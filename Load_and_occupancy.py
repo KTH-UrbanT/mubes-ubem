@@ -84,7 +84,6 @@ def create_Occupant(idf, zone, OccScheduleName, ActScheduleName,NbPeople):
 #         Outdoor_Air_Schedule_Name = ScheduleName,
 #     )
 
-
 def ZoneLoad(idf, zone, LoadSchedule):
 
     floors_surf = [s for s in zone.zonesurfaces if s.Surface_Type in 'floor']
@@ -100,13 +99,13 @@ def ZoneLoad(idf, zone, LoadSchedule):
         )
     return idf
 
-def CreateThermostat(idf,name):
+def CreateThermostat(idf,name,setUp, setLo):
     #adding a Thermostat setting
     idf.newidfobject(
         "HVACTEMPLATE:THERMOSTAT",
         Name=name,
-        Constant_Heating_Setpoint=20,
-        Constant_Cooling_Setpoint=25,
+        Constant_Heating_Setpoint=setLo,
+        Constant_Cooling_Setpoint=setUp,
         )
     return idf
 
@@ -204,7 +203,7 @@ def CreateZoneLoadAndCtrl(idf,building):
     # # we need to creat the outoddr air node for ventilation definition
     # CreateVentFlowRate(idf, 'VentFlowNode', 'Occupancy', building)
     #Create a unique thermostat set points for all the zone (might need some other if different ste points desired)
-    CreateThermostat(idf,'ResidZone')
+    CreateThermostat(idf,'ResidZone',building.setTempUpL, building.setTempLoL)
     # to all zones adding an ideal load element driven by the above thermostat
     #we need a flag the cjheck if Office occupancy has been analysed or not
     Officechek = 0 #it will be turned to 1 when finished to be considered depensing on the occupancy rate
@@ -215,7 +214,7 @@ def CreateZoneLoadAndCtrl(idf,building):
     if OfficeOcc != 0:
         for key in building.OccupType.keys():
             if not key in ['Residential']:
-                PeopleDensity += building.OccupType[key] / OfficeOcc * building.OccupRate[key] #this is the mean number of people per m2
+                PeopleDensity += building.OccupType[key] / OfficeOcc * max(building.OccupRate[key]) #this is the mean number of people per m2, it takes the max occupancy rate
 
     #lest go through all the zones but we need to sort them from the lowest ones to the highest one....
     zonelist =[]

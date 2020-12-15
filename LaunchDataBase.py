@@ -40,7 +40,7 @@ os.chdir('Sim_Results')
 
 Res = {}
 for nbcase in range(len(Buildingsfile)):
-    #if nbcase==5:
+    if nbcase<10:
         print('Building ', nbcase, '/', len(Buildingsfile), 'process starts')
         CaseName = 'run'
         # erasing all older file from previous simulation if present
@@ -115,8 +115,7 @@ for nbcase in range(len(Buildingsfile)):
             #aggregation of specific outputs for printing resume files
             Res[nbcase]['Year'] = building.year
             Res[nbcase]['Residential'] = building.OccupType['Residential']
-            Res[nbcase]['ConsEleTot'] = building.ConsEleTot
-            Res[nbcase]['ConsTheTot'] = building.ConsTheTot
+            Res[nbcase]['EPCMeters'] = building.EPCMeters
             Res[nbcase]['EPHeatArea'] = building.EPHeatedArea
             #avoiding the two stage dictionnary for csv wrinting purposes. could be ignore if different csv are neede
             for key1 in ResEso:

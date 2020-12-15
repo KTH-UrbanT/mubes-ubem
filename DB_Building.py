@@ -4,6 +4,7 @@ import DB_Data
 DBL = DB_Data.DBLimits
 SCD = DB_Data.BasisElement
 GE = DB_Data.GeomElement
+EPC = DB_Data.EPCMeters
 import re
 #this class defines the building characteristics regarding available data in the geojson file
 
@@ -66,25 +67,30 @@ class DB_Build:
         self.footprint = self.getfootprint(DB)
         self.surface = self.getsurface(DB)
         self.year = self.getyear(DB)
-        self.ConsEleTot = self.getConsEleTot(DB)
-        self.ConsTheTot = self.getConsTheTot(DB)
+        self.EPCMeters = self.getEPCMeters(DB)
         self.nbAppartments = self.getnbAppartments(DB)
         self.height = self.getheight(DB)
         self.shades = self.getshade(DB,Shadingsfile,Buildingsfile)
         self.VentSyst = self.getVentSyst(DB)
         self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB)
-        self.OccupType = self.getOccupType(DB)
+        self.OccupType = self.getOccupType()
         self.EnvLeak = SCD['EnvLeak']
         self.IntLoad = self.getIntLoad(DB)
         self.nbStairwell = self.getnbStairwell(DB)
         self.Officehours = [SCD['Office_Open'],SCD['Office_Close']]
         self.DCV = SCD['DemandControlledVentilation']
         self.OccupBasedFlowRate = SCD['OccupBasedFlowRate'] / 1000  # the flow rate is thus in m3/s/person
-        #self.StoreyBuildRatio = 1 / (self.nbfloor + self.nbBasefloor) #no more used as ratio is highlighted by each zone surfaces
         self.EPHeatedArea = self.getEPHeatedArea()
-        self.OccupRate = DB_Data.OccupRate
         self.wwr = SCD['WindowWallRatio']
         self.OffOccRandom = SCD['OffOccRandom']
+        self.setTempUpL =  SCD['setTempUpL']
+        self.setTempLoL = SCD['setTempLoL']
+        #if there are no cooling comsumption, lets considerer a set point at 50deg max
+        for key in self.EPCMeters['Cooling']:
+            if self.EPCMeters['Cooling'][key]>0:
+                self.setTempUpL = SCD['setTempUpL']
+            else:
+                self.setTempUpL = 50
 
     def getRefCoord(self,DB):
         x = DB.geometry.coordinates[0][0][0]
@@ -154,21 +160,19 @@ class DB_Build:
         year = checkLim(year,DBL['year_lim'][0],DBL['year_lim'][1])
         return year
 
-    def getConsEleTot(self,DB):
-        "Get the Electric energy consumptiom"
-        try:
-            ConsEleTot = int(DB.properties['EgiSumma2'])
-        except:
-            ConsEleTot = 0
-        return ConsEleTot
-
-    def getConsTheTot(self,DB):
-        "Get the Thermal energy consumptiom"
-        try:
-            ConsTheTot = int(DB.properties['EgiSumma1'])
-        except:
-            ConsTheTot = 0
-        return ConsTheTot
+    def getEPCMeters(self,DB):
+        "Get the EPC meters values"
+        Meters = {}
+        for key1 in EPC:
+            Meters[key1] = {}
+            for key2 in EPC[key1]:
+                if '_key' in key2:
+                    try:
+                        Meters[key1][key2[:-4]] = DB.properties[EPC[key1][key2]]
+                        Meters[key1][key2[:-4]] = int(DB.properties[EPC[key1][key2]])*EPC[key1][key2[:-4]+'COP']
+                    except:
+                        pass
+        return Meters
 
     def getnbAppartments(self, DB):
         "Get the Thermal energy consumptiom"
@@ -227,15 +231,12 @@ class DB_Build:
         return shades
 
     def getVentSyst(self, DB):
-        try :
-            BalX = [True if 'ja' in DB.properties['VentTypFTX'] else False]
-            Exh = [True if 'ja' in DB.properties['VentTypF'] else False]
-            Bal = [True if 'ja' in DB.properties['VentTypFT'] else False]
-            Nat = [True if 'ja' in DB.properties['VentTypSjalvdrag'] else False]
-            ExhX = [True if 'ja' in DB.properties['VentTypFmed'] else False]
-            VentSyst = {'BalX': BalX, 'Exh': Exh, 'Bal': Bal, 'Nat': Nat, 'ExhX': ExhX}
-        except:
-            VentSyst = {'BalX': False, 'Exh': False, 'Bal': False, 'Nat': False, 'ExhX': False}
+        VentSyst = {}
+        for key in DB_Data.VentSyst:
+            try:
+                VentSyst[key] = [True if 'ja' or 'Ja' or 'JA' in DB.properties[DB_Data.VentSyst[key]] else False]
+            except:
+                VentSyst[key] = False
         return VentSyst
 
     def getAreaBasedFlowRate(self, DB):
@@ -246,59 +247,21 @@ class DB_Build:
         AreaBasedFlowRate = checkLim(AreaBasedFlowRate,DBL['AreaBasedFlowRate_lim'][0],DBL['AreaBasedFlowRate_lim'][1])
         return AreaBasedFlowRate/1000 #in order to have it in m3/s/m2
 
-    def getOccupType(self, DB):
-
-
-
-        try:
-            Residential = DB.properties['EgenAtempBostad']
-            Hotel = DB.properties['EgenAtempHotell']
-            Restaurant = DB.properties['EgenAtempRestaurang']
-            Office = DB.properties['EgenAtempKontor']
-            FoodMarket = DB.properties['EgenAtempLivsmedel']
-            GoodsMarket = DB.properties['EgenAtempButik']
-            Shopping = DB.properties['EgenAtempKopcentrum'] #'I still wonder what is the difference with goods'
-            Hospital24h = DB.properties['EgenAtempVard']
-            Hospitalday = DB.properties['EgenAtempHotell']
-            School = DB.properties['EgenAtempSkolor']
-            IndoorSports = DB.properties['EgenAtempBad']
-            Other = DB.properties['EgenAtempOvrig']
-            AssmbPlace = DB.properties['EgenAtempTeater']
-            #OccupRate = DB.properties['EgenAtempSumma']
-            OccupType =  {'Residential': Residential,
-                           'Hotel': Hotel, 'Restaurant': Restaurant,
-                           'Office': Office, 'FoodMarket': FoodMarket,
-                           'GoodsMarket': GoodsMarket, 'Shopping': Shopping,
-                           'Hospital24h': Hospital24h, 'Hospitalday': Hospitalday,
-                           'School': School, 'IndoorSports': IndoorSports,
-                           'AssmbPlace' : AssmbPlace,'Other': Other,
-                           #'OccupRate': OccupRate,
-                           }
-        except:
-            OccupType = {}
-        for key in OccupType.keys():
-            try:
-                OccupType[key] = int(OccupType[key])/100
-            except:
-                OccupType[key] = 0
+    def getOccupType(self):
+        OccupType = {}
+        self.OccupRate = {}
+        for key in DB_Data.OccupType:
+            if '_key' in key:
+                try:
+                    OccupType[key[:-4]] = int(DB_Data.OccupType[key])/100
+                except:
+                    OccupType[key[:-4]] = 0
+            if '_Rate' in key:
+                self.OccupRate[key[:-5]] = DB_Data.OccupType[key]
         return OccupType
-
 
     def getIntLoad(self, DB):
         #we should integrate the loads depending on the number of appartemnent in the building
         files_path = os.path.dirname(os.getcwd()) + '\\InputFiles\\P_Mean_over_10.txt'
         IntLoad = files_path
         return IntLoad
-
-
-#
-# class DB_Shading:
-#
-#     def __init__(self,Shade):
-#         self.buildID =
-#     ShadeWall['byggnadsid'] = Shadingsfile[ii].properties['byggnadsid']
-#     ShadeWall['vaggid'] = Shadingsfile[ii].properties['vaggid']
-#     ShadeWall['geometries'] = []
-#     for jj in Shadingsfile[ii].geometry.coordinates:
-#         ShadeWall['geometries'].append(tuple([jj[0] - ref[0], jj[1] - ref[1]]))
-#     finished = 1

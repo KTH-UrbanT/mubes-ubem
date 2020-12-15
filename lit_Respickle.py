@@ -4,14 +4,17 @@ from matplotlib import gridspec
 
 signature =True
 
-path1zone = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\Sim_Results\\1zoneperfloor\\'
-#path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\Sim_Results\\zone_perim\\'
-#path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\Sim_Results\\1zone_new\\'
-path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\Sim_Results\\'
+path1zone = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\Sim_Results\\1zoneperfloor\\'
+path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\Sim_Results\\zone_perim\\'
+#path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\Sim_Results\\1zone_new\\'
+path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\Sim_Results\\'
+path1zone = path
+
 with open(path1zone+'GlobPickle.pickle', 'rb') as handle:
     zone1 = pickle.load(handle)
 with open(path+'GlobPickle.pickle', 'rb') as handle:
     zone2 = pickle.load(handle)
+
 
 
 for i,key in enumerate(zone1.keys()):
@@ -35,7 +38,8 @@ tot1 = []
 tot2 = []
 nbbuild = []
 EPC_elec = []
-EPC_Th = []
+EPC_Heat = []
+EPC_Cool = []
 EPC_Tot = []
 TotelPower = {}
 EPareas1 =[]
@@ -51,9 +55,20 @@ for i,key in enumerate(zone2):
     heat2.append(zone2[key]['EnergyConsVal'][5]/3.6)
     tot1.append((zone1[key]['EnergyConsVal'][1]+zone1[key]['EnergyConsVal'][4]+zone1[key]['EnergyConsVal'][5])/zone1[key]['EPlusHeatArea']/3.6*1000) #to have GJ into kWh/m2
     tot2.append((zone2[key]['EnergyConsVal'][1]+zone2[key]['EnergyConsVal'][4]+zone2[key]['EnergyConsVal'][5])/zone2[key]['EPlusHeatArea']/3.6*1000)
-    EPC_elec.append(zone1[key]['ConsEleTot']/1000)
-    EPC_Th.append(zone1[key]['ConsTheTot']/1000)
-    EPC_Tot.append((zone1[key]['ConsTheTot']+zone1[key]['ConsEleTot'])/zone2[key]['EPlusHeatArea'])
+    eleval = 0
+    for x in zone1[key]['EPCMeters']['ElecLoad']:
+        if zone1[key]['EPCMeters']['ElecLoad'][x]:
+            eleval += zone1[key]['EPCMeters']['ElecLoad'][x]/1e3
+    EPC_elec.append(eleval)
+    heatval = 0
+    for x in zone1[key]['EPCMeters']['Heating']:
+        heatval += zone1[key]['EPCMeters']['Heating'][x]/1e3
+    EPC_Heat.append(heatval)
+    coolval = 0
+    for x in zone1[key]['EPCMeters']['Cooling']:
+        coolval += zone1[key]['EPCMeters']['Cooling'][x]/1e3
+    EPC_Cool.append(coolval)
+    EPC_Tot.append((eleval+heatval+coolval)*1000/zone2[key]['EPlusHeatArea'])
     EPareas1.append(zone1[key]['EPlusHeatArea'])
     EPareas2.append(zone2[key]['EPlusHeatArea'])
     DBareas.append(zone1[key]['DataBaseArea'])
@@ -73,7 +88,7 @@ ax0.plot(nbbuild, EPC_elec,'x')
 ax0.grid()
 plt.title('Elec_Load (MWh)')
 ax1 = plt.subplot(gs[-1,0])
-
+ax1.plot(nbbuild, [(heat1[i]-EPC_elec[i])/EPC_elec[i]*100 for i in range(len(heat1))],'x')
 ax1.grid()
 #ax1.title('mono-multi')
 plt.tight_layout()
@@ -83,11 +98,11 @@ gs = gridspec.GridSpec(4, 1)
 ax0 = plt.subplot(gs[:-1,0])
 ax0.plot(nbbuild,heat1,'s')
 ax0.plot(nbbuild,heat2,'o')
-ax0.plot(nbbuild, EPC_Th,'x')
+ax0.plot(nbbuild, EPC_Heat,'x')
 ax0.grid()
 plt.title('Heat (MWh)')
 ax1 = plt.subplot(gs[-1,0])
-ax1.plot(nbbuild, [(heat1[i]-heat2[i])/heat1[i]*100 for i in range(len(heat1))],'s')
+ax1.plot(nbbuild, [(heat1[i]-EPC_Heat[i])/EPC_Heat[i]*100 for i in range(len(heat1))],'s')
 ax1.grid()
 #ax1.title('mono-multi')
 plt.tight_layout()
@@ -98,10 +113,11 @@ gs = gridspec.GridSpec(4, 1)
 ax0 = plt.subplot(gs[:-1,0])
 ax0.plot(nbbuild,cool1,'s')
 ax0.plot(nbbuild,cool2,'o')
+ax0.plot(nbbuild, EPC_Cool,'x')
 ax0.grid()
 plt.title('Cool (MWh)')
 ax1 = plt.subplot(gs[-1,0])
-ax1.plot(nbbuild, [(cool1[i]-cool2[i])/cool1[i]*100 for i in range(len(cool1))],'s')
+#ax1.plot(nbbuild, [(cool1[i]-EPC_Cool[i])/cool1[i]*100 for i in range(len(cool1))],'s')
 ax1.grid()
 #ax1.title('mono-multi')
 plt.tight_layout()
@@ -132,8 +148,8 @@ ax0.plot(nbbuild,EnergieTot,'>')
 ax0.grid()
 plt.title('Tot (kWh/m2)')
 ax1 = plt.subplot(gs[-1,0])
-ax1.plot(nbbuild, [(tot1[i]-tot2[i])/tot1[i]*100 for i in range(len(cool1))],'s')
-ax1.plot(nbbuild, [(EPC_Tot[i]-tot2[i])/EPC_Tot[i]*100 for i in range(len(cool1))],'x')
+ax1.plot(nbbuild, [(tot1[i]-EPC_Tot[i])/EPC_Tot[i]*100 for i in range(len(cool1))],'x')
+#ax1.plot(nbbuild, [(EPC_Tot[i]-tot2[i])/EPC_Tot[i]*100 for i in range(len(cool1))],'x')
 ax1.grid()
 #ax1.title('mono-multi')
 plt.tight_layout()
