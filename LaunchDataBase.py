@@ -2,7 +2,7 @@ import sys
 import os
 
 path2addgeom = os.path.dirname(os.getcwd()) + '\\geomeppy'
-#ath2addeppy = os.path.dirname(os.getcwd()) + '\\eppy'
+#path2addeppy = os.path.dirname(os.getcwd()) + '\\eppy'
 #sys.path.append(path2addeppy)
 sys.path.append(path2addgeom)
 
