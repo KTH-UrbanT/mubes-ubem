@@ -264,7 +264,7 @@ def CreateZoneLoadAndCtrl(idf,building):
                 else:
                     ## here is the scedule that define the number of occupant with fixed number of occupants (same all the time but sitlll linked to shedule).
                     ScheduleCompactOccup(idf, 'OccuSchedule'+str(idx), building, SetPoint=round(FloorArea*PeopleDensity))
-                    OfficeTypeZone = 0
+                    OfficeTypeZone = 0 #this just to give the correct theröostat type to the ZeonCtrl function below.
             # Internal load profil taken from the number of appartement. see building.IntLoad in DB_Building
             ZoneLoad(idf, zone, 'LoadSchedule')
             # HVAC equipment for each zone including ventilation systems (exhaust, balanced with or not heat recovery)

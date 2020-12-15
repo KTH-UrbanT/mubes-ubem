@@ -1,4 +1,3 @@
-import re
 from geomeppy import geom
 from shapely.geometry import Polygon
 from shapely.ops import cascaded_union
@@ -30,7 +29,24 @@ def createBuilding(idf,building,perim):
         below_ground_stories=building.nbBasefloor,
         #below_ground_storey_height = 3,#1, the value is by default 2,5m
         )
-    #idf.intersect_match()
+    #this function enable to create all the boundary conditions for all surfaces
+    idf.intersect_match()
+
+    #enveloppe can be creates now and allocated to to correct surfaces
+    createEnvelope(idf, building)
+    #create parition walls as recommended in
+    #from EP9.2 there is a dedicated construction type (to be tried as well), but 'Fullexeterior' option is still required
+    #see https://unmethours.com/question/42542/interior-air-walls-for-splitting-nonconvex-zones/
+    # see https://unmethours.com/question/13094/change-all-interior-walls-to-air-walls/
+    #see https://unmethours.com/question/41171/constructionairboundary-solar-enclosures-for-grouped-zones-solar-distribution/
+    createAirwallsCstr(idf)
+    #the shading walls aroudn the building are created with the function baloew
+    createShadings(building, idf)
+    #this last function on the Geometry is here to split the left non convexe surfaces
+    #if not some warning are appended because of shading computation. non convex surfaces can impact itself
+    #it should thus be only the roof surfaces
+    split2convex(idf)
+
     return idf
 
 def createShadings(building,idf):
@@ -40,7 +56,7 @@ def createShadings(building,idf):
                 coordinates=building.shades[sh]['Vertex'], #[GeomElement['VertexKey']],
                 height=building.shades[sh]['height'],
                 )
-            #Because adding a shading bloc creates two identical surfaces, let remove one to avoid too big input files
+            #Because adding a shading bloc creates two identical surfaces, lets remove one to avoid too big input files
             newshade = idf.idfobjects["SHADING:SITE:DETAILED"]
             for i in newshade:
                 if i.Name in ('Shading'+str(ii)+'_2'):
@@ -64,7 +80,7 @@ def createEnvelope(idf,building):
             if id_win.Name in id_cstr.Name:
                 id_cstr.Outside_Layer = id_win.Name
 
-    #lets change the construction for some specific zones surfaces, like the the link between none heat zone like
+    #lets change the construction for some specific zones surfaces, like the link between none heat zone like
     # basement and the above floors
     # creating the materials, see Envelope_Param for material specifications for seperation with heated and non heated zones
     Envelope_Param.createNewConstruction(idf, 'Project Heated2NonHeated', 'Heated2NonHeated')
@@ -102,6 +118,8 @@ def check4UnusedCSTR(idf):
 
 
 def createAirwallsCstr(idf):
+    #this function could take into account the new available construction type 'Construction:AirBoundary' starting with EP9.2
+    #https://unmethours.com/question/41171/constructionairboundary-solar-enclosures-for-grouped-zones-solar-distribution/
     #creating the materials, see Envelope_Param for material specifications
     Envelope_Param.CreatAirwallsMat(idf)
     #for all construction, see if some other material than default exist
@@ -118,7 +136,6 @@ def split2convex(idf):
     idxi = []
     for i, j in enumerate(surlist):
         if j.Outside_Boundary_Condition.lower() == "outdoors" and not('Wall' in j.Construction_Name):
-        #if 'roof' in j.Surface_Type or 'ceiling' in j.Surface_Type or 'floor' in j.Surface_Type:
             roofcoord = j.coords
             coord2split = []
             for nbpt in roofcoord:
@@ -165,10 +182,7 @@ def split2convex(idf):
                 Zone_Name=surf2treat.Zone_Name,
                 Wind_Exposure=surf2treat.Wind_Exposure,
             )
-            #if not 'Core' in surf2treat.Name:
-            #    if surf2treat.tilt == 180:
-            #        new_coord.reverse()
-            #surftri.setcoords(new_coord)
+
             surftri.setcoords(new_coord)
             if 'Roof' in surf2treat.Construction_Name and surftri.tilt == 180:
                     surftri.setcoords(reversed(new_coord))

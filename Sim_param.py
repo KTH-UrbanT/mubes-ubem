@@ -6,7 +6,9 @@ def setSimparam(idf):
     simctrl.Run_Simulation_for_Weather_File_Run_Periods = 'Yes'
     #chqnging the Solar calculation because of complex surface (non convexe)
     build_param = idf.idfobjects['BUILDING'][0]
-    build_param.Solar_Distribution = 'FullExterior' #'MinimalShadowing' #
+    build_param.Solar_Distribution = 'FullExteriorWithReflections' #'FullExterior' #'MinimalShadowing' # FullExterior is the most detailed option possible in our case.
+    #it computes exteriori shading bu not internal. all the radiation that enters the zones is allocated to the floor
+    # https://bigladdersoftware.com/epx/docs/9-1/engineering-reference/shading-module.html#solar-distribution
 
     runperiod = idf.idfobjects['RUNPERIOD'][0]
     runperiod.Begin_Day_of_Month = 1

@@ -1,6 +1,5 @@
 import csv
-import sys
-import os
+
 
 # Convert comma-delimited CSV files to pipe-delimited files
 # Usage: Drag-and-drop CSV file over script to convert it.

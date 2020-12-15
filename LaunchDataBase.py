@@ -2,8 +2,8 @@ import sys
 import os
 
 path2addgeom = os.path.dirname(os.getcwd()) + '\\geomeppy'
-path2addeppy = os.path.dirname(os.getcwd()) + '\\eppy'
-sys.path.append(path2addeppy)
+#ath2addeppy = os.path.dirname(os.getcwd()) + '\\eppy'
+#sys.path.append(path2addeppy)
 sys.path.append(path2addgeom)
 
 #add needed packages
@@ -67,69 +67,58 @@ for nbcase in range(len(Buildingsfile)):
         else:
             idf.idfname = building.name #'Building '+ str(nbcase)
             start = time.time()
-            GeomScripts.createBuilding(idf,building, perim = True)
+            GeomScripts.createBuilding(idf,building, perim = False)
             end = time.time()
             print('createBuilding time : ' + str(end - start))
 
-            # overall chek and saves don't know if useless....
-            start = time.time()
-            idf.intersect_match()
-            end = time.time()
-            print('intersect_match time : ' + str(end - start))
-
-            start = time.time()
-            GeomScripts.createEnvelope(idf,building)
-            end = time.time()
-            print('createEnvelope time : ' + str(end - start))
-
-            start = time.time()
-            GeomScripts.createAirwallsCstr(idf)
-            end = time.time()
-            print('createAirwallsCstr time : ' + str(end - start))
-
-            start = time.time()
-            GeomScripts.createShadings(building,idf)
-            end = time.time()
-            print('createShadings time : ' + str(end - start))
-
-            #idf.view_model(test=False)
-            start = time.time()
-            GeomScripts.split2convex(idf)
-            end = time.time()
-            print('split2convex time : ' + str(end - start))
 
             #idf.view_model(test=False)
             start = time.time()
             #control command related equipment, loads and leaks for each zones
             Load_and_occupancy.CreateZoneLoadAndCtrl(idf,building)
+
             #ouputs definitions
             Set_Outputs.AddOutputs(idf)
             end = time.time()
-            print('Ctrl and load step time : ' + str(end - start))
+            print('Ctrl, load & outputs step time : ' + str(end - start))
 
             #saving files launching the simulation
             #idf.to_obj('Building'+str(nbcase)+'.obj')
             start = time.time()
             idf.saveas('Building'+str(nbcase)+'.idf')
+
+            #the readvars option enable to create a csv file with all the specified ouputs
+            #but as for many zones, this can lead to heavy files, worakourand are proposed in the Set_Outputs file. see below
             #idf.run(readvars=True, output_prefix=CaseName)
             idf.run(output_prefix=CaseName, verbose='q')
             end = time.time()
             print('Run step time : ' + str(end - start))
+
             #ouputs readings
+            #if ZoneOutputs=True, results are aggregated at storey level, if False, results are aggregated into heated and non heated zones
             start = time.time()
             ResEso = Set_Outputs.Read_OutputsEso(CaseName,ZoneOutput=False)
             end = time.time()
             print('Read ESO step time : ' + str(end - start))
+
+            #plots option, for debug purposes
             letsplot = False
             if letsplot:
                 Set_Outputs.Plot_Outputs(ResEso, idf)
+
+            #read the html file. this options might be cancelled because resultats can be computed form ResEso file
+            #it is currently sued for debuging to check, integral of time series and computed velues by EP engin
+            #like energy consumptions, electric loads, heated and non heated areas.
+            #the Endinfo file could be reads and plot elsewhere. it reports number of warning and errors
             start = time.time()
             Res[nbcase], Endinfo = Set_Outputs.Read_Outputhtml(idf,CaseName,Buildingsfile[nbcase])
+            #aggregation of specific outputs for printing resume files
             Res[nbcase]['Year'] = building.year
             Res[nbcase]['Residential'] = building.OccupType['Residential']
             Res[nbcase]['ConsEleTot'] = building.ConsEleTot
             Res[nbcase]['ConsTheTot'] = building.ConsTheTot
             Res[nbcase]['EPHeatArea'] = building.EPHeatedArea
+            #avoiding the two stage dictionnary for csv wrinting purposes. could be ignore if different csv are neede
             for key1 in ResEso:
                 #if not 'Environ' in key1:
                     Res[nbcase][key1]= {}
@@ -141,17 +130,21 @@ for nbcase in range(len(Buildingsfile)):
             end = time.time()
             print('Read HTML and organize Res dict step time : ' + str(end - start))
             print(Endinfo)
+
+            #copy for savings the errors file for each run, the html results file and compute a csv file.
             shutil.copyfile(CaseName+'out.err', 'Building'+str(nbcase)+'.err')
             shutil.copyfile(CaseName + 'tbl.htm', 'Building' + str(nbcase) + '.html')
+            csv2tabdelim.WriteCSVFile('Building' + str(nbcase) + '.csv', ResEso)
+            #this was used when using the automatic csv file from EP engine. no more needed
             #shutil.copyfile(CaseName + 'out.csv', 'Building' + str(nbcase) + '.csv')
             #csv2tabdelim.convert('Building' + str(nbcase) + '.csv')
-            csv2tabdelim.WriteCSVFile('Building' + str(nbcase) + '.csv', ResEso)
-        del building
-#Res['ExtTemp'] = ResEso[key1][key2]['GlobData']
-#Res['IRglob']
 
-#print(Res)
-ObjectName = open('Areadiscreap.txt','w')
+        #the current building object is removed
+        del building
+
+
+#resum all global resultats into one simple ASCII file
+ObjectName = open('GlobOutputs.txt','w')
 for key in Res:
     towrite = {}
     for keys in Res[key]:
@@ -160,6 +153,7 @@ for key in Res:
     ObjectName.write(str(towrite)+'\n')
 ObjectName.close()
 
+#save the time series and globa resultats into one pickle
 with open('GlobPickle.pickle', 'wb') as handle:
     pickle.dump(Res, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -169,7 +163,8 @@ for file in os.listdir():
         # print('Removing', file, ' from folder')
         os.remove(file)
 
-sys.path.remove(path2addeppy)
+#removong the path to the local package of eppy and geomeppy
+#sys.path.remove(path2addeppy)
 sys.path.remove(path2addgeom)
 
 
