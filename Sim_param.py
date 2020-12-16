@@ -43,4 +43,4 @@ def Location_and_weather(idf):
     ground_Temp.October_Ground_Temperature = 15
     ground_Temp.November_Ground_Temperature = 15
     ground_Temp.December_Ground_Temperature = 15
-
+    return idf

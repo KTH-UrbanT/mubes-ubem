@@ -33,10 +33,10 @@ Buildingsfile = pygeoj.load(loadedfile)
 loadedfile = 'C:\\Users\\xav77\\Documents\\FAURE\\DataBase\\Minneberg_Sweref99TM\\Walls.geojson'
 Shadingsfile = pygeoj.load(loadedfile)
 
-SimDir = os.path.join(os.getcwd(),'Sim_Results')
+MainPath = os.getcwd()
+SimDir = os.path.join(MainPath,'Sim_Results')
 if not os.path.exists(SimDir):
     os.mkdir(SimDir)
-os.chdir('Sim_Results')
 
 Res = {}
 for nbcase in range(len(Buildingsfile)):
@@ -58,7 +58,7 @@ for nbcase in range(len(Buildingsfile)):
 
         #Geometry related modification
         #creatin of an instance of building class with the available data in the dataBase
-        building = DB_Build('Building'+str(nbcase),Buildingsfile,Shadingsfile,nbcase)
+        building = DB_Build('Building'+str(nbcase),Buildingsfile,Shadingsfile,nbcase,MainPath)
         end = time.time()
         print('First step time : '+str(end-start))
         if not building.height:
@@ -85,19 +85,19 @@ for nbcase in range(len(Buildingsfile)):
             #saving files launching the simulation
             #idf.to_obj('Building'+str(nbcase)+'.obj')
             start = time.time()
-            idf.saveas('Building'+str(nbcase)+'.idf')
+            idf.saveas(SimDir+'\\'+'Building'+str(nbcase)+'.idf')
 
             #the readvars option enable to create a csv file with all the specified ouputs
             #but as for many zones, this can lead to heavy files, worakourand are proposed in the Set_Outputs file. see below
             #idf.run(readvars=True, output_prefix=CaseName)
-            idf.run(output_prefix=CaseName, verbose='q')
+            idf.run(output_directory=SimDir ,output_prefix=CaseName, verbose='q')
             end = time.time()
             print('Run step time : ' + str(end - start))
 
             #ouputs readings
             #if ZoneOutputs=True, results are aggregated at storey level, if False, results are aggregated into heated and non heated zones
             start = time.time()
-            ResEso = Set_Outputs.Read_OutputsEso(CaseName,ZoneOutput=False)
+            ResEso = Set_Outputs.Read_OutputsEso(SimDir+'\\'+CaseName,ZoneOutput=False)
             end = time.time()
             print('Read ESO step time : ' + str(end - start))
 
@@ -111,7 +111,7 @@ for nbcase in range(len(Buildingsfile)):
             #like energy consumptions, electric loads, heated and non heated areas.
             #the Endinfo file could be reads and plot elsewhere. it reports number of warning and errors
             start = time.time()
-            Res[nbcase], Endinfo = Set_Outputs.Read_Outputhtml(idf,CaseName,Buildingsfile[nbcase])
+            Res[nbcase], Endinfo = Set_Outputs.Read_Outputhtml(idf,SimDir+'\\'+CaseName,Buildingsfile[nbcase])
             #aggregation of specific outputs for printing resume files
             Res[nbcase]['Year'] = building.year
             Res[nbcase]['Residential'] = building.OccupType['Residential']
@@ -131,9 +131,9 @@ for nbcase in range(len(Buildingsfile)):
             print(Endinfo)
 
             #copy for savings the errors file for each run, the html results file and compute a csv file.
-            shutil.copyfile(CaseName+'out.err', 'Building'+str(nbcase)+'.err')
-            shutil.copyfile(CaseName + 'tbl.htm', 'Building' + str(nbcase) + '.html')
-            csv2tabdelim.WriteCSVFile('Building' + str(nbcase) + '.csv', ResEso)
+            shutil.copyfile(SimDir+'\\'+CaseName+'out.err', SimDir+'\\'+'Building'+str(nbcase)+'.err')
+            shutil.copyfile(SimDir+'\\'+CaseName + 'tbl.htm', SimDir+'\\'+'Building' + str(nbcase) + '.html')
+            csv2tabdelim.WriteCSVFile(SimDir+'\\'+'Building' + str(nbcase) + '.csv', ResEso)
             #this was used when using the automatic csv file from EP engine. no more needed
             #shutil.copyfile(CaseName + 'out.csv', 'Building' + str(nbcase) + '.csv')
             #csv2tabdelim.convert('Building' + str(nbcase) + '.csv')

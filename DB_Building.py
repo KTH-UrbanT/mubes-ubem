@@ -58,7 +58,7 @@ def findBuildId(Id, Buildingsfile):
 
 class DB_Build:
 
-    def __init__(self,name,Buildingsfile,Shadingsfile,nbcase):
+    def __init__(self,name,Buildingsfile,Shadingsfile,nbcase,MainPath):
         DB = Buildingsfile[nbcase]
         self.name = name
         self.RefCoord = self.getRefCoord(DB)
@@ -75,7 +75,7 @@ class DB_Build:
         self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB)
         self.OccupType = self.getOccupType()
         self.EnvLeak = SCD['EnvLeak']
-        self.IntLoad = self.getIntLoad(DB)
+        self.IntLoad = self.getIntLoad(MainPath)
         self.nbStairwell = self.getnbStairwell(DB)
         self.Officehours = [SCD['Office_Open'],SCD['Office_Close']]
         self.DCV = SCD['DemandControlledVentilation']
@@ -260,8 +260,8 @@ class DB_Build:
                 self.OccupRate[key[:-5]] = DB_Data.OccupType[key]
         return OccupType
 
-    def getIntLoad(self, DB):
+    def getIntLoad(self, MainPath):
         #we should integrate the loads depending on the number of appartemnent in the building
-        files_path = os.path.dirname(os.getcwd()) + '\\InputFiles\\P_Mean_over_10.txt'
+        files_path = os.path.join(MainPath,'InputFiles')+'\\P_Mean_over_10.txt'
         IntLoad = files_path
         return IntLoad
