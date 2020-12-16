@@ -1,9 +1,7 @@
 # MUBES_UBEM
 Python Script based UBEM simulation tool using EnergyPlus (EP) as the core engine.
 It has been developed in Python 3.7 with EP 9.1 and has been successfully tested with EP 9.4.
-It is based on 2 main packages:
-- [EPPY] (https://github.com/santoshphilip/eppy), and
-- [GeomEppy] ( https://github.com/jamiebull1/geomeppy).
+It is based on 2 main packages: [EPPY](https://github.com/santoshphilip/eppy) and [GeomEppy](https://github.com/jamiebull1/geomeppy).
 
 ## Installation process
 EPPY can be installed directly from pip (eppy 0.5.53), see the requirements.txt file.
