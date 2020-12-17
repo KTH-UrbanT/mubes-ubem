@@ -1,4 +1,4 @@
-import ProbGenerator
+import CoreFiles.ProbGenerator as ProbGenerator
 import os
 #script to define the loads for each zones
 # import os
@@ -251,14 +251,13 @@ def CreateZoneLoadAndCtrl(idf,building):
                 create_Occupant(idf, zone, 'OccuSchedule'+str(idx), 'OccupActivity', 1)
                 if building.OffOccRandom:
                     #lets create a beta distribution random file for the number of ccupant
-                    pathname = os.path.dirname(os.getcwd()) + '\\InputFiles\\nbUsers.txt'
-                    ProbGenerator.BuildData('nbUsers.txt',round(FloorArea*PeopleDensity)/20,round(FloorArea*PeopleDensity))
+                    pathfile = os.path.dirname(os.getcwd()) + '\\InputFiles\\'
+                    name = building.name + 'nbUsers.txt'
+                    ProbGenerator.BuildData(name,pathfile,round(FloorArea*PeopleDensity)/20,round(FloorArea*PeopleDensity))
                     # lets create a schedule file for occupant and the associated file
-                    create_ScheduleFile(idf, 'OccuSchedule'+str(idx), pathname)
-                    pathname = os.path.dirname(os.getcwd()) + '\\InputFiles\\SetPointUp.txt'
-                    create_ScheduleFile(idf, 'OffTsetUp' + str(idx), pathname)
-                    pathname = os.path.dirname(os.getcwd()) + '\\InputFiles\\SetPointLo.txt'
-                    create_ScheduleFile(idf, 'OffTsetLo' + str(idx), pathname)
+                    create_ScheduleFile(idf, 'OccuSchedule'+str(idx), pathfile+name)   #we should be careful because of varaition with multiproc
+                    create_ScheduleFile(idf, 'OffTsetUp' + str(idx), pathfile+'SetPointUp.txt')
+                    create_ScheduleFile(idf, 'OffTsetLo' + str(idx), pathfile+'SetPointLo.txt')
                     CreateThermostatFile(idf, 'OfficeZone'+ str(idx),'OffTsetUp' + str(idx),'OffTsetLo' + str(idx))
                 else:
                     ## here is the scedule that define the number of occupant with fixed number of occupants (same all the time but sitlll linked to shedule).

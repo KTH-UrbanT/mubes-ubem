@@ -8,18 +8,18 @@ sys.path.append(path2addgeom)
 
 #add needed packages
 import pygeoj
-import GeomScripts
-import Set_Outputs
-import Sim_param
-import Load_and_occupancy
+import CoreFiles.GeomScripts as GeomScripts
+import CoreFiles.Set_Outputs as Set_Outputs
+import CoreFiles.Sim_param as Sim_param
+import CoreFiles.Load_and_occupancy as Load_and_occupancy
 import pickle
 import time
-from DB_Building import DB_Build
+from DataBase.DB_Building import DB_Build
 from geomeppy import IDF
 import os
 
 start = time.time()
-
+MainPath = os.getcwd()
 #e+ parameters
 epluspath = 'C:\\EnergyPlusV9-1-0\\'
 #selecting the E+ version and .idd file
@@ -30,14 +30,14 @@ Buildingsfile = pygeoj.load(loadedfile)
 loadedfile = 'C:\\Users\\xav77\\Documents\\FAURE\\DataBase\\Minneberg_Sweref99TM\\Walls.geojson'
 Shadingsfile = pygeoj.load(loadedfile)
 
-SimDir = os.path.join(os.getcwd(),'CasesFile')
+SimDir = os.path.join(os.getcwd(),'CaseFiles')
 if not os.path.exists(SimDir):
     os.mkdir(SimDir)
-os.chdir('CasesFile')
+os.chdir(SimDir)
 
 Res = {}
 for nbcase in range(len(Buildingsfile)):
-    if nbcase<10:
+    if nbcase==7:
         print('Building ', nbcase, '/', len(Buildingsfile), 'process starts')
         CaseName = 'run'
         # erasing all older file from previous simulation if present
@@ -55,7 +55,7 @@ for nbcase in range(len(Buildingsfile)):
 
         #Geometry related modification
         #creatin of an instance of building class with the available data in the dataBase
-        building = DB_Build('Building'+str(nbcase),Buildingsfile,Shadingsfile,nbcase)
+        building = DB_Build('Building'+str(nbcase),Buildingsfile,Shadingsfile,nbcase,MainPath)
         end = time.time()
         print('First step time : '+str(end-start))
         if not building.height:
@@ -83,20 +83,10 @@ for nbcase in range(len(Buildingsfile)):
             start = time.time()
             idf.saveas('Building_'+str(nbcase)+'.idf')
 
-            #Some relevent information are needed after the computation
-            Res[nbcase] = {}
-            Res[nbcase]['Year'] = building.year
-            Res[nbcase]['Residential'] = building.OccupType['Residential']
-            Res[nbcase]['EPCMeters'] = building.EPCMeters
-            Res[nbcase]['EPHeatArea'] = building.EPHeatedArea
             with open('Building_'+str(nbcase)+'.pickle', 'wb') as handle:
-                pickle.dump(idf, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                pickle.dump(building, handle, protocol=pickle.HIGHEST_PROTOCOL)
         #the current building object is removed
         del building, idf
-
-#save the time series and globa resultats into one pickle
-with open('GlobPickle.pickle', 'wb') as handle:
-    pickle.dump(Res, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 #removong the path to the local package of eppy and geomeppy
 #sys.path.remove(path2addeppy)

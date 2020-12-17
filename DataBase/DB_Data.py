@@ -27,7 +27,7 @@ BasisElement = \
  'OccupBasedFlowRate': 7,  # l/s/person
  'EnvLeak': 0.8,# l/s/m2 at 50Pa
  'WindowWallRatio': 0.15,
- 'OffOccRandom' : False,
+ 'OffOccRandom' : True,
  'setTempUpL' : 25,
  'setTempLoL' : 21,
  }

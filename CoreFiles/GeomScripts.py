@@ -1,8 +1,8 @@
 from geomeppy import geom
 from shapely.geometry import Polygon
 from shapely.ops import cascaded_union
-import Envelope_Param
-import DB_Data
+import CoreFiles.Envelope_Param as Envelope_Param
+import DataBase.DB_Data as DB_Data
 Material = DB_Data.BaseMaterial
 GeomElement = DB_Data.GeomElement
 

@@ -8,15 +8,15 @@ sys.path.append(path2addgeom)
 
 #add needed packages
 import pygeoj
-import GeomScripts
-import Set_Outputs
-import Sim_param
-import Load_and_occupancy
-import csv2tabdelim
+import CoreFiles.GeomScripts as GeomScripts
+import CoreFiles.Set_Outputs as Set_Outputs
+import CoreFiles.Sim_param as Sim_param
+import CoreFiles.Load_and_occupancy as Load_and_occupancy
+import CoreFiles.csv2tabdelim as csv2tabdelim
 import shutil
 import pickle
 import time
-from DB_Building import DB_Build
+from DataBase.DB_Building import DB_Build
 from geomeppy import IDF
 import os
 
@@ -40,7 +40,7 @@ if not os.path.exists(SimDir):
 
 Res = {}
 for nbcase in range(len(Buildingsfile)):
-    if nbcase<10:
+    if nbcase==7:
         print('Building ', nbcase, '/', len(Buildingsfile), 'process starts')
         CaseName = 'run'
         # erasing all older file from previous simulation if present
@@ -111,8 +111,11 @@ for nbcase in range(len(Buildingsfile)):
             #like energy consumptions, electric loads, heated and non heated areas.
             #the Endinfo file could be reads and plot elsewhere. it reports number of warning and errors
             start = time.time()
-            Res[nbcase], Endinfo = Set_Outputs.Read_Outputhtml(idf,SimDir+'\\'+CaseName,Buildingsfile[nbcase])
+            Res[nbcase], Endinfo = Set_Outputs.Read_Outputhtml(SimDir+'\\'+CaseName)
             #aggregation of specific outputs for printing resume files
+            Res['DataBaseArea'] = building.surface
+            Res['NbFloors'] = building.nb_floor
+            Res['NbZones'] = len(idf.idfobjects['ZONE'])
             Res[nbcase]['Year'] = building.year
             Res[nbcase]['Residential'] = building.OccupType['Residential']
             Res[nbcase]['EPCMeters'] = building.EPCMeters

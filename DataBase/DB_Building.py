@@ -1,6 +1,6 @@
 from shapely.geometry import Polygon
 import os
-import DB_Data
+import DataBase.DB_Data as DB_Data
 DBL = DB_Data.DBLimits
 SCD = DB_Data.BasisElement
 GE = DB_Data.GeomElement
@@ -73,7 +73,7 @@ class DB_Build:
         self.shades = self.getshade(DB,Shadingsfile,Buildingsfile)
         self.VentSyst = self.getVentSyst(DB)
         self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB)
-        self.OccupType = self.getOccupType()
+        self.OccupType = self.getOccupType(DB)
         self.EnvLeak = SCD['EnvLeak']
         self.IntLoad = self.getIntLoad(MainPath)
         self.nbStairwell = self.getnbStairwell(DB)
@@ -86,11 +86,11 @@ class DB_Build:
         self.setTempUpL =  SCD['setTempUpL']
         self.setTempLoL = SCD['setTempLoL']
         #if there are no cooling comsumption, lets considerer a set point at 50deg max
-        for key in self.EPCMeters['Cooling']:
-            if self.EPCMeters['Cooling'][key]>0:
-                self.setTempUpL = SCD['setTempUpL']
-            else:
-                self.setTempUpL = 50
+        # for key in self.EPCMeters['Cooling']:
+        #     if self.EPCMeters['Cooling'][key]>0:
+        #         self.setTempUpL = SCD['setTempUpL']
+        #     else:
+        #         self.setTempUpL = 50
 
     def getRefCoord(self,DB):
         x = DB.geometry.coordinates[0][0][0]
@@ -234,7 +234,7 @@ class DB_Build:
         VentSyst = {}
         for key in DB_Data.VentSyst:
             try:
-                VentSyst[key] = [True if 'ja' or 'Ja' or 'JA' in DB.properties[DB_Data.VentSyst[key]] else False]
+                VentSyst[key] = [True if 'Ja' in DB.properties[DB_Data.VentSyst[key]] else False]
             except:
                 VentSyst[key] = False
         return VentSyst
@@ -247,13 +247,13 @@ class DB_Build:
         AreaBasedFlowRate = checkLim(AreaBasedFlowRate,DBL['AreaBasedFlowRate_lim'][0],DBL['AreaBasedFlowRate_lim'][1])
         return AreaBasedFlowRate/1000 #in order to have it in m3/s/m2
 
-    def getOccupType(self):
+    def getOccupType(self,DB):
         OccupType = {}
         self.OccupRate = {}
         for key in DB_Data.OccupType:
             if '_key' in key:
                 try:
-                    OccupType[key[:-4]] = int(DB_Data.OccupType[key])/100
+                    OccupType[key[:-4]] = int(DB.properties[DB_Data.OccupType[key]])/100
                 except:
                     OccupType[key[:-4]] = 0
             if '_Rate' in key:

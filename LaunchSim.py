@@ -3,6 +3,9 @@ import os, sys, stat
 import time
 import multiprocessing as mp
 import pickle
+import shutil
+import CoreFiles.Set_Outputs as Set_Outputs
+import CoreFiles.csv2tabdelim as csv2tabdelim
 from subprocess import check_call
 
 path2addgeom = os.path.dirname(os.getcwd()) + '\\geomeppy'
@@ -19,16 +22,18 @@ def initiateprocess(filepath):
     return file2run
 
 def runcase(file,filepath):
+    ResSimpath = os.getcwd()+'\\Sim_Results\\'
     start = time.time()
+    with open(filepath+file[:-4]+'.pickle', 'rb') as handle:
+         building = pickle.load(handle)
     Runfile = filepath + file
     RunDir = filepath + file[:-4]
     print(RunDir)
     if not os.path.exists(RunDir):
         os.mkdir(RunDir)
     os.chdir(RunDir)
-    #with open(i, 'rb') as handle:
-    #    file = pickle.load(handle)
-    # e+ parameters
+    CaseName = 'Run'
+     #e+ parameters
     epluspath = 'C:\\EnergyPlusV9-1-0\\'
     # selecting the E+ version and .idd file
     IDF.setiddname(epluspath + "Energy+.idd")
@@ -36,49 +41,62 @@ def runcase(file,filepath):
     idf.epw = epluspath + 'WeatherData\\'+ idf.idfobjects['SITE:LOCATION'][0].Name+'.epw' #the weather path is taken from the epluspath
     # os.mkdir(caseDir)
     # os.chdir(caseDir)
-    idf.run(output_prefix='Run', verbose='q')
+    idf.run(output_prefix=CaseName, verbose='q')
 
     # cmd = [epluspath, '--weather', idf.epw, '--output-directory', OutputDir, '--idd', epluspath + "Energy+.idd", '--expandobjects', '--output-prefix', 'Run'+str(nb), file]
     # check_call(cmd, stdout=open(os.devnull, "w"))
-
-
+    ResEso = Set_Outputs.Read_OutputsEso(RunDir + '\\' + CaseName, ZoneOutput=False)
+    Res, Endinfo = Set_Outputs.Read_Outputhtml(RunDir + '\\' + CaseName)
+    Res['DataBaseArea'] = building.surface
+    Res['NbFloors'] = building.nbfloor
+    Res['NbZones'] = len(idf.idfobjects['ZONE'])
+    Res['Year'] = building.year
+    Res['Residential'] = building.OccupType['Residential']
+    Res['EPCMeters'] = building.EPCMeters
+    Res['EPHeatArea'] = building.EPHeatedArea
+    for key1 in ResEso:
+        # if not 'Environ' in key1:
+        Res[key1] = {}
+        for key2 in ResEso[key1]:
+            Res[key1]['Data_' + key2] = ResEso[key1][key2]['GlobData']
+            Res[key1]['TimeStep_' + key2] = ResEso[key1][key2]['TimeStep']
+            Res[key1]['Unit_' + key2] = ResEso[key1][key2]['Unit']
+    shutil.copyfile(RunDir + '\\' + 'Runout.err', ResSimpath + '\\' + file[:-4] + '.err')
+    shutil.copyfile(RunDir + '\\' + 'Runtbl.htm', ResSimpath + '\\' + file[:-4] + '.html')
+    with open(ResSimpath + '\\' + file[:-4]+'.pickle', 'wb') as handle:
+        pickle.dump(Res, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    csv2tabdelim.WriteCSVFile(ResSimpath+'\\'+file[:-4] + '.csv', ResEso)
     #here we should save the results and introduce some calibration
     #maybe using the building object...i don't really know yet
     #it means several runs
     #let us delete the remainning files
+
+    os.chdir(filepath)
+    for i in os.listdir(RunDir):
+       os.remove(RunDir+'\\'+i)
+    os.rmdir(RunDir)  # Now the directory is empty of files
+
     end = time.time()
     print(file[:-4] + ' ended in ' + str(round((end-start)*10)/10) + ' sec')
-    #os.chdir(SimDir)
-    #for i in os.listdir(caseDir):
-    #    os.remove(caseDir+'\\'+i)
-    #os.rmdir(caseDir)  # Now the directory is empty of files
 
 
-if __name__ == '__main__' :
-    #weneed to position in the casesfile folder
-    #os.chdir(MainPath)
-        #os.rmdir(SimDir)
-    MainPath =os.getcwd()
-    # SimDir = os.path.join(MainPath,'OngoingSim')
-    # if not os.path.exists(SimDir):
-    #     os.mkdir(SimDir)
-    filepath = MainPath + '\\CasesFile\\'
-    file2run = initiateprocess(filepath)
-
-    processes = [mp.Process(target=runcase, args=(file2run[i],filepath)) for i in range(len(file2run))]
+def RunMultiProc(file2run,filepath):
+    # nbcpu = mp.cpu_count()
+    # pool = mp.Pool(processes = int(nbcpu)) #let us allow 80% of CPU usage
+    # for i in range(len(file2run)):
+    #     #runcase(file2run[i], filepath)
+    #     pool.apply_async(runcase, args=(file2run[i], filepath))
+    # pool.close()
+    # pool.join()
+    processes = [mp.Process(target=runcase, args=(file2run[i], filepath)) for i in range(len(file2run))]
     for p in processes:
         p.start()
     for p in processes:
         p.join()
 
+if __name__ == '__main__' :
 
-# #then I need to dress a process that for each idf file poresent in the liste subprocess should be launched.
-# #than for each we will be able to organize some calibratiomn process
-# EplusPath = 'C:\\EnergyPlusV9-1-0\\energyplus.exe'
-# WeatherPath = 'C:\\EnergyPlusV9-1-0\\WeatherData\\SWE_Stockholm.Arlanda.024600_IWEC.epw'
-# OutputDir = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\Sim_Results'
-# EPiddPath = 'C:\\EnergyPlusV9-1-0\\Energy+.idd'
-# OutputPrefix = 'run'
-# IDFPath = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\Sim_Results\\in.idf'
-# cmd = [EplusPath, '--weather', WeatherPath, '--output-directory', OutputDir, '--idd', EPiddPath, '--expandobjects', '--output-prefix', OutputPrefix, IDFPath]
-# check_call(cmd, stdout=open(os.devnull, "w"))
+    MainPath =os.getcwd()
+    filepath = MainPath + '\\CaseFiles\\'
+    file2run = initiateprocess(filepath)
+    RunMultiProc(file2run,filepath)

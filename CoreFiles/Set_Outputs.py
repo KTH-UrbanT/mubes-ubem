@@ -140,7 +140,7 @@ def Plot_Outputs(res,idf):
 
     plt.show()
 
-def Read_Outputhtml(idf,CaseName,currentBui):
+def Read_Outputhtml(CaseName):
     #compairons of surfaces
     fname = CaseName+'tbl.htm'
     filehandle = open(fname, 'r',encoding='latin-1').read() # get a file handle to the html file
@@ -151,9 +151,6 @@ def Read_Outputhtml(idf,CaseName,currentBui):
     Res['EPlusNonHeatArea'] = htables[2][1][3][1]
     #Res['EnergyConsKey'] = htables[3][1][0]
     Res['EnergyConsVal'] = htables[3][1][-1]
-    Res['DataBaseArea'] = currentBui.properties['EgenAtemp']
-    Res['NbFloors'] =currentBui.properties['EgenAntalPlan']
-    Res['NbZones'] = len(idf.idfobjects['ZONE'])
     fname = CaseName+'out.end'
     Endsinfo = open(fname, 'r', encoding='latin-1').read()
     return Res, Endsinfo

@@ -10,7 +10,7 @@ def Write2file(val,name):
         for item in val:
             f.write("%s\n" % item)
 
-def BuildData(name,min,max):
+def BuildData(name,path,min,max):
     #we alsways start on midnight
     nbocc = []
     TsetUp =[]
@@ -28,8 +28,8 @@ def BuildData(name,min,max):
             nbocc.append(gives1Val(min,max))
             TsetUp.append(25)
             TsetLo.append(20)
-    Write2file(nbocc,os.path.dirname(os.getcwd()) + '\\InputFiles\\' + name)
-    Write2file(TsetUp,os.path.dirname(os.getcwd()) + '\\InputFiles\\SetPointUp.txt')
-    Write2file(TsetLo,os.path.dirname(os.getcwd()) + '\\InputFiles\\SetPointLo.txt')
+    Write2file(nbocc,path+name)
+    Write2file(TsetUp,path+'SetPointUp.txt')
+    Write2file(TsetLo,path+'SetPointLo.txt')
 
 #BuildData('Test_fichier.txt',0,10)

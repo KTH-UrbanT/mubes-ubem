@@ -1,17 +1,29 @@
 import pickle
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
+import os
+
+
+
+os.chdir(os.getcwd()+'\\Sim_Results')
+liste = os.listdir()
+zone1 = {}
+for i in liste:
+    if '.pickle' in i:
+        with open(i, 'rb') as handle:
+            zone1[int(i[i.index('_')+1:i.index('.')])] = pickle.load(handle)
+
+
 
 signature =True
-
 path1zone = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\Sim_Results\\1zoneperfloor\\'
 path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\Sim_Results\\zone_perim\\'
 #path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\Sim_Results\\1zone_new\\'
-path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\Sim_Results\\'
-path1zone = path
+#path1zone = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\Sim_Results\\'
+path = path1zone
 
-with open(path1zone+'GlobPickle.pickle', 'rb') as handle:
-    zone1 = pickle.load(handle)
+# with open(path1zone+'GlobPickle.pickle', 'rb') as handle:
+#     zone1 = pickle.load(handle)
 with open(path+'GlobPickle.pickle', 'rb') as handle:
     zone2 = pickle.load(handle)
 
@@ -98,11 +110,11 @@ gs = gridspec.GridSpec(4, 1)
 ax0 = plt.subplot(gs[:-1,0])
 ax0.plot(nbbuild,heat1,'s')
 ax0.plot(nbbuild,heat2,'o')
-ax0.plot(nbbuild, EPC_Heat,'x')
+#ax0.plot(nbbuild, EPC_Heat,'x')
 ax0.grid()
 plt.title('Heat (MWh)')
 ax1 = plt.subplot(gs[-1,0])
-ax1.plot(nbbuild, [(heat1[i]-EPC_Heat[i])/EPC_Heat[i]*100 for i in range(len(heat1))],'s')
+#ax1.plot(nbbuild, [(heat1[i]-EPC_Heat[i])/EPC_Heat[i]*100 for i in range(len(heat1))],'s')
 ax1.grid()
 #ax1.title('mono-multi')
 plt.tight_layout()
@@ -113,7 +125,7 @@ gs = gridspec.GridSpec(4, 1)
 ax0 = plt.subplot(gs[:-1,0])
 ax0.plot(nbbuild,cool1,'s')
 ax0.plot(nbbuild,cool2,'o')
-ax0.plot(nbbuild, EPC_Cool,'x')
+#ax0.plot(nbbuild, EPC_Cool,'x')
 ax0.grid()
 plt.title('Cool (MWh)')
 ax1 = plt.subplot(gs[-1,0])
@@ -128,7 +140,7 @@ gs = gridspec.GridSpec(4, 1)
 ax0 = plt.subplot(gs[:-1,0])
 ax0.plot(nbbuild,EPareas1,'s')
 ax0.plot(nbbuild,EPareas2,'o')
-ax0.plot(nbbuild,DBareas,'x')
+#ax0.plot(nbbuild,DBareas,'x')
 ax0.grid()
 plt.title('Areas (m2)')
 ax1 = plt.subplot(gs[-1,0])
@@ -143,12 +155,12 @@ gs = gridspec.GridSpec(4, 1)
 ax0 = plt.subplot(gs[:-1,0])
 ax0.plot(nbbuild,tot1,'s')
 ax0.plot(nbbuild,tot2,'o')
-ax0.plot(nbbuild,EPC_Tot,'x')
-ax0.plot(nbbuild,EnergieTot,'>')
+#ax0.plot(nbbuild,EPC_Tot,'x')
+#ax0.plot(nbbuild,EnergieTot,'>')
 ax0.grid()
 plt.title('Tot (kWh/m2)')
 ax1 = plt.subplot(gs[-1,0])
-ax1.plot(nbbuild, [(tot1[i]-EPC_Tot[i])/EPC_Tot[i]*100 for i in range(len(cool1))],'x')
+#ax1.plot(nbbuild, [(tot1[i]-EPC_Tot[i])/EPC_Tot[i]*100 for i in range(len(cool1))],'x')
 #ax1.plot(nbbuild, [(EPC_Tot[i]-tot2[i])/EPC_Tot[i]*100 for i in range(len(cool1))],'x')
 ax1.grid()
 #ax1.title('mono-multi')
@@ -158,18 +170,18 @@ if signature:
     fig = plt.figure()
     posy = -1
     gs = gridspec.GridSpec(int(len(zone1)**0.5)+1, round(len(zone1)**0.5))
-    for i,key in enumerate(zone2):
+    for i,key in enumerate(zone1):
         posx = i%(int(len(zone1)**0.5)+1) # if i<=int(len(zone1)/2) else int(len(zone1)/2)
         if posx==0:
             posy += 1# i%(round(len(zone1)/2)) #0 if posx<int(len(zone1)/2) else i-posx
         ax0 = plt.subplot(gs[posx, posy])
-        ax0.plot(zone2[key]['OutdoorSite']['Data_Site Outdoor Air Drybulb Temperature'],zone2[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate'],'.')
-        ax0.plot(zone2[key]['OutdoorSite']['Data_Site Outdoor Air Drybulb Temperature'],
-                 zone2[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Cooling Rate'],'.')
-        ax0.plot(zone2[key]['OutdoorSite']['Data_Site Outdoor Air Drybulb Temperature'],
-                 zone2[key]['HeatedArea']['Data_Zone Ideal Loads Heat Recovery Total Heating Rate'],'.')
-        ax0.plot(zone2[key]['OutdoorSite']['Data_Site Outdoor Air Drybulb Temperature'],
-                 zone2[key]['HeatedArea']['Data_Zone Ideal Loads Heat Recovery Total Cooling Rate'],'.')
+        ax0.plot(zone1[key]['OutdoorSite']['Data_Site Outdoor Air Drybulb Temperature'],zone2[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate'],'.')
+        ax0.plot(zone1[key]['OutdoorSite']['Data_Site Outdoor Air Drybulb Temperature'],
+                 zone1[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Cooling Rate'],'.')
+        ax0.plot(zone1[key]['OutdoorSite']['Data_Site Outdoor Air Drybulb Temperature'],
+                 zone1[key]['HeatedArea']['Data_Zone Ideal Loads Heat Recovery Total Heating Rate'],'.')
+        ax0.plot(zone1[key]['OutdoorSite']['Data_Site Outdoor Air Drybulb Temperature'],
+                 zone1[key]['HeatedArea']['Data_Zone Ideal Loads Heat Recovery Total Cooling Rate'],'.')
         plt.title('Building_'+str(key))
 
 plt.show()
