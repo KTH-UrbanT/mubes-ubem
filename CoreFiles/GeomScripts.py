@@ -2,9 +2,6 @@ from geomeppy import geom
 from shapely.geometry import Polygon
 from shapely.ops import cascaded_union
 import CoreFiles.Envelope_Param as Envelope_Param
-import DataBase.DB_Data as DB_Data
-Material = DB_Data.BaseMaterial
-GeomElement = DB_Data.GeomElement
 
 def createBuilding(idf,building,perim):
     coord_b1 = building.footprint
@@ -32,20 +29,26 @@ def createBuilding(idf,building,perim):
     #this function enable to create all the boundary conditions for all surfaces
     idf.intersect_match()
 
+    # this last function on the Geometry is here to split the left non convexe surfaces
+    # if not, some warning are appended because of shading computation. non convex surfaces can impact itself
+    # it should thus be only the roof surfaces. Non convex internal zone are not concerned as Solar distribution is 'FullExterior'
+    split2convex(idf)
+
+def createRapidGeomElem(idf,building):
     #enveloppe can be creates now and allocated to to correct surfaces
     createEnvelope(idf, building)
+
     #create parition walls as recommended in
     #from EP9.2 there is a dedicated construction type (to be tried as well), but 'Fullexeterior' option is still required
     #see https://unmethours.com/question/42542/interior-air-walls-for-splitting-nonconvex-zones/
     # see https://unmethours.com/question/13094/change-all-interior-walls-to-air-walls/
     #see https://unmethours.com/question/41171/constructionairboundary-solar-enclosures-for-grouped-zones-solar-distribution/
     createAirwallsCstr(idf)
+
     #the shading walls aroudn the building are created with the function baloew
     createShadings(building, idf)
-    #this last function on the Geometry is here to split the left non convexe surfaces
-    #if not some warning are appended because of shading computation. non convex surfaces can impact itself
-    #it should thus be only the roof surfaces
-    split2convex(idf)
+
+
 
     return idf
 
@@ -67,7 +70,7 @@ def createEnvelope(idf,building):
     #settings for the materials and constructions
     idf.set_default_constructions()
     #creating the materials, see Envelope_Param for material specifications
-    Envelope_Param.create_Material(idf,Material)
+    Envelope_Param.create_Material(idf,building.Materials)
     #for all construction, see if some other material than default exist
     cstr = idf.idfobjects['CONSTRUCTION']
     mat = idf.idfobjects['MATERIAL']
@@ -135,7 +138,7 @@ def split2convex(idf):
     surlist = idf.idfobjects['BUILDINGSURFACE:DETAILED']
     idxi = []
     for i, j in enumerate(surlist):
-        if j.Outside_Boundary_Condition.lower() == "outdoors" and not('Wall' in j.Construction_Name):
+        if j.Outside_Boundary_Condition.lower() == "outdoors" and not('wall' in j.Surface_Type): #avant c'etait Wall eyt filtre sur construction_name du coup il fallait attirbuer les construction avant et faire le split2convex apres le createenvelope
             roofcoord = j.coords
             coord2split = []
             for nbpt in roofcoord:

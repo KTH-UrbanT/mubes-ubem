@@ -24,10 +24,10 @@ path = path1zone
 
 # with open(path1zone+'GlobPickle.pickle', 'rb') as handle:
 #     zone1 = pickle.load(handle)
-with open(path+'GlobPickle.pickle', 'rb') as handle:
-    zone2 = pickle.load(handle)
+# with open(path+'GlobPickle.pickle', 'rb') as handle:
+#     zone2 = pickle.load(handle)
 
-
+zone2 = zone1
 
 for i,key in enumerate(zone1.keys()):
     if i==0:

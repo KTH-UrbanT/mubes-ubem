@@ -16,7 +16,7 @@ import CoreFiles.csv2tabdelim as csv2tabdelim
 import shutil
 import pickle
 import time
-from DataBase.DB_Building import DB_Build
+from DataBase.DB_Building import Building
 from geomeppy import IDF
 import os
 
@@ -51,31 +51,31 @@ for nbcase in range(len(Buildingsfile)):
 
         # selecting the emty template file
         idf = IDF(epluspath + "ExampleFiles\\Minimal.idf")
-        # location and weather definition
-        Sim_param.Location_and_weather(idf)
-        #Changes in the simulation parameters
-        Sim_param.setSimparam(idf)
 
-        #Geometry related modification
         #creatin of an instance of building class with the available data in the dataBase
-        building = DB_Build('Building'+str(nbcase),Buildingsfile,Shadingsfile,nbcase,MainPath)
+        building = Building('Building'+str(nbcase),Buildingsfile,Shadingsfile,nbcase,MainPath)
         end = time.time()
         print('First step time : '+str(end-start))
+        # location and weather definition
+        Sim_param.Location_and_weather(idf,building)
+        # Changes in the simulation parameters
+        Sim_param.setSimparam(idf)
+
         if not building.height:
             print('Building ',nbcase,' stop, Not enough data to proceed')
 
         else:
             idf.idfname = building.name #'Building '+ str(nbcase)
             start = time.time()
-            GeomScripts.createBuilding(idf,building, perim = False)
+            GeomScripts.createBuilding(idf,building, perim = False) #2functions for the time consumming speration AND stockhastic simulation further
+            GeomScripts.createRapidGeomElem(idf, building)
             end = time.time()
             print('createBuilding time : ' + str(end - start))
 
-
-            #idf.view_model(test=False)
+            idf.view_model(test=False)
             start = time.time()
             #control command related equipment, loads and leaks for each zones
-            Load_and_occupancy.CreateZoneLoadAndCtrl(idf,building)
+            Load_and_occupancy.CreateZoneLoadAndCtrl(idf,building,MainPath)
 
             #ouputs definitions
             Set_Outputs.AddOutputs(idf)
@@ -106,16 +106,16 @@ for nbcase in range(len(Buildingsfile)):
             if letsplot:
                 Set_Outputs.Plot_Outputs(ResEso, idf)
 
-            #read the html file. this options might be cancelled because resultats can be computed form ResEso file
+            #read the html file. this options might be cancelled because results can be computed form ResEso file
             #it is currently sued for debuging to check, integral of time series and computed velues by EP engin
             #like energy consumptions, electric loads, heated and non heated areas.
             #the Endinfo file could be reads and plot elsewhere. it reports number of warning and errors
             start = time.time()
             Res[nbcase], Endinfo = Set_Outputs.Read_Outputhtml(SimDir+'\\'+CaseName)
             #aggregation of specific outputs for printing resume files
-            Res['DataBaseArea'] = building.surface
-            Res['NbFloors'] = building.nb_floor
-            Res['NbZones'] = len(idf.idfobjects['ZONE'])
+            Res[nbcase]['DataBaseArea'] = building.surface
+            Res[nbcase]['NbFloors'] = building.nbfloor
+            Res[nbcase]['NbZones'] = len(idf.idfobjects['ZONE'])
             Res[nbcase]['Year'] = building.year
             Res[nbcase]['Residential'] = building.OccupType['Residential']
             Res[nbcase]['EPCMeters'] = building.EPCMeters

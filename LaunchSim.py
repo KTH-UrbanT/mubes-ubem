@@ -25,7 +25,10 @@ def runcase(file,filepath):
     ResSimpath = os.getcwd()+'\\Sim_Results\\'
     start = time.time()
     with open(filepath+file[:-4]+'.pickle', 'rb') as handle:
-         building = pickle.load(handle)
+         loadB = pickle.load(handle)
+    #idf = loadB['BuildIDF'] #currently the idf object losses some required information...don't know why (inheritances of class and classmtehod... to be investigate
+    #the work around is to read the idf.file
+    building = loadB['BuildData']
     Runfile = filepath + file
     RunDir = filepath + file[:-4]
     print(RunDir)
@@ -81,18 +84,22 @@ def runcase(file,filepath):
 
 
 def RunMultiProc(file2run,filepath):
-    # nbcpu = mp.cpu_count()
-    # pool = mp.Pool(processes = int(nbcpu)) #let us allow 80% of CPU usage
-    # for i in range(len(file2run)):
-    #     #runcase(file2run[i], filepath)
-    #     pool.apply_async(runcase, args=(file2run[i], filepath))
-    # pool.close()
-    # pool.join()
-    processes = [mp.Process(target=runcase, args=(file2run[i], filepath)) for i in range(len(file2run))]
-    for p in processes:
-        p.start()
-    for p in processes:
-        p.join()
+    method1 = True #this is just to maje tries as the method1 seem to block the file saving process after the first shot on each core
+    #thoe other methods works fine BUT it laucnhe all the case so CPU saturation is not the solutions neither
+    if method1:
+        nbcpu = mp.cpu_count()
+        pool = mp.Pool(processes = int(nbcpu)) #let us allow 80% of CPU usage
+        for i in range(len(file2run)):
+             #runcase(file2run[i], filepath)
+             pool.apply_async(runcase, args=(file2run[i], filepath))
+        pool.close()
+        pool.join()
+    else:
+        processes = [mp.Process(target=runcase, args=(file2run[i], filepath)) for i in range(len(file2run))]
+        for p in processes:
+            p.start()
+        for p in processes:
+            p.join()
 
 if __name__ == '__main__' :
 

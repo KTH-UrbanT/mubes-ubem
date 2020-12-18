@@ -1,3 +1,7 @@
+WeatherFile = \
+ {'Loc' : "SWE_Stockholm.Arlanda.024600_IWEC"
+  }
+
 #this dict gives the U value for each type of walls\facade element
 #only one type of element is possible now. if several we should check for boundary layer conditions and the necesseary
 # reversed contruction

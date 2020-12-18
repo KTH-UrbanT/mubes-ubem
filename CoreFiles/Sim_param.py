@@ -21,9 +21,9 @@ def setSimparam(idf):
     timestepobj.Number_of_Timesteps_per_Hour = 4
     return idf
 
-def Location_and_weather(idf):
+def Location_and_weather(idf,building):
     #Weather_file = "USA_CO_Golden-NREL.724666_TMY3.epw"
-    Weather_file = "SWE_Stockholm.Arlanda.024600_IWEC"
+    Weather_file = building.WeatherDataFile
     idf.epw = Weather_file+'.epw'
     location = idf.idfobjects['SITE:LOCATION'][0]   #there might be some way of taking the information from the weather file directly in the idf object...
     location.Name = Weather_file

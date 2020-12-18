@@ -190,7 +190,7 @@ def CreateBasementLeakage(idf, zone, ACH):
 
 
 
-def CreateZoneLoadAndCtrl(idf,building):
+def CreateZoneLoadAndCtrl(idf,building,MainPath):
     # create the schedule type if not created before
     if not (idf.getobject('SCHEDULETYPELIMITS', 'Any Number')):
         Schedule_Type(idf)
@@ -251,7 +251,7 @@ def CreateZoneLoadAndCtrl(idf,building):
                 create_Occupant(idf, zone, 'OccuSchedule'+str(idx), 'OccupActivity', 1)
                 if building.OffOccRandom:
                     #lets create a beta distribution random file for the number of ccupant
-                    pathfile = os.path.dirname(os.getcwd()) + '\\InputFiles\\'
+                    pathfile = MainPath + '\\InputFiles\\'
                     name = building.name + 'nbUsers.txt'
                     ProbGenerator.BuildData(name,pathfile,round(FloorArea*PeopleDensity)/20,round(FloorArea*PeopleDensity))
                     # lets create a schedule file for occupant and the associated file

@@ -1,4 +1,5 @@
 from shapely.geometry import Polygon
+from geomeppy import IDF
 import os
 import DataBase.DB_Data as DB_Data
 DBL = DB_Data.DBLimits
@@ -8,7 +9,7 @@ EPC = DB_Data.EPCMeters
 import re
 #this class defines the building characteristics regarding available data in the geojson file
 
-#function that check if value is out of limits
+#function that checks if value is out of limits
 def checkLim(val, ll, ul):
     if val < ll:
         val = ll
@@ -54,9 +55,25 @@ def findBuildId(Id, Buildingsfile):
             finished = 1
     return height
 
+class BuildingList:
+    def __init__(self):
+        self.building = []
 
+    def addBuilding(self,name,Buildingsfile,Shadingsfile,nbcase,MainPath,epluspath):
+        #idf object is created here
+        IDF.setiddname(epluspath + "Energy+.idd")
+        idf = IDF(epluspath + "ExampleFiles\\Minimal.idf")
+        idf.idfname = name
+        #building object is created here
+        building = Building(name, Buildingsfile, Shadingsfile, nbcase, MainPath)
+        #both are append as dict in the globa studied case list
+        self.building.append({
+            'BuildData' : building,
+            'BuildIDF' : idf,
+        }
+        )
 
-class DB_Build:
+class Building:
 
     def __init__(self,name,Buildingsfile,Shadingsfile,nbcase,MainPath):
         DB = Buildingsfile[nbcase]
@@ -85,6 +102,8 @@ class DB_Build:
         self.OffOccRandom = SCD['OffOccRandom']
         self.setTempUpL =  SCD['setTempUpL']
         self.setTempLoL = SCD['setTempLoL']
+        self.Materials = DB_Data.BaseMaterial
+        self.WeatherDataFile = DB_Data.WeatherFile['Loc']
         #if there are no cooling comsumption, lets considerer a set point at 50deg max
         # for key in self.EPCMeters['Cooling']:
         #     if self.EPCMeters['Cooling'][key]>0:
