@@ -9,6 +9,8 @@ def setSimparam(idf):
     build_param.Solar_Distribution = 'FullExterior' #'FullExteriorWithReflections' #'FullExterior' #'MinimalShadowing' # FullExterior is the most detailed option possible in our case.
     #it computes exteriori shading bu not internal. all the radiation that enters the zones is allocated to the floor
     # https://bigladdersoftware.com/epx/docs/9-1/engineering-reference/shading-module.html#solar-distribution
+    #the one with reflection might not be needed and takes more cumputational time (it worth it for specific radiation propreties of the surroundings surfaces
+    #but these are tekan from default value from now
 
     runperiod = idf.idfobjects['RUNPERIOD'][0]
     runperiod.Begin_Day_of_Month = 1
@@ -16,7 +18,7 @@ def setSimparam(idf):
     runperiod.End_Day_of_Month = 31
     runperiod.End_Month = 12
 
-
+    #time step
     timestepobj = idf.idfobjects['TIMESTEP'][0]
     timestepobj.Number_of_Timesteps_per_Hour = 4
     return idf

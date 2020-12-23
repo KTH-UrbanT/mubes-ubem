@@ -29,7 +29,7 @@ def createBuilding(idf,building,perim):
     #this function enable to create all the boundary conditions for all surfaces
     idf.intersect_match()
 
-    # this last function on the Geometry is here to split the left non convexe surfaces
+    # this last function on the Geometry is here to split the non convexe surfaces
     # if not, some warning are appended because of shading computation. non convex surfaces can impact itself
     # it should thus be only the roof surfaces. Non convex internal zone are not concerned as Solar distribution is 'FullExterior'
     split2convex(idf)
@@ -47,8 +47,6 @@ def createRapidGeomElem(idf,building):
 
     #the shading walls aroudn the building are created with the function baloew
     createShadings(building, idf)
-
-
 
     return idf
 
@@ -75,6 +73,9 @@ def createEnvelope(idf,building):
     cstr = idf.idfobjects['CONSTRUCTION']
     mat = idf.idfobjects['MATERIAL']
     win = idf.idfobjects['WINDOWMATERIAL:SIMPLEGLAZINGSYSTEM']
+    #the paradigm states that the nam of the naterials are the same as the construction
+    #things will have to evolve a bit to integrate several layers wihtin some construction
+    #the loop below assign materials to existing construction (from set_default_construction(), just above)
     for id_cstr in cstr:
         for id_mat in mat:
             if id_mat.Name in id_cstr.Name:
@@ -85,8 +86,10 @@ def createEnvelope(idf,building):
 
     #lets change the construction for some specific zones surfaces, like the link between none heat zone like
     # basement and the above floors
-    # creating the materials, see Envelope_Param for material specifications for seperation with heated and non heated zones
+    # creating the construction, see Envelope_Param for material specifications for seperation with heated and non heated zones
     Envelope_Param.createNewConstruction(idf, 'Project Heated2NonHeated', 'Heated2NonHeated')
+
+    #special loop to assign the consctruction that seperates the basement to the other storeys.
     for idx, zone in enumerate(idf.idfobjects["ZONE"]):
         storey = int(zone.Name[zone.Name.find('Storey')+6:]) #the name ends with Storey # so lest get the storey number this way
         for s in zone.zonesurfaces:
@@ -94,8 +97,11 @@ def createEnvelope(idf,building):
                 s.Construction_Name = 'Project Heated2NonHeated'
             if s.Surface_Type in 'floor' and storey==0:#which mean that we are on the first floors just above basement
                 s.Construction_Name = 'Project Heated2NonHeated'
-    #setting windows on all wall with 25% ratio
+
+    #setting windows on all wall with ratio specified in DB-Database
     idf.set_wwr(building.wwr, construction="Project External Window")
+
+    #used to removed unsued construction (just to limit the warning from EP of unused construction)
     check4UnusedCSTR(idf)
     return idf
 

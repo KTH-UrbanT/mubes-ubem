@@ -13,6 +13,7 @@ import CoreFiles.Set_Outputs as Set_Outputs
 import CoreFiles.Sim_param as Sim_param
 import CoreFiles.Load_and_occupancy as Load_and_occupancy
 import pickle
+import LaunchSim
 import time
 from DataBase.DB_Building import BuildingList
 
@@ -59,6 +60,8 @@ def setOutputLevel(idf):
 
 if __name__ == '__main__' :
 
+#this main is written for validation of the global workflow. and as an example ofr other simulation
+
     MainPath = os.getcwd()
     epluspath = 'C:\\EnergyPlusV9-1-0\\'
     loadedfile = 'C:\\Users\\xav77\\Documents\\FAURE\\DataBase\\Minneberg_Sweref99TM\\Buildings.geojson'
@@ -74,7 +77,7 @@ if __name__ == '__main__' :
     Res = {}
     StudiedCase = BuildingList()
     for nbcase in range(len(Buildingsfile)):
-        #if nbcase==7:
+        if nbcase<14:
             print('Building ', nbcase, '/', len(Buildingsfile), 'process starts')
             CaseName = 'run'
             # erasing all older file from previous simulation if present
@@ -104,5 +107,8 @@ if __name__ == '__main__' :
                 idf.saveas('Building_' + str(nbcase) + '.idf')
                 with open('Building_' + str(nbcase) + '.pickle', 'wb') as handle:
                     pickle.dump(StudiedCase.building[-1], handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    file2run = LaunchSim.initiateprocess(MainPath)
+    LaunchSim.RunMultiProc(file2run, MainPath, multi = True)
 
     sys.path.remove(path2addgeom)
