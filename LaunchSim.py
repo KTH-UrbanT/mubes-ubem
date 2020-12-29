@@ -24,8 +24,8 @@ def initiateprocess(MainPath):
 
 def runcase(file,filepath):
 
-    ResSimpath = filepath+'\\Sim_Results\\'
     filepath = filepath+'\\CaseFiles\\'
+    ResSimpath = filepath + '\\Sim_Results\\'
     if not os.path.exists(ResSimpath):
         os.mkdir(ResSimpath)
     with open(filepath+file[:-4]+'.pickle', 'rb') as handle:
@@ -48,6 +48,7 @@ def runcase(file,filepath):
     # os.mkdir(caseDir)
     # os.chdir(caseDir)
     idf.run(output_prefix=CaseName, verbose='q')
+    #idf.run(readvars=True, output_prefix=CaseName, verbose='q')
 
     # cmd = [epluspath, '--weather', idf.epw, '--output-directory', OutputDir, '--idd', epluspath + "Energy+.idd", '--expandobjects', '--output-prefix', 'Run'+str(nb), file]
     # check_call(cmd, stdout=open(os.devnull, "w"))
@@ -57,6 +58,7 @@ def runcase(file,filepath):
 def savecase(CaseName,RunDir,building,ResSimpath,file,idf,filepath):
     ResEso = Set_Outputs.Read_OutputsEso(RunDir + '\\' + CaseName, ZoneOutput=False)
     Res, Endinfo = Set_Outputs.Read_Outputhtml(RunDir + '\\' + CaseName)
+    #Res['BuildDB'] = building
     Res['DataBaseArea'] = building.surface
     Res['NbFloors'] = building.nbfloor
     Res['NbZones'] = len(idf.idfobjects['ZONE'])
@@ -73,8 +75,10 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,idf,filepath):
             Res[key1]['Unit_' + key2] = ResEso[key1][key2]['Unit']
     #shutil.copyfile(RunDir + '\\' + 'Runout.err', ResSimpath + file[:-4] + '.err')
     #shutil.copyfile(RunDir + '\\' + 'Runtbl.htm', ResSimpath + file[:-4] + '.html')
+    #shutil.copyfile(RunDir + '\\' + 'Runout.csv', ResSimpath + file[:-4] + '.csv')
     with open(ResSimpath + '\\' + file[:-4]+'.pickle', 'wb') as handle:
         pickle.dump(Res, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    #csv2tabdelim.convert(ResSimpath + file[:-4] + '.csv')
     #csv2tabdelim.WriteCSVFile(ResSimpath+'\\'+file[:-4] + '.csv', ResEso)
     #here we should save the results and introduce some calibration
     #maybe using the building object...i don't really know yet
@@ -88,12 +92,12 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,idf,filepath):
 
 
 
-def RunMultiProc(file2run,filepath,multi):
+def RunMultiProc(file2run,filepath,multi,maxcpu):
      #this is just to maje tries as the method1 seem to block the file saving process after the first shot on each core
     #thoe other methods works fine BUT it laucnhe all the case so CPU saturation is not the solutions neither
     if multi:
         nbcpu = mp.cpu_count()
-        pool = mp.Pool(processes = int(nbcpu*4/5)) #let us allow 80% of CPU usage
+        pool = mp.Pool(processes = int(nbcpu*maxcpu)) #let us allow 80% of CPU usage
         for i in range(len(file2run)):
              #runcase(file2run[i], filepath)
              pool.apply_async(runcase, args=(file2run[i], filepath))
@@ -111,4 +115,4 @@ if __name__ == '__main__' :
     MainPath =os.getcwd()
     filepath = MainPath + '\\CaseFiles\\'
     file2run = initiateprocess(filepath)
-    RunMultiProc(file2run,filepath,multi=False)
+    RunMultiProc(file2run,filepath,multi=False,maxcpu = 0.8)

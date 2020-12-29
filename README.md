@@ -8,8 +8,18 @@ EPPY can be installed directly from pip (eppy 0.5.53), see the requirements.txt 
 GeomEppy needs to be taken from https://github.com/xavfa/geomeppy as many changes have be done in order to comply with more complex building footprints.
 Besides, other changes might be also needed as MUBES_UBEM is just at the beginning of its development.
 
-Path for the data base geojson files (buildings and walls) are currently written in hard. These are not part of the suite.
-The file LaunchDataBase.py is the master file that organizes everything.
+## Run simulation case
+the file CaseBuilder.py handles the input file creation and launches the simulation in multicore mode. The % of CPU capacity can be modified in the script.
+The if __name__ == '__main__' (in CaseBuilder.py) gives an example with pathes to geojson files written in hard. These are not part of the suite.
+It highlights were can be introduced specific changes in the building parameters. The paradigme of input files creation rely on a for loop for the moment. Thus, some object's deepcopy should be introduced if ones wants to introduced several cases with same geometry for example.
+Noew folders are created during the process :
+'CaseFile' contains the inputs file of each case to be simulated. a Subfolder 'Sim_Results' will contains pickles files of each run realised (for each input case file).
+During each run, a specific subfoler is created and then removed after its simulation ends.
+Thus, at the end of the full process, the 'CaseFile folder' remains with, for each run, the .idf and .pickles files (EnergyPlus input file and the building object with its parameters form the geojson file).
+A subfolder Sim_Results contains all the results in .pickle file (but .csv are also possible).
+
+Note : The file LaunchDataBase.py is no more usefull even though still present. It will be reoved in future updates.
+
 
 ## Engine structure
 The paradigm of simulation engine is to automate simulation on several different levels :

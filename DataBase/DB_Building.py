@@ -92,6 +92,8 @@ class Building:
         self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB)
         self.OccupType = self.getOccupType(DB)
         self.EnvLeak = SCD['EnvLeak']
+        self.OccupHeatRate = SCD['OccupHeatRate']
+        self.BasementAirLeak= SCD['BasementAirLeak']
         self.IntLoad = self.getIntLoad(MainPath)
         self.nbStairwell = self.getnbStairwell(DB)
         self.Officehours = [SCD['Office_Open'],SCD['Office_Close']]

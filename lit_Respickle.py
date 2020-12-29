@@ -1,11 +1,16 @@
 import pickle
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
-import os
+import os, sys
+#add the required path
+path2addgeom = os.path.dirname(os.getcwd()) + '\\geomeppy'
+#path2addeppy = os.path.dirname(os.getcwd()) + '\\eppy'
+#sys.path.append(path2addeppy)
+sys.path.append(path2addgeom)
+from geomeppy import IDF
 
 
-
-os.chdir(os.getcwd()+'\\Sim_Results')
+os.chdir(os.getcwd()+'\\CaseFiles\\Sim_Results')
 liste = os.listdir()
 zone1 = {}
 for i in liste:
@@ -14,12 +19,8 @@ for i in liste:
             zone1[int(i[i.index('_')+1:i.index('.')])] = pickle.load(handle)
 
 
-
 signature =True
-path1zone = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\Sim_Results\\1zoneperfloor\\'
-path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\Sim_Results\\zone_perim\\'
-#path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\Sim_Results\\1zone_new\\'
-#path1zone = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\Sim_Results\\'
+path1zone = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles\\Sim_Results\\'
 path = path1zone
 
 # with open(path1zone+'GlobPickle.pickle', 'rb') as handle:

@@ -59,9 +59,8 @@ def setOutputLevel(idf):
 
 
 if __name__ == '__main__' :
-
-#this main is written for validation of the global workflow. and as an example ofr other simulation
-
+#this main is written for validation of the global workflow. and as an example for other simulation
+#the cases are build in a for loop and then all cases are launched in a multiprocess mode, the maximum %of cpu is given as input
     MainPath = os.getcwd()
     epluspath = 'C:\\EnergyPlusV9-1-0\\'
     loadedfile = 'C:\\Users\\xav77\\Documents\\FAURE\\DataBase\\Minneberg_Sweref99TM\\Buildings.geojson'
@@ -75,9 +74,13 @@ if __name__ == '__main__' :
     os.chdir(SimDir)
 
     Res = {}
+    #this will be the final list of studied cases : list of objects stored in a dict . idf key for idf object and building key for building database object
+    #even though this approache might be not finally needed as I didnt manage to save full object in a pickle and reload it for launching.
+    #see LaunchSim.runcase()
+    #theretheless this organization still enable to order things !
     StudiedCase = BuildingList()
     for nbcase in range(len(Buildingsfile)):
-        if nbcase<14:
+        #if nbcase==19:
             print('Building ', nbcase, '/', len(Buildingsfile), 'process starts')
             CaseName = 'run'
             # erasing all older file from previous simulation if present
@@ -109,6 +112,6 @@ if __name__ == '__main__' :
                     pickle.dump(StudiedCase.building[-1], handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     file2run = LaunchSim.initiateprocess(MainPath)
-    LaunchSim.RunMultiProc(file2run, MainPath, multi = True)
+    LaunchSim.RunMultiProc(file2run, MainPath, multi = True, maxcpu = 0.8)
 
     sys.path.remove(path2addgeom)

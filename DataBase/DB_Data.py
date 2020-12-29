@@ -29,9 +29,11 @@ BasisElement = \
 {'Office_Open': '08:00',                   'Office_Close': '18:00',
  'DemandControlledVentilation' : True,
  'OccupBasedFlowRate': 7,  # l/s/person
+ 'OccupHeatRate' : 1, #W per person
  'EnvLeak': 0.8,# l/s/m2 at 50Pa
+ 'BasementAirLeak': 0.1, #in Air change rate [vol/hour]
  'WindowWallRatio': 0.15,
- 'OffOccRandom' : True,
+ 'OffOccRandom' : False,
  'setTempUpL' : 25,
  'setTempLoL' : 21,
  }
