@@ -120,6 +120,7 @@ for nbcase in range(len(Buildingsfile)):
             Res[nbcase]['Residential'] = building.OccupType['Residential']
             Res[nbcase]['EPCMeters'] = building.EPCMeters
             Res[nbcase]['EPHeatArea'] = building.EPHeatedArea
+            Res[nbcase]['EnvLeak'] = building.EnvLeak
             #avoiding the two stage dictionnary for csv wrinting purposes. could be ignore if different csv are neede
             for key1 in ResEso:
                 #if not 'Environ' in key1:

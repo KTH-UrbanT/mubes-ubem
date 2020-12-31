@@ -94,7 +94,6 @@ class Building:
         self.EnvLeak = SCD['EnvLeak']
         self.OccupHeatRate = SCD['OccupHeatRate']
         self.BasementAirLeak= SCD['BasementAirLeak']
-        self.IntLoad = self.getIntLoad(MainPath)
         self.nbStairwell = self.getnbStairwell(DB)
         self.Officehours = [SCD['Office_Open'],SCD['Office_Close']]
         self.DCV = SCD['DemandControlledVentilation']
@@ -106,12 +105,13 @@ class Building:
         self.setTempLoL = SCD['setTempLoL']
         self.Materials = DB_Data.BaseMaterial
         self.WeatherDataFile = DB_Data.WeatherFile['Loc']
+        self.IntLoad = self.getIntLoad(MainPath)
         #if there are no cooling comsumption, lets considerer a set point at 50deg max
-        # for key in self.EPCMeters['Cooling']:
-        #     if self.EPCMeters['Cooling'][key]>0:
-        #         self.setTempUpL = SCD['setTempUpL']
-        #     else:
-        #         self.setTempUpL = 50
+        for key in self.EPCMeters['Cooling']:
+            if self.EPCMeters['Cooling'][key]>0:
+                self.setTempUpL = SCD['setTempUpL']
+            else:
+                self.setTempUpL = 50
 
     def getRefCoord(self,DB):
         x = DB.geometry.coordinates[0][0][0]
@@ -285,4 +285,9 @@ class Building:
         #we should integrate the loads depending on the number of appartemnent in the building
         files_path = os.path.join(MainPath,'InputFiles')+'\\P_Mean_over_10.txt'
         IntLoad = files_path
+        eleval = 0
+        for x in self.EPCMeters['ElecLoad']:
+            if self.EPCMeters['ElecLoad'][x]:
+                eleval += self.EPCMeters['ElecLoad'][x]*1000/8760 #division by number of hours to convert Wh into W
+        IntLoad = eleval/self.EPHeatedArea #this value is thus in W/m2
         return IntLoad

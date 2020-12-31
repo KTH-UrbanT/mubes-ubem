@@ -73,7 +73,7 @@ def create_Occupant(idf, zone, OccScheduleName, ActScheduleName,NbPeople):
         )
     return idf
 
-def ZoneLoad(idf, zone, LoadSchedule):
+def ZoneLoad(idf, zone, LoadSchedule, building, isfile):
     floors_surf = [s for s in zone.zonesurfaces if s.Surface_Type in 'floor']
     floor_area = floors_surf[0].area
     #the profil are considered as for 100m2. thus the designlevel is considering this
@@ -83,7 +83,9 @@ def ZoneLoad(idf, zone, LoadSchedule):
         Name = zone.Name+'Load',
         Zone_or_ZoneList_Name = zone.Name,
         Schedule_Name = LoadSchedule,
-        Design_Level = floor_area/100, #is a multiplier. this means that the file value will be the full zone's load in W
+        Design_Level_Calculation_Method = 'Watts/Area',
+        #Design_Level = floor_area/100 if isfile else building.IntLoad, #is a multiplier. this means that the file value will be the full zone's load in W
+        Watts_per_Zone_Floor_Area = 1/100 if isfile else building.IntLoad
         )
     return idf
 
@@ -182,8 +184,16 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
     # create the schedule type if not created before
     if not (idf.getobject('SCHEDULETYPELIMITS', 'Any Number')):
         Schedule_Type(idf)
-    # create the Schedule with the input file for the Load (same for all zones) as function of zone area afterard
-    create_ScheduleFile(idf, 'LoadSchedule', building.IntLoad)
+    # create the Schedule with the input file for the Load (same for all zones) as function of zone area afterward
+    #if the building.Intload is a path to a file, then the schedule file needs to be define, but if some constant value
+    # is needed, then there is no need for this schedule and a constant unity schedule instead (let us use the leakcge schedule defined below)
+    # the constant load will be dealed afterward in the ZoneLoad function with isfile variable
+    try:
+        os.path.isfile(building.IntLoad)
+        create_ScheduleFile(idf, 'LoadSchedule', building.IntLoad)
+        isfile = True
+    except TypeError:
+        isfile = False
     # we need a schedule for the infiltration rates in each zone. there will a unique one
     # the set point is 1 (multiplayer)
     ScheduleCompact(idf, 'EnvLeakage', 1)
@@ -258,7 +268,7 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
                     ScheduleCompactOccup(idf, 'OccuSchedule'+str(idx), building, SetPoint=round(FloorArea*max(PeopleDensity)))
                     OfficeTypeZone = 0 #this just to give the correct thermostat type to the ZoneCtrl function below.
             # Internal load profile could be taken from the number of appartement. see building.IntLoad in DB_Building
-            ZoneLoad(idf, zone, 'LoadSchedule')
+            ZoneLoad(idf, zone,'LoadSchedule' if isfile else 'EnvLeakage' ,building, isfile)
             # HVAC equipment for each zone including ventilation systems (exhaust, balanced with or not heat recovery)
             ThermostatType = 'ResidZone'  if OfficeTypeZone==0 else 'OfficeZone'+ str(idx)
             ZoneCtrl(idf, zone, building, max(PeopleDensity),ThermostatType)

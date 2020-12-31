@@ -66,6 +66,7 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,idf,filepath):
     Res['Residential'] = building.OccupType['Residential']
     Res['EPCMeters'] = building.EPCMeters
     Res['EPHeatArea'] = building.EPHeatedArea
+    Res['EnvLeak'] = building.EnvLeak
     for key1 in ResEso:
         # if not 'Environ' in key1:
         Res[key1] = {}

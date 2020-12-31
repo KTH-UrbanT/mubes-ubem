@@ -14,8 +14,10 @@ import CoreFiles.Sim_param as Sim_param
 import CoreFiles.Load_and_occupancy as Load_and_occupancy
 import pickle
 import LaunchSim
-import time
+import copy
 from DataBase.DB_Building import BuildingList
+from SALib.sample import latin
+from SALib.util import read_param_file
 
 
 def appendBuildCase(StudiedCase,epluspath,nbcase,Buildingsfile,Shadingsfile,MainPath):
@@ -76,43 +78,46 @@ if __name__ == '__main__' :
         os.mkdir(SimDir)
     os.chdir(SimDir)
 
+    problem = {}
+    problem['names'] = 'EnvelopeLeakage'
+    problem['bounds'] = [[0.4,4]]
+    problem['num_vars'] = 1
+    #problem = read_param_file(MainPath+'\\liste_param.txt')
+    EnvelopeLeak = latin.sample(problem,100)
+
     Res = {}
     #this will be the final list of studied cases : list of objects stored in a dict . idf key for idf object and building key for building database object
     #even though this approache might be not finally needed as I didnt manage to save full object in a pickle and reload it for launching.
     #see LaunchSim.runcase()
     #theretheless this organization still enable to order things !
     StudiedCase = BuildingList()
-    for nbcase in range(len(Buildingsfile)):
-        #if nbcase==7:
-            print('Building ', nbcase, '/', len(Buildingsfile), 'process starts')
-            CaseName = 'run'
-            # erasing all older file from previous simulation if present
-            for file in os.listdir():
-                if CaseName in file[0:len(CaseName)]:
-                    #print('Removing', file, ' from folder')
-                    os.remove(file)
-            idf, building = appendBuildCase(StudiedCase,epluspath,nbcase,Buildingsfile,Shadingsfile,MainPath)
-            #if the building does not have any hieght given by the databse, we skip it
-            if not building.height:
-                print('Building ',nbcase,' stop, Not enough data to proceed')
-            else:
-                #change on the building __init__ class in the simulation level should be done here
-                setSimLevel(idf, building)
-                # change on the building __init__ class in the building level should be done here
-                setBuildingLevel(idf, building)
-                #change on the building __init__ class in the envelope level should be done here
-                setEnvelopeLevel(idf, building)
-                #to have a matplotlib pop up windows of each instance : uncomment the line below
-                #idf.view_model(test=False)
-                #change on the building __init__ class in the zone level should be done here
-                setZoneLevel(idf, building,MainPath)
+    #choice of the building ofr which we're making probabilistic simulations
+    nbcase = 7
+    CaseName = 'run'
+    idf_ref, building_ref = appendBuildCase(StudiedCase, epluspath, nbcase, Buildingsfile, Shadingsfile, MainPath)
+    # change on the building __init__ class in the simulation level should be done here
+    setSimLevel(idf_ref, building_ref)
+    # change on the building __init__ class in the building level should be done here
+    setBuildingLevel(idf_ref, building_ref)
+    # change on the building __init__ class in the envelope level should be done here
+    setEnvelopeLevel(idf_ref, building_ref)
+    #now lets build as many case as there are value in the sampling done earlier
 
-                setOutputLevel(idf)
-
-                # saving files and objects
-                idf.saveas('Building_' + str(nbcase) + '.idf')
-                with open('Building_' + str(nbcase) + '.pickle', 'wb') as handle:
-                    pickle.dump(StudiedCase.building[-1], handle, protocol=pickle.HIGHEST_PROTOCOL)
+    for i,val in enumerate(EnvelopeLeak):
+        idf = copy.deepcopy(idf_ref)
+        building = copy.deepcopy(building_ref)
+        Case={}
+        Case['BuildIDF'] = idf
+        Case['BuildData'] = building
+        print('Building ', i, '/', len(EnvelopeLeak), 'process starts')
+        building.EnvLeak = EnvelopeLeak[i][0]
+        #change on the building __init__ class in the zone level should be done here
+        setZoneLevel(idf, building,MainPath)
+        setOutputLevel(idf)
+        # saving files and objects
+        idf.saveas('Building_' + str(nbcase) +  'v'+str(i)+'.idf')
+        with open('Building_' + str(nbcase) +  'v'+str(i)+ '.pickle', 'wb') as handle:
+            pickle.dump(Case, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
     RunProcess(MainPath)
