@@ -8,6 +8,7 @@ import CoreFiles.Set_Outputs as Set_Outputs
 import CoreFiles.csv2tabdelim as csv2tabdelim
 from subprocess import check_call
 
+
 path2addgeom = os.path.dirname(os.getcwd()) + '\\geomeppy'
 sys.path.append(path2addgeom)
 from geomeppy import IDF
@@ -58,15 +59,15 @@ def runcase(file,filepath):
 def savecase(CaseName,RunDir,building,ResSimpath,file,idf,filepath):
     ResEso = Set_Outputs.Read_OutputsEso(RunDir + '\\' + CaseName, ZoneOutput=False)
     Res, Endinfo = Set_Outputs.Read_Outputhtml(RunDir + '\\' + CaseName)
-    #Res['BuildDB'] = building
-    Res['DataBaseArea'] = building.surface
-    Res['NbFloors'] = building.nbfloor
+    Res['BuildDB'] = building
+    # Res['DataBaseArea'] = building.surface
+    # Res['NbFloors'] = building.nbfloor
     Res['NbZones'] = len(idf.idfobjects['ZONE'])
-    Res['Year'] = building.year
-    Res['Residential'] = building.OccupType['Residential']
-    Res['EPCMeters'] = building.EPCMeters
-    Res['EPHeatArea'] = building.EPHeatedArea
-    Res['EnvLeak'] = building.EnvLeak
+    # Res['Year'] = building.year
+    # Res['Residential'] = building.OccupType['Residential']
+    # Res['EPCMeters'] = building.EPCMeters
+    # Res['EPHeatArea'] = building.EPHeatedArea
+    # Res['EnvLeak'] = building.EnvLeak
     for key1 in ResEso:
         # if not 'Environ' in key1:
         Res[key1] = {}
@@ -87,15 +88,16 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,idf,filepath):
     #let us delete the remainning files
 
     os.chdir(filepath)
-    for i in os.listdir(RunDir):
-       os.remove(RunDir+'\\'+i)
-    os.rmdir(RunDir)  # Now the directory is empty of files
+    # for i in os.listdir(RunDir):
+    #    os.remove(RunDir+'\\'+i)
+    # os.rmdir(RunDir)  # Now the directory is empty of files
 
 
 
 def RunMultiProc(file2run,filepath,multi,maxcpu):
      #this is just to maje tries as the method1 seem to block the file saving process after the first shot on each core
     #thoe other methods works fine BUT it laucnhe all the case so CPU saturation is not the solutions neither
+    print('Launching cases :')
     if multi:
         nbcpu = mp.cpu_count()
         pool = mp.Pool(processes = int(nbcpu*maxcpu)) #let us allow 80% of CPU usage
@@ -110,10 +112,14 @@ def RunMultiProc(file2run,filepath,multi,maxcpu):
             p.start()
         for p in processes:
             p.join()
+    print('Done with this one !')
 
-if __name__ == '__main__' :
-
-    MainPath =os.getcwd()
+def main():
+    MainPath = os.getcwd()
     filepath = MainPath + '\\CaseFiles\\'
     file2run = initiateprocess(filepath)
-    RunMultiProc(file2run,filepath,multi=False,maxcpu = 0.8)
+    RunMultiProc(file2run, filepath, multi=True, maxcpu=0.8)
+
+if __name__ == '__main__' :
+    main()
+

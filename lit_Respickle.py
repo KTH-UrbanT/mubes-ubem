@@ -11,8 +11,8 @@ from geomeppy import IDF
 
 
 signature =False
-path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles\\Sim_Results\\'
-path1zone = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles1zone1W\\Sim_Results\\'
+path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFilesMultiZone\\Sim_Results\\'
+path1zone = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles1zoneperstorey\\Sim_Results\\'
 
 os.chdir(path1zone)
 liste = os.listdir()
@@ -44,6 +44,7 @@ for i,key in enumerate(zone1.keys()):
                 break
 
 
+
 elec1 = []
 elec2 = []
 heat1 = []
@@ -62,7 +63,8 @@ EPareas1 =[]
 EPareas2 =[]
 DBareas = []
 EnergieTot = []
-for i,key in enumerate(zone2):
+for i,key in enumerate(zone1):
+    Ref_Area = zone1[key]['EPlusHeatArea'] #zone1[key]['DataBaseArea']  #
     elec1.append(zone1[key]['EnergyConsVal'][1]/3.6/zone1[key]['EPlusHeatArea']*1000) #convert GJ in kWh/m2
     elec2.append(zone2[key]['EnergyConsVal'][1]/3.6/zone2[key]['EPlusHeatArea']*1000)
     cool1.append(zone1[key]['EnergyConsVal'][4]/3.6/zone1[key]['EPlusHeatArea']*1000)
@@ -75,16 +77,16 @@ for i,key in enumerate(zone2):
     for x in zone1[key]['EPCMeters']['ElecLoad']:
         if zone1[key]['EPCMeters']['ElecLoad'][x]:
             eleval += zone1[key]['EPCMeters']['ElecLoad'][x]
-    EPC_elec.append(eleval/zone2[key]['EPlusHeatArea'])
+    EPC_elec.append(eleval/Ref_Area)
     heatval = 0
     for x in zone1[key]['EPCMeters']['Heating']:
         heatval += zone1[key]['EPCMeters']['Heating'][x]
-    EPC_Heat.append(heatval/zone2[key]['EPlusHeatArea'])
+    EPC_Heat.append(heatval/Ref_Area)
     coolval = 0
     for x in zone1[key]['EPCMeters']['Cooling']:
         coolval += zone1[key]['EPCMeters']['Cooling'][x]
     EPC_Cool.append(coolval/zone2[key]['EPlusHeatArea'])
-    EPC_Tot.append((eleval+heatval+coolval)/zone2[key]['EPlusHeatArea'])
+    EPC_Tot.append((eleval+heatval+coolval)/Ref_Area)
     EPareas1.append(zone1[key]['EPlusHeatArea'])
     EPareas2.append(zone2[key]['EPlusHeatArea'])
     DBareas.append(zone1[key]['DataBaseArea'])
@@ -98,13 +100,15 @@ for i,key in enumerate(zone2):
 fig =plt.figure(0)
 gs = gridspec.GridSpec(4, 1)
 ax0 = plt.subplot(gs[:-1,0])
-ax0.plot(nbbuild,elec1,'s')
-ax0.plot(nbbuild,elec2,'o')
-ax0.plot(nbbuild, EPC_elec,'x')
+ax0.plot(nbbuild,elec1,'s', label= 'Elec1')
+ax0.plot(nbbuild,elec2,'o', label = 'Elec2')
+ax0.plot(nbbuild, EPC_elec,'x', label = 'EPC')
 ax0.grid()
+ax0.legend()
 plt.title('Elec_Load (kWh\m2)')
 ax1 = plt.subplot(gs[-1,0])
-ax1.plot(nbbuild, [(heat1[i]-EPC_elec[i])/EPC_elec[i]*100 for i in range(len(heat1))],'x')
+ax1.plot(nbbuild, [(elec1[i]-EPC_elec[i])/EPC_elec[i]*100 for i in range(len(heat1))],'x', label = '(Elec1-EPC)\EPC (%)')
+ax1.legend()
 ax1.grid()
 #ax1.title('mono-multi')
 plt.tight_layout()
@@ -112,14 +116,16 @@ plt.tight_layout()
 fig1 =plt.figure()
 gs = gridspec.GridSpec(4, 1)
 ax0 = plt.subplot(gs[:-1,0])
-ax0.plot(nbbuild,heat1,'s')
-ax0.plot(nbbuild,heat2,'o')
-ax0.plot(nbbuild, EPC_Heat,'x')
+ax0.plot(nbbuild,heat1,'s', label= 'Heat1')
+ax0.plot(nbbuild,heat2,'o', label= 'Heat2')
+ax0.plot(nbbuild, EPC_Heat,'x', label= 'EPC')
 ax0.grid()
+ax0.legend()
 plt.title('Heat (kWh\m2)')
 ax1 = plt.subplot(gs[-1,0])
-ax1.plot(nbbuild, [(heat1[i]-EPC_Heat[i])/EPC_Heat[i]*100 for i in range(len(heat1))],'s')
+ax1.plot(nbbuild, [(heat1[i]-EPC_Heat[i])/EPC_Heat[i]*100 for i in range(len(heat1))],'s', label = '(Heat1-EPC)\EPC (%)')
 ax1.grid()
+ax1.legend()
 #ax1.title('mono-multi')
 plt.tight_layout()
 
@@ -127,14 +133,16 @@ plt.tight_layout()
 fig2 =plt.figure()
 gs = gridspec.GridSpec(4, 1)
 ax0 = plt.subplot(gs[:-1,0])
-ax0.plot(nbbuild,cool1,'s')
-ax0.plot(nbbuild,cool2,'o')
-ax0.plot(nbbuild, EPC_Cool,'x')
+ax0.plot(nbbuild,cool1,'s', label= 'Cool1')
+ax0.plot(nbbuild,cool2,'o', label= 'Cool2')
+ax0.plot(nbbuild, EPC_Cool,'x', label= 'EPC')
 ax0.grid()
+ax0.legend()
 plt.title('Cool (kWh\m2)')
 ax1 = plt.subplot(gs[-1,0])
 #ax1.plot(nbbuild, [(cool1[i]-EPC_Cool[i])/cool1[i]*100 for i in range(len(cool1))],'s')
 ax1.grid()
+ax1.legend()
 #ax1.title('mono-multi')
 plt.tight_layout()
 
@@ -142,31 +150,35 @@ plt.tight_layout()
 fig3 =plt.figure()
 gs = gridspec.GridSpec(4, 1)
 ax0 = plt.subplot(gs[:-1,0])
-ax0.plot(nbbuild,EPareas1,'s')
-ax0.plot(nbbuild,EPareas2,'o')
-ax0.plot(nbbuild,DBareas,'x')
+ax0.plot(nbbuild,EPareas1,'s', label= 'Area1')
+ax0.plot(nbbuild,EPareas2,'o', label= 'Area2')
+ax0.plot(nbbuild,DBareas,'x', label= 'DataBase ATemp')
 ax0.grid()
+ax0.legend()
 plt.title('Areas (m2)')
 ax1 = plt.subplot(gs[-1,0])
-ax1.plot(nbbuild, [(EPareas1[i]-DBareas[i])/EPareas1[i]*100 for i in range(len(EPareas1))],'s')
-ax1.plot(nbbuild, [(EPareas2[i]-DBareas[i])/EPareas2[i]*100 for i in range(len(EPareas1))],'x')
+ax1.plot(nbbuild, [(EPareas1[i]-DBareas[i])/EPareas1[i]*100 for i in range(len(EPareas1))],'s', label= '(EPAera-Atemp)/EPArea (%)')
+#ax1.plot(nbbuild, [(EPareas2[i]-DBareas[i])/EPareas2[i]*100 for i in range(len(EPareas1))],'x')
 ax1.grid()
+ax1.legend()
 #ax1.title('mono-multi')
 plt.tight_layout()
 
 fig4 = plt.figure()
 gs = gridspec.GridSpec(4, 1)
 ax0 = plt.subplot(gs[:-1,0])
-ax0.plot(nbbuild,tot1,'s')
-ax0.plot(nbbuild,tot2,'o')
-ax0.plot(nbbuild,EPC_Tot,'x')
+ax0.plot(nbbuild,tot1,'s', label= 'Tot1')
+ax0.plot(nbbuild,tot2,'o', label= 'Tot2')
+ax0.plot(nbbuild,EPC_Tot,'x', label= 'EPC')
 #ax0.plot(nbbuild,EnergieTot,'>')
 ax0.grid()
+ax0.legend()
 plt.title('Tot (kWh/m2)')
 ax1 = plt.subplot(gs[-1,0])
-ax1.plot(nbbuild, [(tot1[i]-tot2[i])/tot2[i]*100 for i in range(len(cool1))],'x')
-ax1.plot(nbbuild, [(EPC_Tot[i]-tot2[i])/EPC_Tot[i]*100 for i in range(len(cool1))],'x')
+ax1.plot(nbbuild, [(tot1[i]-tot2[i])/tot2[i]*100 for i in range(len(cool1))],'x', label= '(Tot1-Tot2)/Tot2 (%)')
+ax1.plot(nbbuild, [(EPC_Tot[i]-tot1[i])/EPC_Tot[i]*100 for i in range(len(cool1))],'x', label= '(EPC-Tot1)/EPC (%)')
 ax1.grid()
+ax1.legend()
 #ax1.title('mono-multi')
 plt.tight_layout()
 

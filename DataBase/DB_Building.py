@@ -87,6 +87,7 @@ class Building:
         self.EPCMeters = self.getEPCMeters(DB)
         self.nbAppartments = self.getnbAppartments(DB)
         self.height = self.getheight(DB)
+        self.MaxShadingDist = GE['MaxShadingDist']
         self.shades = self.getshade(DB,Shadingsfile,Buildingsfile)
         self.VentSyst = self.getVentSyst(DB)
         self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB)
@@ -104,6 +105,7 @@ class Building:
         self.setTempUpL =  SCD['setTempUpL']
         self.setTempLoL = SCD['setTempLoL']
         self.Materials = DB_Data.BaseMaterial
+        self.MaterialsNew = DB_Data.BaseMaterialNew
         self.WeatherDataFile = DB_Data.WeatherFile['Loc']
         self.IntLoad = self.getIntLoad(MainPath)
         #if there are no cooling comsumption, lets considerer a set point at 50deg max
@@ -240,7 +242,7 @@ class Building:
             dist = (abs(meanPx - coordx) ** 2 + abs(meanPy - coordy) ** 2) ** 0.5
 
             # shading facade are taken into account only of closer than 200m
-            if dist <= GE['MaxShadingDist']:
+            if dist <= self.MaxShadingDist:
                 try:
                     float(ShadeWall['height'])
                 except:

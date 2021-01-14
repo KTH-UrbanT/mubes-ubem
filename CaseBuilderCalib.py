@@ -5,6 +5,8 @@ path2addgeom = os.path.dirname(os.getcwd()) + '\\geomeppy'
 #path2addeppy = os.path.dirname(os.getcwd()) + '\\eppy'
 #sys.path.append(path2addeppy)
 sys.path.append(path2addgeom)
+# from multiprocessing import set_start_method
+# set_start_method("spawn")
 
 #add needed packages
 import pygeoj
@@ -18,6 +20,24 @@ import copy
 from DataBase.DB_Building import BuildingList
 from SALib.sample import latin
 from SALib.util import read_param_file
+import multiprocessing as mp
+
+__saved_context__ = {}
+
+def saveContext():
+    import sys
+    __saved_context__.update(sys.modules[__name__].__dict__)
+
+def restoreContext():
+    import sys
+    toremove = []
+    names = sys.modules[__name__].__dict__.keys()
+    for n in names:
+        if n not in __saved_context__:
+            toremove.append(n)
+    for i in toremove:
+        del sys.modules[__name__].__dict__[i]
+
 
 
 def appendBuildCase(StudiedCase,epluspath,nbcase,Buildingsfile,Shadingsfile,MainPath):
@@ -61,9 +81,9 @@ def setOutputLevel(idf):
 
 def RunProcess(MainPath):
     file2run = LaunchSim.initiateprocess(MainPath)
-    LaunchSim.RunMultiProc(file2run, MainPath, multi=True, maxcpu=0.8)
+    LaunchSim.RunMultiProc(file2run, MainPath, multi=True, maxcpu=0.7)
 
-if __name__ == '__main__' :
+def LaunchProcess(nbcase):
 #this main is written for validation of the global workflow. and as an example for other simulation
 #the cases are build in a for loop and then all cases are launched in a multiprocess mode, the maximum %of cpu is given as input
     MainPath = os.getcwd()
@@ -73,17 +93,26 @@ if __name__ == '__main__' :
     loadedfile = 'C:\\Users\\xav77\\Documents\\FAURE\\DataBase\\Minneberg_Sweref99TM\\Walls.geojson'
     Shadingsfile = pygeoj.load(loadedfile)
 
-    SimDir = os.path.join(os.getcwd(),'CaseFiles')
+    SimDir = os.path.join(os.getcwd(), 'CaseFiles')
     if not os.path.exists(SimDir):
         os.mkdir(SimDir)
+    else:
+        for i in os.listdir(SimDir):
+            if os.path.isdir(SimDir + '\\' + i):
+                for j in os.listdir(SimDir + '\\' + i):
+                    os.remove(SimDir + '\\' + i + '\\' + j)
+                os.rmdir(SimDir + '\\' + i)
+            else:
+                os.remove(SimDir + '\\' + i)
+    # os.rmdir(RunDir)  # Now the directory is empty of files
     os.chdir(SimDir)
 
     problem = {}
-    problem['names'] = 'EnvelopeLeakage'
-    problem['bounds'] = [[0.4,4]]
-    problem['num_vars'] = 1
+    problem['names'] = ['EnvLEak','WWR'] #'EnvelopeLeakage']#,
+    problem['bounds'] = [[0.2,2],[0.1,0.9]]#,
+    problem['num_vars'] = 2
     #problem = read_param_file(MainPath+'\\liste_param.txt')
-    EnvelopeLeak = latin.sample(problem,100)
+    Param = latin.sample(problem,2)
 
     Res = {}
     #this will be the final list of studied cases : list of objects stored in a dict . idf key for idf object and building key for building database object
@@ -92,25 +121,29 @@ if __name__ == '__main__' :
     #theretheless this organization still enable to order things !
     StudiedCase = BuildingList()
     #choice of the building ofr which we're making probabilistic simulations
-    nbcase = 7
+
     CaseName = 'run'
     idf_ref, building_ref = appendBuildCase(StudiedCase, epluspath, nbcase, Buildingsfile, Shadingsfile, MainPath)
     # change on the building __init__ class in the simulation level should be done here
     setSimLevel(idf_ref, building_ref)
     # change on the building __init__ class in the building level should be done here
     setBuildingLevel(idf_ref, building_ref)
-    # change on the building __init__ class in the envelope level should be done here
-    setEnvelopeLevel(idf_ref, building_ref)
-    #now lets build as many case as there are value in the sampling done earlier
 
-    for i,val in enumerate(EnvelopeLeak):
+
+    #now lets build as many case as there are value in the sampling done earlier
+    for i,val in enumerate(Param):
         idf = copy.deepcopy(idf_ref)
         building = copy.deepcopy(building_ref)
         Case={}
         Case['BuildIDF'] = idf
         Case['BuildData'] = building
-        print('Building ', i, '/', len(EnvelopeLeak), 'process starts')
-        building.EnvLeak = EnvelopeLeak[i][0]
+        print('Building ', i, '/', len(Param), 'process starts')
+        building.EnvLeak = val[0]
+        building.wwr = val[1]
+        #building.MaxShadingDist = val[0]
+        #building.shades = building.getshade(Buildingsfile[nbcase], Shadingsfile, Buildingsfile)
+        # change on the building __init__ class in the envelope level should be done here
+        setEnvelopeLevel(idf, building)
         #change on the building __init__ class in the zone level should be done here
         setZoneLevel(idf, building,MainPath)
         setOutputLevel(idf)
@@ -119,6 +152,13 @@ if __name__ == '__main__' :
         with open('Building_' + str(nbcase) +  'v'+str(i)+ '.pickle', 'wb') as handle:
             pickle.dump(Case, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-
     RunProcess(MainPath)
     sys.path.remove(path2addgeom)
+    os.chdir(MainPath)
+
+if __name__ == '__main__' :
+    #saveContext()
+    for i in [13]:#range(9,28):
+        LaunchProcess(i)
+        os.rename(os.path.join(os.getcwd(), 'CaseFiles'), os.path.join(os.getcwd(), 'CaseFiles'+str(i)))
+        #restoreContext()

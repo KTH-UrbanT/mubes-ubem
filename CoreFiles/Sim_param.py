@@ -46,3 +46,6 @@ def Location_and_weather(idf,building):
     ground_Temp.November_Ground_Temperature = 15
     ground_Temp.December_Ground_Temperature = 15
     return idf
+
+if __name__ == '__main__' :
+    print('Sim_Param Main')

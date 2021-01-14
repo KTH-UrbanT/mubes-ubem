@@ -27,6 +27,27 @@ def create_MaterialObject(idf, Name, ep, U ):
         )
     return idf
 
+def create_MaterialObjectNew(idf, Name, Material):
+    if 'Window' in Name:
+        idf.newidfobject(
+            'WINDOWMATERIAL:SIMPLEGLAZINGSYSTEM',
+            Name=Name,
+            UFactor=Material['UFactor'],
+            Solar_Heat_Gain_Coefficient=Material['Solar_Heat_Gain_Coefficient'],
+            Visible_Transmittance=Material['Visible_Transmittance'],
+        )
+    else:
+        idf.newidfobject(
+            'MATERIAL',
+            Name=Name,
+            Thickness=Material['Thickness'],
+            Conductivity = Material['Conductivity'],
+            Roughness = Material['Roughness'],
+            Density = Material['Density'],
+            Specific_Heat = Material['Specific_Heat'],
+        )
+    return idf
+
 def CreatAirwallsMat(idf):
         idf.newidfobject(
             'MATERIAL',
@@ -48,3 +69,7 @@ def create_Material(idf, Material):
         U_value = Material[key]
         create_MaterialObject(idf, Name, Thickness, U_value)
 
+def create_MaterialNew(idf, Material):
+    for key in Material:
+        Name = key
+        create_MaterialObjectNew(idf, Name, Material[key])

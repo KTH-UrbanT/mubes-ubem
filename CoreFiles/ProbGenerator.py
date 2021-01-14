@@ -32,4 +32,5 @@ def BuildData(name,path,min,max):
     Write2file(TsetUp,path+'SetPointUp.txt')
     Write2file(TsetLo,path+'SetPointLo.txt')
 
-#BuildData('Test_fichier.txt',0,10)
+if __name__ == '__main__' :
+    print('ProbGenerator Main')

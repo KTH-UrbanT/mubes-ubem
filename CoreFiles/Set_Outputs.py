@@ -155,5 +155,6 @@ def Read_Outputhtml(CaseName):
     Endsinfo = open(fname, 'r', encoding='latin-1').read()
     return Res, Endsinfo
 
-
+if __name__ == '__main__' :
+    print('Set_Outputs Main')
 

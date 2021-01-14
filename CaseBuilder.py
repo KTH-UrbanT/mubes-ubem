@@ -36,7 +36,7 @@ def setBuildingLevel(idf,building):
     #Building Level
     ######################################################################################
     #this is the function that requires the most time
-    GeomScripts.createBuilding(idf,building, perim = False)
+    GeomScripts.createBuilding(idf,building, perim = True)
 
 
 def setEnvelopeLevel(idf,building):
@@ -71,9 +71,20 @@ if __name__ == '__main__' :
     loadedfile = 'C:\\Users\\xav77\\Documents\\FAURE\\DataBase\\Minneberg_Sweref99TM\\Walls.geojson'
     Shadingsfile = pygeoj.load(loadedfile)
 
+
+
     SimDir = os.path.join(os.getcwd(),'CaseFiles')
     if not os.path.exists(SimDir):
         os.mkdir(SimDir)
+    else:
+        for i in os.listdir(SimDir):
+            if os.path.isdir(SimDir+'\\'+i):
+                for j in os.listdir(SimDir+'\\'+i):
+                    os.remove(SimDir+'\\'+i+'\\'+j)
+                os.rmdir(SimDir+'\\'+i)
+            else:
+                os.remove(SimDir+'\\'+i)
+    #os.rmdir(RunDir)  # Now the directory is empty of files
     os.chdir(SimDir)
 
     Res = {}

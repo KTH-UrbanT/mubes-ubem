@@ -272,3 +272,6 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
             # HVAC equipment for each zone including ventilation systems (exhaust, balanced with or not heat recovery)
             ThermostatType = 'ResidZone'  if OfficeTypeZone==0 else 'OfficeZone'+ str(idx)
             ZoneCtrl(idf, zone, building, max(PeopleDensity),ThermostatType)
+
+if __name__ == '__main__' :
+    print('LoadAndOccupancy Main')

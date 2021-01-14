@@ -68,35 +68,61 @@ def createEnvelope(idf,building):
     #settings for the materials and constructions
     idf.set_default_constructions()
     #creating the materials, see Envelope_Param for material specifications
-    Envelope_Param.create_Material(idf,building.Materials)
+    #Envelope_Param.create_Material(idf,building.Materials)
+    Envelope_Param.create_MaterialNew(idf, building.MaterialsNew)
+    # lets change the construction for some specific zones surfaces, like the link between none heated zones like
+    # basement and the above floors
+    # creating the construction, see Envelope_Param for material specifications for seperation with heated and non heated zones
+    Envelope_Param.createNewConstruction(idf, 'Project Heated2NonHeated', 'Heated2NonHeated')
+    Envelope_Param.createNewConstruction(idf, 'Project Heated2NonHeated Rev', 'Heated2NonHeated')
+    # special loop to assign the consctruction that seperates the basement to the other storeys.
+    for idx, zone in enumerate(idf.idfobjects["ZONE"]):
+        storey = int(zone.Name[zone.Name.find(
+            'Storey') + 6:])  # the name ends with Storey # so lest get the storey number this way
+        for s in zone.zonesurfaces:
+            if s.Surface_Type in 'ceiling' and storey == -1:  # which mean that we are on the basements juste below ground
+                s.Construction_Name = 'Project Heated2NonHeated Rev'        #this will enable to reverse the construction for the cieling compared to the floor of the adjacent zone
+            if s.Surface_Type in 'floor' and storey == 0:  # which mean that we are on the first floors just above basement
+                s.Construction_Name = 'Project Heated2NonHeated'
     #for all construction, see if some other material than default exist
     cstr = idf.idfobjects['CONSTRUCTION']
     mat = idf.idfobjects['MATERIAL']
     win = idf.idfobjects['WINDOWMATERIAL:SIMPLEGLAZINGSYSTEM']
-    #the paradigm states that the nam of the naterials are the same as the construction
-    #things will have to evolve a bit to integrate several layers wihtin some construction
-    #the loop below assign materials to existing construction (from set_default_construction(), just above)
+    #we need to creates the associate wall from the material in two layers
     for id_cstr in cstr:
+        Wall_Cstr = []
         for id_mat in mat:
-            if id_mat.Name in id_cstr.Name:
-                id_cstr.Outside_Layer = id_mat.Name
+            currentMat = id_mat.Name
+            if id_mat.Name.find(' Insulation')>0:
+                currentMat = id_mat.Name[:id_mat.Name.find(' Insulation')]
+            if id_mat.Name.find(' Inertia')>0:
+                currentMat = id_mat.Name[:id_mat.Name.find(' Inertia')]
+            if currentMat in id_cstr.Name:
+                Wall_Cstr.append(id_mat.Name)
         for id_win in win:
             if id_win.Name in id_cstr.Name:
-                id_cstr.Outside_Layer = id_win.Name
+                Wall_Cstr.append(id_win.Name)
+        #here we shall introduce identification of inertia and insulation for external or internal insulated envelope (to be done)
+        # identification of the order between insulation and inertia :
+        if 'Rev' in id_cstr.Name:
+            Wall_Cstr.reverse()
+        if len(Wall_Cstr)>0:
+            # the reversed construction needed for adjacent zone is not realized yet !!!! to be done
+            id_cstr.Outside_Layer =  Wall_Cstr[0]
+            if len(Wall_Cstr)>1:
+                id_cstr.Layer_2 = Wall_Cstr[1] #cannot create a liste comprehension for this because the else '' creates an error....
+    #the paradigm states that the names of the naterials are the same as the construction
+    #things will have to evolve a bit to integrate several layers wihtin some construction
+    #the loop below assign materials to existing construction (from set_default_construction(), just above)
+    # for id_cstr in cstr:
+    #     for id_mat in mat:
+    #         if id_mat.Name in id_cstr.Name:
+    #             id_cstr.Outside_Layer = id_mat.Name
+    #     for id_win in win:
+    #         if id_win.Name in id_cstr.Name:
+    #             id_cstr.Outside_Layer = id_win.Name
 
-    #lets change the construction for some specific zones surfaces, like the link between none heat zone like
-    # basement and the above floors
-    # creating the construction, see Envelope_Param for material specifications for seperation with heated and non heated zones
-    Envelope_Param.createNewConstruction(idf, 'Project Heated2NonHeated', 'Heated2NonHeated')
 
-    #special loop to assign the consctruction that seperates the basement to the other storeys.
-    for idx, zone in enumerate(idf.idfobjects["ZONE"]):
-        storey = int(zone.Name[zone.Name.find('Storey')+6:]) #the name ends with Storey # so lest get the storey number this way
-        for s in zone.zonesurfaces:
-            if s.Surface_Type in 'ceiling' and storey==-1:#which mean that we are on the basements juste below ground
-                s.Construction_Name = 'Project Heated2NonHeated'
-            if s.Surface_Type in 'floor' and storey==0:#which mean that we are on the first floors just above basement
-                s.Construction_Name = 'Project Heated2NonHeated'
 
     #setting windows on all wall with ratio specified in DB-Database
     idf.set_wwr(building.wwr, construction="Project External Window")
@@ -193,7 +219,7 @@ def split2convex(idf):
             )
 
             surftri.setcoords(new_coord)
-            if 'Roof' in surf2treat.Construction_Name and surftri.tilt == 180:
+            if 'Roof' in surf2treat.Name and surftri.tilt == 180:
                     surftri.setcoords(reversed(new_coord))
         #print(surf2treat.Name)
         idf.removeidfobject(surf2treat)
@@ -280,3 +306,6 @@ def isCommunNode(surf1,surf2):
                 egde.append(nodei)
                 idx.append((i,j))
     return egde, idx
+
+if __name__ == '__main__' :
+    print('GeomScript Main')
