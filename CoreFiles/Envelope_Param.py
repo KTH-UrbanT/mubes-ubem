@@ -5,29 +5,7 @@ def createNewConstruction(idf,Name,Material):
         "CONSTRUCTION", Name=Name, Outside_Layer=Material
     )
 
-
-def create_MaterialObject(idf, Name, ep, U ):
-    if 'Window' in Name:
-        idf.newidfobject(
-            'WINDOWMATERIAL:SIMPLEGLAZINGSYSTEM',
-            Name=Name,
-            UFactor=U,
-            Solar_Heat_Gain_Coefficient=0.7,
-            Visible_Transmittance=0.8,
-        )
-    else:
-        idf.newidfobject(
-            'MATERIAL',
-            Name=Name,
-            Thickness=ep,
-            Conductivity=ep*U,
-            Roughness="Rough",
-            Density=1000,
-            Specific_Heat=1000,
-        )
-    return idf
-
-def create_MaterialObjectNew(idf, Name, Material):
+def create_MaterialObject(idf, Name, Material):
     if 'Window' in Name:
         idf.newidfobject(
             'WINDOWMATERIAL:SIMPLEGLAZINGSYSTEM',
@@ -65,11 +43,7 @@ def CreatAirwallsMat(idf):
 def create_Material(idf, Material):
     for key in Material:
         Name = key
-        Thickness = 0.1
-        U_value = Material[key]
-        create_MaterialObject(idf, Name, Thickness, U_value)
+        create_MaterialObject(idf, Name, Material[key])
 
-def create_MaterialNew(idf, Material):
-    for key in Material:
-        Name = key
-        create_MaterialObjectNew(idf, Name, Material[key])
+if __name__ == '__main__' :
+    print('Envelope_Param Main')

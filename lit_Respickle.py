@@ -11,8 +11,8 @@ from geomeppy import IDF
 
 
 signature =False
-path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFilesMultiZone\\Sim_Results\\'
-path1zone = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles1zoneperstorey\\Sim_Results\\'
+path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles\\Sim_Results\\'
+path1zone = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles\\Sim_Results\\'
 
 os.chdir(path1zone)
 liste = os.listdir()
@@ -74,22 +74,23 @@ for i,key in enumerate(zone1):
     tot1.append((zone1[key]['EnergyConsVal'][1]+zone1[key]['EnergyConsVal'][4]+zone1[key]['EnergyConsVal'][5])/3.6/zone1[key]['EPlusHeatArea']*1000) #to have GJ into kWh/m2
     tot2.append((zone2[key]['EnergyConsVal'][1]+zone2[key]['EnergyConsVal'][4]+zone2[key]['EnergyConsVal'][5])/3.6/zone2[key]['EPlusHeatArea']*1000)
     eleval = 0
-    for x in zone1[key]['EPCMeters']['ElecLoad']:
-        if zone1[key]['EPCMeters']['ElecLoad'][x]:
-            eleval += zone1[key]['EPCMeters']['ElecLoad'][x]
+    val = zone1[key]['BuildDB']
+    for x in val.EPCMeters['ElecLoad']:
+        if val.EPCMeters['ElecLoad'][x]:
+            eleval += val.EPCMeters['ElecLoad'][x]
     EPC_elec.append(eleval/Ref_Area)
     heatval = 0
-    for x in zone1[key]['EPCMeters']['Heating']:
-        heatval += zone1[key]['EPCMeters']['Heating'][x]
+    for x in val.EPCMeters['Heating']:
+        heatval += val.EPCMeters['Heating'][x]
     EPC_Heat.append(heatval/Ref_Area)
     coolval = 0
-    for x in zone1[key]['EPCMeters']['Cooling']:
-        coolval += zone1[key]['EPCMeters']['Cooling'][x]
+    for x in val.EPCMeters['Cooling']:
+        coolval += val.EPCMeters['Cooling'][x]
     EPC_Cool.append(coolval/zone2[key]['EPlusHeatArea'])
     EPC_Tot.append((eleval+heatval+coolval)/Ref_Area)
     EPareas1.append(zone1[key]['EPlusHeatArea'])
     EPareas2.append(zone2[key]['EPlusHeatArea'])
-    DBareas.append(zone1[key]['DataBaseArea'])
+    DBareas.append(val.surface)
     TotelPower[key] = [zone2[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Cooling Rate'][i] +
                       zone2[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate'][i] +
                       zone2[key]['HeatedArea']['Data_Electric Equipment Total Heating Rate'][i]
@@ -101,11 +102,13 @@ fig =plt.figure(0)
 gs = gridspec.GridSpec(4, 1)
 ax0 = plt.subplot(gs[:-1,0])
 ax0.plot(nbbuild,elec1,'s', label= 'Elec1')
-ax0.plot(nbbuild,elec2,'o', label = 'Elec2')
+#ax0.plot(nbbuild,elec2,'o', label = 'Elec2')
 ax0.plot(nbbuild, EPC_elec,'x', label = 'EPC')
 ax0.grid()
 ax0.legend()
-plt.title('Elec_Load (kWh\m2)')
+ax0.set_xlabel('Building nb')
+ax0.set_ylabel('Elec_Load (kWh\m2)')
+#plt.title('Elec_Load (kWh\m2)')
 ax1 = plt.subplot(gs[-1,0])
 ax1.plot(nbbuild, [(elec1[i]-EPC_elec[i])/EPC_elec[i]*100 for i in range(len(heat1))],'x', label = '(Elec1-EPC)\EPC (%)')
 ax1.legend()

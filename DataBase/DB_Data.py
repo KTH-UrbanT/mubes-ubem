@@ -2,72 +2,91 @@ WeatherFile = \
  {'Loc' : "SWE_Stockholm.Arlanda.024600_IWEC"
   }
 
-#this dict gives the U value for each type of walls\facade element
-#only one type of element is possible now. if several we should check for boundary layer conditions and the necesseary
-# reversed contruction
+#Thisdict gives all the materials characteristics.
+# There are 2 layer maximum, the word Inertia and Insulation or key factor further in the code. If one layer is wanted, just comment the other one.
+#the basement is considered not heated and thus never insulated layer
 BaseMaterial = \
-{'Wall': 0.21,
- 'Basement Floor': 0.25,
- 'Roof': 0.15,
- 'Window': 1.9,
- 'Heated2NonHeated': 0.25,
-  }
-BaseMaterialNew = \
  {'Window' : {'UFactor' :  1.9,
             'Solar_Heat_Gain_Coefficient' : 0.7,
             'Visible_Transmittance' : 0.8,
             },
-'Wall Inertia' : {'Thickness' : 0.1,
-                  'Conductivity' : 2.3,
+'Wall Inertia' : {'Thickness' : 0.05,                   #this layer will be considered also for the basement walls
+                  'Conductivity' : 0.21*0.1,
                 'Roughness' : "Rough",
-                'Density' : 2300,
-                'Specific_Heat' : 800,
+                'Density' : 1000,
+                'Specific_Heat' : 1000,
                 },
-'Wall Insulation' : {'Thickness' : 0.1,
-            'Conductivity' : 0.032,
+'Wall Insulation' : {'Thickness' : 0.05,
+            'Conductivity' : 0.21*0.1,
             'Roughness' : "Rough",
-            'Density' : 600,
-            'Specific_Heat' : 800,
+            'Density' : 1000,
+            'Specific_Heat' : 1000,
             },
-'Basement Floor Inertia' : {'Thickness' : 0.1,
-            'Conductivity' : 2.3,
+'Basement Floor' : {'Thickness' : 0.1,     #this layer will be considered also for the basement floor
+            'Conductivity' : 0.25*0.1,
             'Roughness' : "Rough",
-            'Density' : 2300,
-            'Specific_Heat' : 800,
+            'Density' : 1000,
+            'Specific_Heat' : 1000,
             },
-'Basement Floor Insulation' : {'Thickness' : 0.1,
-            'Conductivity' : 0.032,
+# 'Basement Floor Insulation' : {'Thickness' : 0.05,    #not needed as even without basement the Heated1rstFloor is taken for the first floor
+#             'Conductivity' : 0.25*0.1,
+#             'Roughness' : "Rough",
+#             'Density' : 1000,
+#             'Specific_Heat' : 1000,
+#             },
+'Roof Inertia' : {'Thickness' : 0.05,
+            'Conductivity' : 0.15*0.1,
             'Roughness' : "Rough",
-            'Density' : 600,
-            'Specific_Heat' : 800,
+            'Density' : 1000,
+            'Specific_Heat' : 1000,
             },
-'Roof Inertia' : {'Thickness' : 0.1,
-            'Conductivity' : 2.3,
+'Roof Insulation' : {'Thickness' : 0.05,
+            'Conductivity' : 0.15*0.1,
             'Roughness' : "Rough",
-            'Density' : 2300,
-            'Specific_Heat' : 800,
+            'Density' : 1000,
+            'Specific_Heat' : 1000,
             },
-'Roof Insulation' : {'Thickness' : 0.1,
-            'Conductivity' : 0.032,
+'Heated1rstFloor Inertia' : {'Thickness' : 0.05,
+            'Conductivity' : 0.25*0.1,
             'Roughness' : "Rough",
-            'Density' : 600,
-            'Specific_Heat' : 800,
+            'Density' : 1000,
+            'Specific_Heat' : 1000,
             },
-'Heated2NonHeated Inertia' : {'Thickness' : 0.1,
-            'Conductivity' : 2.3,
+'Heated1rstFloor Insulation' : {'Thickness' : 0.05,
+            'Conductivity' : 0.25*0.1,
             'Roughness' : "Rough",
-            'Density' : 2300,
-            'Specific_Heat' : 800,
-            },
-'Heated2NonHeated Insulation' : {'Thickness' : 0.1,
-            'Conductivity' : 0.032,
-            'Roughness' : "Rough",
-            'Density' : 600,
-            'Specific_Heat' : 800,
+            'Density' : 1000,
+            'Specific_Heat' : 1000,
             },
   }
 
-#this dict is for the shading paradigm. There are two files that we need. the firt one if the main geojson that contains all buildings and their propreties
+#this dict is for specification of internalMass equivalence.
+#the material should represent the overwhole mean material of all partition and furnitures
+#the weight par zone area gives the quentity and the Average thickness enable to compute the surface for heat transfer
+#the mass gives a volume thanks to the density that gives a surface thanks to the average thickness
+InternalMass = \
+ {'HeatedZoneIntMass' : {
+        'Thickness' : 0.05,
+        'Conductivity' : 0.25*0.1,
+        'Roughness' : "Rough",
+        'Density' : 1000,
+        'Specific_Heat' : 1000,
+        'WeightperZoneArea' : 15, #kg/m2
+        'AverageThickness' : 0.1,   #m this will define the surface in contact with the zone
+    },
+'NonHeatedZoneIntMass' : {
+        'Thickness' : 0.05,
+        'Conductivity' : 0.25*0.1,
+        'Roughness' : "Rough",
+        'Density' : 1000,
+        'Specific_Heat' : 1000,
+        'WeightperZoneArea' : 15, #kg/m2
+        'AverageThickness' : 0.1,   #m this will define the surface in contact with the zone
+    },
+  }
+
+
+#this dict is for the shading paradigm. There are two files that we need. the firt one is the main geojson that contains all buildings and their propreties
 #the other one contains for each shading surface id the vertex point and the building Id in order to catch the height of it.
 #to externalize as much as possible, these elements are reported in the dict below
 GeomElement = \
@@ -87,7 +106,8 @@ BasisElement = \
  'OccupHeatRate' : 70, #W per person
  'EnvLeak': 0.89,# l/s/m2 at 50Pa
  'BasementAirLeak': 0.1, #in Air change rate [vol/hour]
- 'WindowWallRatio': 0.3,
+ 'WindowWallRatio': 0.2,
+ 'ExternalInsulation' : True,
  'OffOccRandom' : False,
  'setTempUpL' : 25,
  'setTempLoL' : 21,

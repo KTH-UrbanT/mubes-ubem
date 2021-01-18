@@ -36,7 +36,7 @@ def setBuildingLevel(idf,building):
     #Building Level
     ######################################################################################
     #this is the function that requires the most time
-    GeomScripts.createBuilding(idf,building, perim = True)
+    GeomScripts.createBuilding(idf,building, perim = False)
 
 
 def setEnvelopeLevel(idf,building):

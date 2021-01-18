@@ -22,12 +22,12 @@ def BuildData(name,path,min,max):
         WE = False if DayofWeek < 6 else True  #this will gove a 1 when we are on weekends
         if HrperDay<8 or HrperDay>18 or WE:
             nbocc.append(0)
-            TsetUp.append(28)
-            TsetLo.append(15)
+            TsetUp.append(50)
+            TsetLo.append(21)
         else:
             nbocc.append(gives1Val(min,max))
-            TsetUp.append(25)
-            TsetLo.append(20)
+            TsetUp.append(50)
+            TsetLo.append(21)
     Write2file(nbocc,path+name)
     Write2file(TsetUp,path+'SetPointUp.txt')
     Write2file(TsetLo,path+'SetPointLo.txt')

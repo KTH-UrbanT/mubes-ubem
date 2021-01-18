@@ -9,7 +9,6 @@ path2addgeom = os.path.dirname(os.getcwd()) + '\\geomeppy'
 sys.path.append(path2addgeom)
 from geomeppy import IDF
 
-
 def GetData(path):
     os.chdir(path)
     liste = os.listdir()
@@ -21,15 +20,6 @@ def GetData(path):
             with open(i, 'rb') as handle:
                 SimNumb.append(int(i[i.index('v')+1:i.index('.')]))
                 zone1[SimNumb[-1]] = pickle.load(handle)
-    # for i,key in enumerate(zone1.keys()):
-    #     if i==0:
-    #         print('First key :' + str(zone1[key].keys()))
-    #         for key1 in zone1[key].keys():
-    #             if isinstance(zone1[key][key1],dict):
-    #                 keytoprnit = [key for key in zone1[key][key1].keys() if 'Data' in key]
-    #                 for nb in keytoprnit:
-    #                     print(nb)
-    #                 break
     elec1 = []
     heat1 = []
     cool1 = []
@@ -93,7 +83,33 @@ def GetData(path):
             'SimNumb' :SimNumb,
             }
 
-def createNewFig():
+def GetSingleSim(path,buildList=[]):
+    os.chdir(path)
+    if not buildList:
+        liste = os.listdir()
+    else:
+        liste = [buildList]
+    zone1 = {}
+    SimNumb = []
+    print('reading file...')
+    for i in liste:
+        if '.pickle' in i:
+            with open(i, 'rb') as handle:
+                SimNumb.append(int(i[i.index('v')+1:i.index('.')]))
+                zone1[SimNumb[-1]] = pickle.load(handle)
+    print('organizing data...')
+    if len(zone1)>1:
+        print('Sorry, ti seems that there are at least 2 simulation results file in this path...')
+    else:
+        Res = {}
+        toget = ['HeatedArea','NonHeatedArea','OutdoorSite']
+        for key in zone1:
+            for key1 in zone1[key]:
+                if key1 in toget:
+                    Res[key1] = zone1[key][key1]
+    return Res
+
+def createDualFig():
     fig_name = plt.figure()
     gs = gridspec.GridSpec(4, 1, left=0.1, bottom = 0.1)
     ax0 = plt.subplot(gs[:-1, 0])
@@ -101,22 +117,23 @@ def createNewFig():
     ax1 = plt.subplot(gs[-1, 0])
     ax1.grid()
     plt.tight_layout()
-    return fig_name, ax0, ax1
+    return {'fig_name' : fig_name, 'ax0': ax0, 'ax1' : ax1}
 
-def createNewFig1():
+def createSimpleFig():
     fig_name = plt.figure()
     gs = gridspec.GridSpec(4, 1, left=0.1, bottom = 0.1)
     ax0 = plt.subplot(gs[:, 0])
     ax0.grid()
     plt.tight_layout()
-    return fig_name, ax0
+    return {'fig_name' : fig_name, 'ax0': ax0}
 
 
-def plotResBase(fig_name,ax0,varx,vary,varxname,varyname):
+def plotResBase(fig_name,ax0,varx,vary,varxname,varyname,title):
     plt.figure(fig_name)
-    ax0.plot(varx, vary,'.',label= varyname)
+    ax0.plot(varx, vary,label= varyname)
     ax0.set_xlabel(varxname)
     ax0.legend()
+    plt.title(title)
 
 def plotRelRes(fig_name,ax0,varx,vary,varxname,varyname):
     plt.figure(fig_name)
@@ -161,48 +178,47 @@ def SignaturePlots(data):
                  data[key]['HeatedArea']['Data_Zone Ideal Loads Heat Recovery Total Cooling Rate'],'.')
         plt.title('Building_'+str(key))
 
-def DistAnalyse():
-    fig_name, ax0 = createNewFig1()
+def DistAnalyse(mainPath):
+    NewFig = createSimpleFig()
     for i in range(5, 28):
-        path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\DistShading\\CaseFiles' + str(
+        path = mainPath + str(
             i) + '\\Sim_Results\\'
         Res = GetData(path)
-        plotRelRes(fig_name.number, ax0, Res['Dist'], Res['tot1'], 'Dist', 'Building_' + str(i))
+        plotRelRes(NewFig['fig_name'].number, NewFig['ax0'], Res['Dist'], Res['tot1'], 'Dist', 'Building_' + str(i))
         Dist50 = [x for x, val in enumerate(Res['Dist']) if val < 50]
         minDist = Res['Dist'].index(min(Res['Dist']))
         maxDist = Res['Dist'].index(max(Res['Dist']))
-        path2idf = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\DistShading\\CaseFiles' + str(
+        path2idf = mainPath + str(
             i) + '\\'
-        print('For Building_'+str(i)+' : Mini is sim_'+str(Res['SimNumb'][minDist])+ ' / Maxi is sim_'+str(Res['SimNumb'][maxDist]))
+        print('For Building_'+str(i)+' : Mini is sim_'+str(Res['tot1'][minDist])+ ' / Maxi is sim_'+str(Res['tot1'][maxDist]))
+        print('For Building_' + str(i) + ' : increasing dist leads to:' + str(Res['tot1'][minDist]-
+            Res['tot1'][maxDist])+ 'of kWh/m2 of differences')
         epluspath = 'C:\\EnergyPlusV9-1-0\\'
         IDF.setiddname(epluspath + "Energy+.idd")
         idf = IDF(path2idf + 'Building_'+str(i)+'v'+str(Res['SimNumb'][maxDist])+'.idf')
         idf.view_model(test=False)
 
-    plt.show()
 
-def wwrLeakAnalyse():
-    path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles13\\Sim_Results\\'
+def wwrLeakAnalyse(path):
     Res = GetData(path)
-    fig_sample, ax0 = createNewFig1()
-    plotResBase(fig_sample.number, ax0, Res['WWR'], Res['EnvLeak'], 'Window Wall Ratio (-)', 'Env Leak (l/s/m2 for 50Pa)')
+    NewFig = createSimpleFig()
+    plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['WWR'], Res['EnvLeak'], 'Window Wall Ratio (-)', 'Env Leak (l/s/m2 for 50Pa)')
     range = [0.1,0.9 ]
     Res = Datafilter(Res, 'WWR', range)
-    plotResBase(fig_sample.number, ax0, Res['WWR'], Res['EnvLeak'], 'Window Wall Ratio (-)','Env Leak (l/s/m2 for 50Pa)')
-    # fig_name, ax0, ax1 = createNewFig()
+    plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['WWR'], Res['EnvLeak'], 'Window Wall Ratio (-)','Env Leak (l/s/m2 for 50Pa)')
+    # fig_name, ax0, ax1 = createDualFig()
     # plotRes(fig_name.number,ax0,ax1,Res['EnvLeak'],Res['tot1'],Res['EPC_Tot'],'EnvLeak','Total Sim (kW/m2)','Total Mes (kW/m2)')
-    # fig_name, ax0, ax1 = createNewFig()
+    # fig_name, ax0, ax1 = createDualFig()
     # plotRes(fig_name.number,ax0,ax1,Res['WWR'], Res['tot1'], Res['EPC_Tot'], 'WWR', 'Total Sim (kW/m2)', 'Total Mes (kW/m2)')
-    fig_name, ax0 = createNewFig1()
-    plotAdimRes(fig_name.number, ax0, Res['EnvLeak'], Res['tot1'], 'Normalized Parameter (-)', 'Normalized Heat needs (-)','Ext Env Leak [0.2,2]')
-    plotAdimRes(fig_name.number, ax0, Res['WWR'], Res['tot1'], 'Normalized Parameter (-)', 'Normalized Heat needs (-)','Window Wall Ratio' +str(range))
-    fig_name, ax0 = createNewFig1()
-    plotResBase(fig_name.number, ax0, Res['EnvLeak'], Res['tot1'], 'Env Leak (l/s/m2 for 50Pa)',
+    NewFig = createSimpleFig()
+    plotAdimRes(NewFig['fig_name'].number, NewFig['ax0'], Res['EnvLeak'], Res['tot1'], 'Normalized Parameter (-)', 'Normalized Heat needs (-)','Ext Env Leak [0.2,2]')
+    plotAdimRes(NewFig['fig_name'].number, NewFig['ax0'], Res['WWR'], Res['tot1'], 'Normalized Parameter (-)', 'Normalized Heat needs (-)','Window Wall Ratio' +str(range))
+    NewFig = createSimpleFig()
+    plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['EnvLeak'], Res['tot1'], 'Env Leak (l/s/m2 for 50Pa)',
                 'Total needs (kWh/m2)')
-    fig_name, ax0 = createNewFig1()
-    plotResBase(fig_name.number, ax0, Res['WWR'], Res['tot1'], 'Window Wall Ratio (-)', 'Total needs (kWh/m2)')
+    NewFig = createSimpleFig()
+    plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['WWR'], Res['tot1'], 'Window Wall Ratio (-)', 'Total needs (kWh/m2)')
 
-    plt.show()
 
 def Datafilter(Data, Var, range):
     NewSet = {}
@@ -210,7 +226,51 @@ def Datafilter(Data, Var, range):
         NewSet[key] = [val for i,val in enumerate(Data[key]) if Data[Var][i]<range[1] and Data[Var][i]>range[0]]
     return NewSet
 
+def DynAnalyse(path,BuildList = []):
+    liste2load = path
+    if len(liste2load)==1 and BuildList:
+        liste2load = BuildList
+        currentpath = path[0]
+    for i,current_val in enumerate(liste2load):
+        if not BuildList:
+            Res = GetSingleSim(current_val,BuildList)
+        else:
+            Res = GetSingleSim(currentpath, current_val)
+        if i==0:
+            NewFig ={}
+        for key in Res:
+            if i==0:
+                NewFig[key] = {}
+            for key1 in Res[key]:
+                if 'Data_' in key1:
+                    if i==0:
+                        NewFig[key][key1] = createSimpleFig()
+                    plotResBase(NewFig[key][key1]['fig_name'].number, NewFig[key][key1]['ax0'], [i for i in range(0,len(Res[key][key1]))], Res[key][key1], 'Time', key1,key)
+
+
+def OccupancyAnalyses(path):
+    for i,current_path in enumerate(path):
+        Res = GetData(current_path)
+        NewFig = createSimpleFig()
+        plotRelRes(NewFig['fig_name'].number, NewFig['ax0'], Res['nbbuild'], Res['tot1'], 'Number of run (-)',
+                    'Reduction factor of total needs (-)')
+        DynAnalyse([current_path],BuildList=['Building_6v0.pickle','Building_6v1.pickle'])
 
 if __name__ == '__main__' :
-    wwrLeakAnalyse()
-    #DistAnalyse()
+    path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles6\\Sim_Results\\']
+    #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\LeakWWR\\CaseFiles7\\Sim_Results\\']
+    #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\DistShadingWWR07\\CaseFiles']
+
+    #this is to plot time series of all variables
+    #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles\\Sim_Results\\']
+    #path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles\\Sim_Results\\')
+    #DynAnalyse(path)
+
+    OccupancyAnalyses(path)
+
+    #this is to plot results from LHC sampling for the three building 7, 9 and 13 from now
+    #wwrLeakAnalyse(path[0])
+
+    # this is to plot results shading distance simulation in DistShading folder
+    #DistAnalyse(path)
+    plt.show()

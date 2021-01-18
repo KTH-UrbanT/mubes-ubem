@@ -1,5 +1,6 @@
 import CoreFiles.ProbGenerator as ProbGenerator
 import os
+import CoreFiles.Envelope_Param as Envelope_Param
 #script to define the loads for each zones
 # import os
 # import numpy as np
@@ -74,8 +75,8 @@ def create_Occupant(idf, zone, OccScheduleName, ActScheduleName,NbPeople):
     return idf
 
 def ZoneLoad(idf, zone, LoadSchedule, building, isfile):
-    floors_surf = [s for s in zone.zonesurfaces if s.Surface_Type in 'floor']
-    floor_area = floors_surf[0].area
+    #floors_surf = [s for s in zone.zonesurfaces if s.Surface_Type in 'floor']
+    #floor_area = floors_surf[0].area
     #the profil are considered as for 100m2. thus the designlevel is considering this
     #create the equipement tha will apply the load to the zone
     idf.newidfobject(
@@ -178,7 +179,16 @@ def CreateBasementLeakage(idf, zone, ACH):
     )
     return idf
 
-
+def CreateInternalMass(idf,zone,FloorArea,name,Material):
+    surf = Material['WeightperZoneArea']*FloorArea/Material['Density']/Material['AverageThickness']
+    idf.newidfobject(
+        "INTERNALMASS",
+        Name=zone.Name + 'IntMass',
+        Zone_Name=zone.Name,
+        Construction_Name=name,
+        Surface_Area=round(surf),
+    )
+    return idf
 
 def CreateZoneLoadAndCtrl(idf,building,MainPath):
     # create the schedule type if not created before
@@ -227,17 +237,23 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
     SortedZoneIdx = sorted(range(len(zoneStoreylist)), key=lambda k: zoneStoreylist[k])
     for idx in SortedZoneIdx:
         zone = AllZone[idx]
+        # we need to compute the enveloppe area facing outside as well as the floor area (for HVAC)
+        ExtWallArea = 0
+        for s in zone.zonesurfaces:
+            if s.Outside_Boundary_Condition in 'outdoors':
+                ExtWallArea += s.area
+            if s.Surface_Type in 'floor':
+                FloorArea = s.area
         #we need to create envelope infiltration for each zone facing outside adn specific ones for the basement
         if zoneStoreylist[idx]<0: #means that we are in the basement
             CreateBasementLeakage(idf, zone, ACH=building.BasementAirLeak)
+            #creating the internalMass element if the dict is not empty
+            if building.InternalMass['NonHeatedZoneIntMass']:
+                CreateInternalMass(idf, zone, FloorArea, 'NonHeatedZoneIntMassObj', building.InternalMass['NonHeatedZoneIntMass'])
         else:
-            # we need to compute the enveloppe area facing outside as well as the floor area (for HVAC)
-            ExtWallArea = 0
-            for s in zone.zonesurfaces:
-                if s.Outside_Boundary_Condition in 'outdoors':
-                    ExtWallArea += s.area
-                if s.Surface_Type in 'floor':
-                    FloorArea  = s.area
+            #creating the internalMass element if the dict is not empty
+            if building.InternalMass['HeatedZoneIntMass']:
+                CreateInternalMass(idf, zone, FloorArea, 'HeatedZoneIntMassObj', building.InternalMass['HeatedZoneIntMass'])
             if ExtWallArea != 0 and building.EnvLeak !=0 :
                 CreateEnvLeakage(idf, zone, building, ExtWallArea)
             # check if Residential occupancy is not a 100% of the building, we shall take into account the ventilation for
@@ -255,7 +271,7 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
                 if building.OffOccRandom:   #if random occupancy is wished (in DB_data)
                     #lets create a beta distribution random file for the number of ccupant
                     pathfile = MainPath + '\\InputFiles\\'
-                    name = building.name + 'nbUsers.txt'
+                    name = idf.idfname + '.txt' #building.name + 'nbUsers.txt'
                     #from now, random value are taken from 20 to 100% of the people density (the min value id DB_Data is not considered yet)
                     ProbGenerator.BuildData(name,pathfile,round(FloorArea*min(PeopleDensity)),round(FloorArea*max(PeopleDensity)))
                     # lets create a schedule file for occupant and the associated file

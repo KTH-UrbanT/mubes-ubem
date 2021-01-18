@@ -88,9 +88,9 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,idf,filepath):
     #let us delete the remainning files
 
     os.chdir(filepath)
-    # for i in os.listdir(RunDir):
-    #    os.remove(RunDir+'\\'+i)
-    # os.rmdir(RunDir)  # Now the directory is empty of files
+    for i in os.listdir(RunDir):
+       os.remove(RunDir+'\\'+i)
+    os.rmdir(RunDir)  # Now the directory is empty of files
 
 
 
@@ -120,6 +120,6 @@ def main():
     file2run = initiateprocess(filepath)
     RunMultiProc(file2run, filepath, multi=True, maxcpu=0.8)
 
-if __name__ == '__main__' :
-    main()
+# if __name__ == '__main__' :
+#     main()
 

@@ -101,12 +101,13 @@ class Building:
         self.OccupBasedFlowRate = SCD['OccupBasedFlowRate'] / 1000  # the flow rate is thus in m3/s/person
         self.EPHeatedArea = self.getEPHeatedArea()
         self.wwr = SCD['WindowWallRatio']
+        self.ExternalInsulation = SCD['ExternalInsulation']
         self.OffOccRandom = SCD['OffOccRandom']
         self.setTempUpL =  SCD['setTempUpL']
         self.setTempLoL = SCD['setTempLoL']
         self.Materials = DB_Data.BaseMaterial
-        self.MaterialsNew = DB_Data.BaseMaterialNew
         self.WeatherDataFile = DB_Data.WeatherFile['Loc']
+        self.InternalMass = DB_Data.InternalMass
         self.IntLoad = self.getIntLoad(MainPath)
         #if there are no cooling comsumption, lets considerer a set point at 50deg max
         for key in self.EPCMeters['Cooling']:
