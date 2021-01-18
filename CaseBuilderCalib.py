@@ -131,7 +131,7 @@ def LaunchProcess(nbcase):
             building.OffOccRandom = True
         # change on the building __init__ class in the envelope level should be done here
         setEnvelopeLevel(idf, building)
-        idf.view_model(test=False)
+        #idf.view_model(test=False)
         #change on the building __init__ class in the zone level should be done here
         setZoneLevel(idf, building,MainPath)
         setOutputLevel(idf)
@@ -146,7 +146,7 @@ def LaunchProcess(nbcase):
 
 if __name__ == '__main__' :
     #saveContext()
-    for i in [10]: #range(7,8):
+    for i in [6,10]: #range(7,8):
         LaunchProcess(i)
         os.rename(os.path.join(os.getcwd(), 'CaseFiles'), os.path.join(os.getcwd(), 'CaseFiles'+str(i)))
         #restoreContext()

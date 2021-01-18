@@ -10,7 +10,7 @@ def Write2file(val,name):
         for item in val:
             f.write("%s\n" % item)
 
-def BuildData(name,path,min,max):
+def BuildData(name,path,min,max,building):
     #we alsways start on midnight
     nbocc = []
     TsetUp =[]
@@ -20,7 +20,7 @@ def BuildData(name,path,min,max):
         HrperDay = i%24                 #this will gives us values between 0 and 24hours
         DayofWeek = int(i % (24 * 7) / 24) + FirstDayofWeek # this will give the day of the week (0 is for Mondays)
         WE = False if DayofWeek < 6 else True  #this will gove a 1 when we are on weekends
-        if HrperDay<8 or HrperDay>18 or WE:
+        if HrperDay<int(building.Officehours[0][:building.Officehours[0].find(':')]) or HrperDay>int(building.Officehours[1][:building.Officehours[1].find(':')]):# or WE:
             nbocc.append(0)
             TsetUp.append(50)
             TsetLo.append(21)

@@ -273,7 +273,7 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
                     pathfile = MainPath + '\\InputFiles\\'
                     name = idf.idfname + '.txt' #building.name + 'nbUsers.txt'
                     #from now, random value are taken from 20 to 100% of the people density (the min value id DB_Data is not considered yet)
-                    ProbGenerator.BuildData(name,pathfile,round(FloorArea*min(PeopleDensity)),round(FloorArea*max(PeopleDensity)))
+                    ProbGenerator.BuildData(name,pathfile,round(FloorArea*min(PeopleDensity)),round(FloorArea*max(PeopleDensity)), building)
                     # lets create a schedule file for occupant and the associated file
                     create_ScheduleFile(idf, 'OccuSchedule'+str(idx), pathfile+name)   #we should be careful because of varaition with multiproc
                     create_ScheduleFile(idf, 'OffTsetUp' + str(idx), pathfile+'SetPointUp.txt')
