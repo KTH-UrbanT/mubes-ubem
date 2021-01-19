@@ -75,7 +75,7 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,idf,filepath):
             Res[key1]['Data_' + key2] = ResEso[key1][key2]['GlobData']
             Res[key1]['TimeStep_' + key2] = ResEso[key1][key2]['TimeStep']
             Res[key1]['Unit_' + key2] = ResEso[key1][key2]['Unit']
-    #shutil.copyfile(RunDir + '\\' + 'Runout.err', ResSimpath + file[:-4] + '.err')
+    shutil.copyfile(RunDir + '\\' + 'Runout.err', ResSimpath + file[:-4] + '.err')
     #shutil.copyfile(RunDir + '\\' + 'Runtbl.htm', ResSimpath + file[:-4] + '.html')
     #shutil.copyfile(RunDir + '\\' + 'Runout.csv', ResSimpath + file[:-4] + '.csv')
     with open(ResSimpath + '\\' + file[:-4]+'.pickle', 'wb') as handle:

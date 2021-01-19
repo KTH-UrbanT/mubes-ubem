@@ -100,7 +100,7 @@ class Building:
         self.DCV = SCD['DemandControlledVentilation']
         self.OccupBasedFlowRate = SCD['OccupBasedFlowRate'] / 1000  # the flow rate is thus in m3/s/person
         self.EPHeatedArea = self.getEPHeatedArea()
-        self.wwr = SCD['WindowWallRatio']
+        self.wwr = SCD['wwr']
         self.ExternalInsulation = SCD['ExternalInsulation']
         self.OffOccRandom = SCD['OffOccRandom']
         self.setTempUpL =  SCD['setTempUpL']
@@ -294,3 +294,5 @@ class Building:
                 eleval += self.EPCMeters['ElecLoad'][x]*1000/8760 #division by number of hours to convert Wh into W
         IntLoad = eleval/self.EPHeatedArea #this value is thus in W/m2
         return IntLoad
+
+

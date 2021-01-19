@@ -15,7 +15,7 @@ def createBuilding(idf,building,perim):
         below_ground_stories = building.nbBasefloor,
         # below_ground_storey_height = 1, the value is by default 2,5m
         zoning = 'core/perim',
-        perim_depth = 2,
+        perim_depth = 3,
         )
     else:
         idf.add_block(

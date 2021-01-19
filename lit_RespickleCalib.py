@@ -95,7 +95,11 @@ def GetSingleSim(path,buildList=[]):
     for i in liste:
         if '.pickle' in i:
             with open(i, 'rb') as handle:
-                SimNumb.append(int(i[i.index('v')+1:i.index('.')]))
+                try:
+                    num = int(i[i.index('v') + 1:i.index('.')])
+                except:
+                    num = int(i[i.index('_') + 1:i.index('.')])
+                SimNumb.append(num)
                 zone1[SimNumb[-1]] = pickle.load(handle)
     print('organizing data...')
     if len(zone1)>1:
@@ -130,7 +134,7 @@ def createSimpleFig():
 
 def plotResBase(fig_name,ax0,varx,vary,varxname,varyname,title):
     plt.figure(fig_name)
-    ax0.plot(varx, vary,label= varyname)
+    ax0.plot(varx, vary,'.',label= varyname)
     ax0.set_xlabel(varxname)
     ax0.legend()
     plt.title(title)
@@ -184,28 +188,28 @@ def DistAnalyse(mainPath):
         path = mainPath + str(
             i) + '\\Sim_Results\\'
         Res = GetData(path)
-        plotRelRes(NewFig['fig_name'].number, NewFig['ax0'], Res['Dist'], Res['tot1'], 'Dist', 'Building_' + str(i))
+        plotRelRes(NewFig['fig_name'].number, NewFig['ax0'], Res['Dist'], Res['heat1'], 'Shading Distance (m)', 'Building_' + str(i))
         Dist50 = [x for x, val in enumerate(Res['Dist']) if val < 50]
         minDist = Res['Dist'].index(min(Res['Dist']))
         maxDist = Res['Dist'].index(max(Res['Dist']))
         path2idf = mainPath + str(
             i) + '\\'
-        print('For Building_'+str(i)+' : Mini is sim_'+str(Res['tot1'][minDist])+ ' / Maxi is sim_'+str(Res['tot1'][maxDist]))
+        print('For Building_'+str(i)+' : Mini is sim_'+str(Res['heat1'][minDist])+ ' / Maxi is sim_'+str(Res['heat1'][maxDist]))
         print('For Building_' + str(i) + ' : increasing dist leads to:' + str(Res['tot1'][minDist]-
             Res['tot1'][maxDist])+ 'of kWh/m2 of differences')
         epluspath = 'C:\\EnergyPlusV9-1-0\\'
         IDF.setiddname(epluspath + "Energy+.idd")
-        idf = IDF(path2idf + 'Building_'+str(i)+'v'+str(Res['SimNumb'][maxDist])+'.idf')
-        idf.view_model(test=False)
+        idf = IDF(path2idf + 'Building_'+str(i)+'v'+str(Res['SimNumb'][minDist])+'.idf')
+        #idf.view_model(test=False)
 
 
 def wwrLeakAnalyse(path):
     Res = GetData(path)
     NewFig = createSimpleFig()
-    plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['WWR'], Res['EnvLeak'], 'Window Wall Ratio (-)', 'Env Leak (l/s/m2 for 50Pa)')
+    plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['WWR'], Res['EnvLeak'], 'Window Wall Ratio (-)', 'Env Leak (l/s/m2 for 50Pa)','')
     range = [0.1,0.9 ]
     Res = Datafilter(Res, 'WWR', range)
-    plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['WWR'], Res['EnvLeak'], 'Window Wall Ratio (-)','Env Leak (l/s/m2 for 50Pa)')
+    plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['WWR'], Res['EnvLeak'], 'Window Wall Ratio (-)','Env Leak (l/s/m2 for 50Pa)','')
     # fig_name, ax0, ax1 = createDualFig()
     # plotRes(fig_name.number,ax0,ax1,Res['EnvLeak'],Res['tot1'],Res['EPC_Tot'],'EnvLeak','Total Sim (kW/m2)','Total Mes (kW/m2)')
     # fig_name, ax0, ax1 = createDualFig()
@@ -215,9 +219,9 @@ def wwrLeakAnalyse(path):
     plotAdimRes(NewFig['fig_name'].number, NewFig['ax0'], Res['WWR'], Res['tot1'], 'Normalized Parameter (-)', 'Normalized Heat needs (-)','Window Wall Ratio' +str(range))
     NewFig = createSimpleFig()
     plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['EnvLeak'], Res['tot1'], 'Env Leak (l/s/m2 for 50Pa)',
-                'Total needs (kWh/m2)')
+                'Total needs (kWh/m2)','')
     NewFig = createSimpleFig()
-    plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['WWR'], Res['tot1'], 'Window Wall Ratio (-)', 'Total needs (kWh/m2)')
+    plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['WWR'], Res['tot1'], 'Window Wall Ratio (-)', 'Total needs (kWh/m2)','')
 
 
 def Datafilter(Data, Var, range):
@@ -232,8 +236,8 @@ def DynAnalyse(path,BuildList = []):
         liste2load = BuildList
         currentpath = path[0]
     for i,current_val in enumerate(liste2load):
-        if not BuildList:
-            Res = GetSingleSim(current_val,BuildList)
+        if len(BuildList)<2:
+            Res = GetSingleSim(current_val,BuildList[0] if BuildList else [])
         else:
             Res = GetSingleSim(currentpath, current_val)
         if i==0:
@@ -247,30 +251,61 @@ def DynAnalyse(path,BuildList = []):
                         NewFig[key][key1] = createSimpleFig()
                     plotResBase(NewFig[key][key1]['fig_name'].number, NewFig[key][key1]['ax0'], [i for i in range(0,len(Res[key][key1]))], Res[key][key1], 'Time', key1,key)
 
+def DynAnalyseUnity(path,BuildList = []):
+    liste2load = path
+    if len(liste2load)==1 and BuildList:
+        liste2load = BuildList
+        currentpath = path[0]
+    for i,current_val in enumerate(liste2load):
+        if len(BuildList)<2:
+            Res = GetSingleSim(current_val,BuildList[0] if BuildList else [])
+        else:
+            Res = GetSingleSim(currentpath, current_val)
+        if i==0:
+            NewFig ={}
+        for key in Res:
+            # if i==0:
+            #     NewFig[key] = {}
+            for key1 in Res[key]:
+                if 'Data_' in key1:
+                    DataLabel = key1[len('Data_'):]
+                    Unit = Res[key]['Unit_' + DataLabel]
+                    new = True
+                    for key2 in NewFig:
+                        if Unit in key2:
+                            currentfig = NewFig[key2]
+                            new = False
+                    if new:
+                        NewFig[Unit] = createSimpleFig()
+                        currentfig = NewFig[Unit]
+                    plotResBase(currentfig['fig_name'].number, currentfig['ax0'], [i for i in range(0,len(Res[key][key1]))], Res[key][key1], 'Time', DataLabel,Unit)
 
 def OccupancyAnalyses(path):
     for i,current_path in enumerate(path):
         Res = GetData(current_path)
-        NewFig = createSimpleFig()
+        if i==0:
+            NewFig = createSimpleFig()
         plotRelRes(NewFig['fig_name'].number, NewFig['ax0'], Res['nbbuild'], Res['tot1'], 'Number of run (-)',
                     'Reduction factor of total needs (-)')
-        DynAnalyse([current_path],BuildList=['Building_6v0.pickle','Building_6v1.pickle'])
+        #DynAnalyse([current_path],BuildList=['Building_10v0.pickle','Building_10v1.pickle'])
 
 if __name__ == '__main__' :
-    path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles6\\Sim_Results\\']
+    path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles10\\Sim_Results\\']
     #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\LeakWWR\\CaseFiles7\\Sim_Results\\']
-    #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\DistShadingWWR07\\CaseFiles']
+    #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\DistShadingWWR03\\CaseFiles8\\Sim_Results\\']
 
     #this is to plot time series of all variables
     #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles\\Sim_Results\\']
-    #path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles\\Sim_Results\\')
-    #DynAnalyse(path)
+    #path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles1zoneperstoreyExtIns\\Sim_Results\\')
+    #path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFilesIntIns\\Sim_Results\\')
+    #path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles1zoneperstoreyExtIns05mWall\\Sim_Results\\')
+    #DynAnalyseUnity(path,BuildList=['Building_11.pickle'])
 
-    OccupancyAnalyses(path)
+    #OccupancyAnalyses(path)
 
     #this is to plot results from LHC sampling for the three building 7, 9 and 13 from now
-    #wwrLeakAnalyse(path[0])
-
+    wwrLeakAnalyse(path[0])
+    path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\DistShadingWWR03\\CaseFiles']
     # this is to plot results shading distance simulation in DistShading folder
-    #DistAnalyse(path)
+    #DistAnalyse(path[0])
     plt.show()

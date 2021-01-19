@@ -180,7 +180,7 @@ def CreateBasementLeakage(idf, zone, ACH):
     return idf
 
 def CreateInternalMass(idf,zone,FloorArea,name,Material):
-    surf = Material['WeightperZoneArea']*FloorArea/Material['Density']/Material['AverageThickness']
+    surf = Material['WeightperZoneArea']*FloorArea/Material['Density']/Material['Thickness']
     idf.newidfobject(
         "INTERNALMASS",
         Name=zone.Name + 'IntMass',

@@ -65,7 +65,7 @@ def RunProcess(MainPath):
     file2run = LaunchSim.initiateprocess(MainPath)
     LaunchSim.RunMultiProc(file2run, MainPath, True, 0.7)
 
-def LaunchProcess(nbcase):
+def LaunchProcess(nbcase,VarName2Change = [],Bounds = [],nbruns = 1):
 #this main is written for validation of the global workflow. and as an example for other simulation
 #the cases are build in a for loop and then all cases are launched in a multiprocess mode, the maximum %of cpu is given as input
     MainPath = os.getcwd()
@@ -88,13 +88,14 @@ def LaunchProcess(nbcase):
                 os.remove(SimDir + '\\' + i)
     # os.rmdir(RunDir)  # Now the directory is empty of files
     os.chdir(SimDir)
-
-    problem = {}
-    problem['names'] = ['Dist'] #'EnvelopeLeakage']#,
-    problem['bounds'] = [[1,300]]#,
-    problem['num_vars'] = 1
-    #problem = read_param_file(MainPath+'\\liste_param.txt')
-    Param = latin.sample(problem,100)
+    Param = 1
+    if len(VarName2Change)>0:
+        problem = {}
+        problem['names'] = VarName2Change
+        problem['bounds'] = Bounds#,
+        problem['num_vars'] = len(VarName2Change)
+        #problem = read_param_file(MainPath+'\\liste_param.txt')
+        Param = latin.sample(problem,nbruns)
 
     Res = {}
     #this will be the final list of studied cases : list of objects stored in a dict . idf key for idf object and building key for building database object
@@ -121,14 +122,12 @@ def LaunchProcess(nbcase):
         Case['BuildIDF'] = idf
         Case['BuildData'] = building
         print('Building ', i, '/', len(Param), 'process starts')
-        # building.EnvLeak = val[0]
-        # building.wwr = val[1]
-        # building.MaxShadingDist = 0#val[0]
-        # building.shades = building.getshade(Buildingsfile[nbcase], Shadingsfile, Buildingsfile)
-        if i ==0:
-            building.OffOccRandom = False
-        else:
-            building.OffOccRandom = True
+
+        for varnum,var in enumerate(VarName2Change):
+            setattr(building, var, Param[i,varnum])
+            if 'MaxShadingDist' in var:
+                building.shades = building.getshade(Buildingsfile[nbcase], Shadingsfile, Buildingsfile)
+
         # change on the building __init__ class in the envelope level should be done here
         setEnvelopeLevel(idf, building)
         #idf.view_model(test=False)
@@ -145,8 +144,10 @@ def LaunchProcess(nbcase):
     os.chdir(MainPath)
 
 if __name__ == '__main__' :
-    #saveContext()
-    for i in [6,10]: #range(7,8):
-        LaunchProcess(i)
+    CaseName = ['EnvLeakWWR']
+    BuildNum = [10]
+    VarName2Change = ['EnvLeak','wwr']
+    Bounds = [[0.2,2],[0.1,0.5]]
+    for i in BuildNum:
+        LaunchProcess(i,VarName2Change,Bounds,100)
         os.rename(os.path.join(os.getcwd(), 'CaseFiles'), os.path.join(os.getcwd(), 'CaseFiles'+str(i)))
-        #restoreContext()

@@ -12,7 +12,7 @@ from geomeppy import IDF
 
 signature =False
 path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles\\Sim_Results\\'
-path1zone = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles\\Sim_Results\\'
+path1zone = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles1zoneperstoreyIntIns\\Sim_Results\\'
 
 os.chdir(path1zone)
 liste = os.listdir()
@@ -119,14 +119,16 @@ plt.tight_layout()
 fig1 =plt.figure()
 gs = gridspec.GridSpec(4, 1)
 ax0 = plt.subplot(gs[:-1,0])
-ax0.plot(nbbuild,heat1,'s', label= 'Heat1')
-ax0.plot(nbbuild,heat2,'o', label= 'Heat2')
-ax0.plot(nbbuild, EPC_Heat,'x', label= 'EPC')
+ax0.plot(nbbuild,heat1,'s', label= 'Int Ins')
+ax0.plot(nbbuild,heat2,'o', label= 'Ext Ins')
+#ax0.plot(nbbuild, EPC_Heat,'x', label= 'EPC')
 ax0.grid()
 ax0.legend()
-plt.title('Heat (kWh\m2)')
+ax0.set_xlabel('Building nb')
+ax0.set_ylabel('Heat needs (kWh\m2)')
+#plt.title('Heat (kWh\m2)')
 ax1 = plt.subplot(gs[-1,0])
-ax1.plot(nbbuild, [(heat1[i]-EPC_Heat[i])/EPC_Heat[i]*100 for i in range(len(heat1))],'s', label = '(Heat1-EPC)\EPC (%)')
+ax1.plot(nbbuild, [(heat1[i]-heat2[i])/heat2[i]*100 for i in range(len(heat1))],'s', label = '(II-EI)\EI (%)')
 ax1.grid()
 ax1.legend()
 #ax1.title('mono-multi')

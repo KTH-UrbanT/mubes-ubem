@@ -10,22 +10,22 @@ BaseMaterial = \
             'Solar_Heat_Gain_Coefficient' : 0.7,
             'Visible_Transmittance' : 0.8,
             },
-'Wall Inertia' : {'Thickness' : 0.05,                   #this layer will be considered also for the basement walls
-                  'Conductivity' : 0.21*0.1,
+'Wall Inertia' : {'Thickness' : 0.2,                   #this layer will be considered also for the basement walls
+                  'Conductivity' : 0.9,
                 'Roughness' : "Rough",
-                'Density' : 1000,
+                'Density' : 2300,
                 'Specific_Heat' : 1000,
                 },
-'Wall Insulation' : {'Thickness' : 0.05,
-            'Conductivity' : 0.21*0.1,
+'Wall Insulation' : {'Thickness' : 0.2,
+            'Conductivity' : 0.03,
             'Roughness' : "Rough",
-            'Density' : 1000,
+            'Density' : 150,
             'Specific_Heat' : 1000,
             },
 'Basement Floor' : {'Thickness' : 0.1,     #this layer will be considered also for the basement floor
-            'Conductivity' : 0.25*0.1,
+            'Conductivity' : 0.9,
             'Roughness' : "Rough",
-            'Density' : 1000,
+            'Density' : 2300,
             'Specific_Heat' : 1000,
             },
 # 'Basement Floor Insulation' : {'Thickness' : 0.05,    #not needed as even without basement the Heated1rstFloor is taken for the first floor
@@ -34,28 +34,28 @@ BaseMaterial = \
 #             'Density' : 1000,
 #             'Specific_Heat' : 1000,
 #             },
-'Roof Inertia' : {'Thickness' : 0.05,
-            'Conductivity' : 0.15*0.1,
+# 'Roof Inertia' : {'Thickness' : 0.05,
+#             'Conductivity' : 0.15*0.1,
+#             'Roughness' : "Rough",
+#             'Density' : 1000,
+#             'Specific_Heat' : 1000,
+#             },
+'Roof Insulation' : {'Thickness' : 0.3,
+            'Conductivity' : 0.03,
             'Roughness' : "Rough",
-            'Density' : 1000,
+            'Density' : 150,
             'Specific_Heat' : 1000,
             },
-'Roof Insulation' : {'Thickness' : 0.05,
-            'Conductivity' : 0.15*0.1,
+'Heated1rstFloor Inertia' : {'Thickness' : 0.1,
+            'Conductivity' : 0.9,
             'Roughness' : "Rough",
-            'Density' : 1000,
+            'Density' : 2300,
             'Specific_Heat' : 1000,
             },
-'Heated1rstFloor Inertia' : {'Thickness' : 0.05,
-            'Conductivity' : 0.25*0.1,
+'Heated1rstFloor Insulation' : {'Thickness' : 0.15,
+            'Conductivity' : 0.035,
             'Roughness' : "Rough",
-            'Density' : 1000,
-            'Specific_Heat' : 1000,
-            },
-'Heated1rstFloor Insulation' : {'Thickness' : 0.05,
-            'Conductivity' : 0.25*0.1,
-            'Roughness' : "Rough",
-            'Density' : 1000,
+            'Density' : 150,
             'Specific_Heat' : 1000,
             },
   }
@@ -66,22 +66,20 @@ BaseMaterial = \
 #the mass gives a volume thanks to the density that gives a surface thanks to the average thickness
 InternalMass = \
  {'HeatedZoneIntMass' : {
-        'Thickness' : 0.05,
-        'Conductivity' : 0.25*0.1,
+        'Thickness' : 0.1, #m this will define the surface in contact with the zone
+        'Conductivity' : 0.3,
         'Roughness' : "Rough",
-        'Density' : 1000,
-        'Specific_Heat' : 1000,
-        'WeightperZoneArea' : 15, #kg/m2
-        'AverageThickness' : 0.1,   #m this will define the surface in contact with the zone
+        'Density' : 600,
+        'Specific_Heat' : 1400,
+        'WeightperZoneArea' : 40, #kg/m2
     },
 'NonHeatedZoneIntMass' : {
-        'Thickness' : 0.05,
-        'Conductivity' : 0.25*0.1,
+        'Thickness' : 0.1, #m this will define the surface in contact with the zone
+        'Conductivity' : 0.3,
         'Roughness' : "Rough",
-        'Density' : 1000,
-        'Specific_Heat' : 1000,
-        'WeightperZoneArea' : 15, #kg/m2
-        'AverageThickness' : 0.1,   #m this will define the surface in contact with the zone
+        'Density' : 600,
+        'Specific_Heat' : 1400,
+        'WeightperZoneArea' : 40, #kg/m2
     },
   }
 
@@ -100,14 +98,15 @@ GeomElement = \
 #if some separation (ventilation and people) is needed than people heat generation should be converted inteo Electric Load as thus ariflow can be
 # related to a schedule, other wise...impossible
 BasisElement = \
-{'Office_Open': '08:00',                   'Office_Close': '18:00',
+{'Office_Open': '08:00',
+ 'Office_Close': '18:00',
  'DemandControlledVentilation' : True,
  'OccupBasedFlowRate': 7,  # l/s/person
  'OccupHeatRate' : 70, #W per person
  'EnvLeak': 0.89,# l/s/m2 at 50Pa
  'BasementAirLeak': 0.1, #in Air change rate [vol/hour]
- 'WindowWallRatio': 0.2,
- 'ExternalInsulation' : True,
+ 'wwr': 0.3,
+ 'ExternalInsulation' : False,
  'OffOccRandom' : False,
  'setTempUpL' : 25,
  'setTempLoL' : 21,

@@ -61,7 +61,8 @@ def RunProcess(MainPath):
     file2run = LaunchSim.initiateprocess(MainPath)
     LaunchSim.RunMultiProc(file2run, MainPath, multi=True, maxcpu=0.8)
 
-if __name__ == '__main__' :
+
+def LaunchProcess(nbsim,VarName2Change = [], Var2Change = []):
 #this main is written for validation of the global workflow. and as an example for other simulation
 #the cases are build in a for loop and then all cases are launched in a multiprocess mode, the maximum %of cpu is given as input
     MainPath = os.getcwd()
@@ -70,8 +71,6 @@ if __name__ == '__main__' :
     Buildingsfile = pygeoj.load(loadedfile)
     loadedfile = 'C:\\Users\\xav77\\Documents\\FAURE\\DataBase\\Minneberg_Sweref99TM\\Walls.geojson'
     Shadingsfile = pygeoj.load(loadedfile)
-
-
 
     SimDir = os.path.join(os.getcwd(),'CaseFiles')
     if not os.path.exists(SimDir):
@@ -94,7 +93,7 @@ if __name__ == '__main__' :
     #theretheless this organization still enable to order things !
     StudiedCase = BuildingList()
     for nbcase in range(len(Buildingsfile)):
-        #if nbcase==7:
+        #if nbcase==5 or nbcase==6:
             print('Building ', nbcase, '/', len(Buildingsfile), 'process starts')
             CaseName = 'run'
             # erasing all older file from previous simulation if present
@@ -111,6 +110,9 @@ if __name__ == '__main__' :
                 setSimLevel(idf, building)
                 # change on the building __init__ class in the building level should be done here
                 setBuildingLevel(idf, building)
+
+                for var in VarName2Change:
+                    setattr(building, var, Var2Change[nbsim])
                 #change on the building __init__ class in the envelope level should be done here
                 setEnvelopeLevel(idf, building)
                 #to have a matplotlib pop up windows of each instance : uncomment the line below
@@ -128,3 +130,14 @@ if __name__ == '__main__' :
 
     RunProcess(MainPath)
     sys.path.remove(path2addgeom)
+    os.chdir(MainPath)
+
+if __name__ == '__main__' :
+    #saveContext()
+    CaseName = ['DFalgo']
+    VarName2Change = []
+    Var2Change = []
+    for id,name in enumerate(CaseName): #range(7,8):
+        LaunchProcess(id,VarName2Change,Var2Change)
+        os.rename(os.path.join(os.getcwd(), 'CaseFiles'), os.path.join(os.getcwd(), 'CaseFiles'+name))
+        #restoreContext()
