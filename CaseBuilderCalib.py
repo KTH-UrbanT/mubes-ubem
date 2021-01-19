@@ -1,7 +1,7 @@
 import os
 import sys
 #add the required path
-path2addgeom = os.path.dirname(os.getcwd()) + '\\geomeppy'
+path2addgeom = os.path.join(os.path.dirname(os.getcwd()),'geomeppy')
 #path2addeppy = os.path.dirname(os.getcwd()) + '\\eppy'
 #sys.path.append(path2addeppy)
 sys.path.append(path2addgeom)
@@ -61,9 +61,9 @@ def setOutputLevel(idf):
     #ouputs definitions
     Set_Outputs.AddOutputs(idf)
 
-def RunProcess(MainPath):
+def RunProcess(MainPath,epluspath):
     file2run = LaunchSim.initiateprocess(MainPath)
-    LaunchSim.RunMultiProc(file2run, MainPath, True, 0.7)
+    LaunchSim.RunMultiProc(file2run, MainPath, True, 0.7,epluspath)
 
 def LaunchProcess(nbcase,VarName2Change = [],Bounds = [],nbruns = 1):
 #this main is written for validation of the global workflow. and as an example for other simulation
@@ -75,7 +75,7 @@ def LaunchProcess(nbcase,VarName2Change = [],Bounds = [],nbruns = 1):
         for line in Paths:
             for key in keyPath:
                 if key in line:
-                    keyPath[key] = line[line.find(':')+1:-1]
+                    keyPath[key] = os.path.normcase(line[line.find(':')+1:-1])
 
     epluspath = keyPath['epluspath']
     Buildingsfile = pygeoj.load(keyPath['Buildingsfile'])
@@ -86,12 +86,12 @@ def LaunchProcess(nbcase,VarName2Change = [],Bounds = [],nbruns = 1):
         os.mkdir(SimDir)
     else:
         for i in os.listdir(SimDir):
-            if os.path.isdir(SimDir + '\\' + i):
-                for j in os.listdir(SimDir + '\\' + i):
-                    os.remove(SimDir + '\\' + i + '\\' + j)
-                os.rmdir(SimDir + '\\' + i)
+            if os.path.isdir(os.path.join(SimDir,i)):
+                for j in os.listdir(os.path.join(SimDir,i)):
+                    os.remove(os.path.join(os.path.join(SimDir,i),j))
+                os.rmdir(os.path.join(SimDir,i))
             else:
-                os.remove(SimDir + '\\' + i)
+                os.remove(os.path.join(SimDir,i))
     # os.rmdir(RunDir)  # Now the directory is empty of files
     os.chdir(SimDir)
     Param = 1
@@ -145,7 +145,7 @@ def LaunchProcess(nbcase,VarName2Change = [],Bounds = [],nbruns = 1):
         with open('Building_' + str(nbcase) +  'v'+str(i)+ '.pickle', 'wb') as handle:
             pickle.dump(Case, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    RunProcess(MainPath)
+    RunProcess(MainPath,epluspath)
     sys.path.remove(path2addgeom)
     os.chdir(MainPath)
 
@@ -153,7 +153,7 @@ if __name__ == '__main__' :
     CaseName = ['EnvLeakWWR']
     BuildNum = [10]
     VarName2Change = ['EnvLeak','wwr']
-    Bounds = [[0.2,2],[0.1,0.5]]
+    Bounds = [[0.2,4],[0.1,0.8]]
     for i in BuildNum:
-        LaunchProcess(i,VarName2Change,Bounds,100)
+        LaunchProcess(i,VarName2Change,Bounds,1)
         os.rename(os.path.join(os.getcwd(), 'CaseFiles'), os.path.join(os.getcwd(), 'CaseFiles'+str(i)))

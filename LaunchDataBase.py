@@ -1,7 +1,7 @@
 import sys
 import os
 
-path2addgeom = os.path.dirname(os.getcwd()) + '\\geomeppy'
+path2addgeom = os.path.join(os.path.dirname(os.getcwd()),'geomeppy')
 #path2addeppy = os.path.dirname(os.getcwd()) + '\\eppy'
 #sys.path.append(path2addeppy)
 sys.path.append(path2addgeom)
@@ -54,7 +54,7 @@ for nbcase in range(len(Buildingsfile)):
                 os.remove(file)
 
         # selecting the emty template file
-        idf = IDF(epluspath + "ExampleFiles\\Minimal.idf")
+        idf = IDF(os.path.normcase(os.path.join(epluspath,"ExampleFiles/Minimal.idf")))
 
         #creatin of an instance of building class with the available data in the dataBase
         building = Building('Building'+str(nbcase),Buildingsfile,Shadingsfile,nbcase,MainPath)
@@ -89,7 +89,7 @@ for nbcase in range(len(Buildingsfile)):
             #saving files launching the simulation
             #idf.to_obj('Building'+str(nbcase)+'.obj')
             start = time.time()
-            idf.saveas(SimDir+'\\'+'Building'+str(nbcase)+'.idf')
+            idf.saveas(os.path.join(SimDir,'Building'+str(nbcase)+'.idf'))
 
             #the readvars option enable to create a csv file with all the specified ouputs
             #but as for many zones, this can lead to heavy files, worakourand are proposed in the Set_Outputs file. see below
@@ -101,7 +101,7 @@ for nbcase in range(len(Buildingsfile)):
             #ouputs readings
             #if ZoneOutputs=True, results are aggregated at storey level, if False, results are aggregated into heated and non heated zones
             start = time.time()
-            ResEso = Set_Outputs.Read_OutputsEso(SimDir+'\\'+CaseName,ZoneOutput=False)
+            ResEso = Set_Outputs.Read_OutputsEso(os.path.join(SimDir,CaseName),ZoneOutput=False)
             end = time.time()
             print('Read ESO step time : ' + str(end - start))
 
@@ -115,7 +115,7 @@ for nbcase in range(len(Buildingsfile)):
             #like energy consumptions, electric loads, heated and non heated areas.
             #the Endinfo file could be reads and plot elsewhere. it reports number of warning and errors
             start = time.time()
-            Res[nbcase], Endinfo = Set_Outputs.Read_Outputhtml(SimDir+'\\'+CaseName)
+            Res[nbcase], Endinfo = Set_Outputs.Read_Outputhtml(os.path.join(SimDir,CaseName))
             #aggregation of specific outputs for printing resume files
             Res[nbcase]['DataBaseArea'] = building.surface
             Res[nbcase]['NbFloors'] = building.nbfloor
@@ -139,8 +139,8 @@ for nbcase in range(len(Buildingsfile)):
             print(Endinfo)
 
             #copy for savings the errors file for each run, the html results file and compute a csv file.
-            shutil.copyfile(SimDir+'\\'+CaseName+'out.err', SimDir+'\\'+'Building'+str(nbcase)+'.err')
-            shutil.copyfile(SimDir+'\\'+CaseName + 'tbl.htm', SimDir+'\\'+'Building' + str(nbcase) + '.html')
+            shutil.copyfile(os.path.join(SimDir,CaseName+'out.err'), os.path.join(SimDir,'Building'+str(nbcase)+'.err'))
+            shutil.copyfile(os.path.join(SimDir,CaseName+'tbl.htm'), os.path.join(SimDir,'Building' + str(nbcase) + '.html'))
             csv2tabdelim.WriteCSVFile(SimDir+'\\'+'Building' + str(nbcase) + '.csv', ResEso)
             #this was used when using the automatic csv file from EP engine. no more needed
             #shutil.copyfile(CaseName + 'out.csv', 'Building' + str(nbcase) + '.csv')

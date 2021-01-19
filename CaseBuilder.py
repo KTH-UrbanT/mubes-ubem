@@ -1,7 +1,7 @@
 import os
 import sys
 #add the required path
-path2addgeom = os.path.dirname(os.getcwd()) + '\\geomeppy'
+path2addgeom = os.path.join(os.path.dirname(os.getcwd()),'geomeppy')
 #path2addeppy = os.path.dirname(os.getcwd()) + '\\eppy'
 #sys.path.append(path2addeppy)
 sys.path.append(path2addgeom)
@@ -72,24 +72,24 @@ def LaunchProcess(nbsim,VarName2Change = [], Var2Change = []):
         for line in Paths:
             for key in keyPath:
                 if key in line:
-                    keyPath[key] = line[line.find(':')+1:-1]
+                    keyPath[key] = os.path.normcase(line[line.find(':')+1:-1])
 
     epluspath = keyPath['epluspath']
     Buildingsfile = pygeoj.load(keyPath['Buildingsfile'])
     Shadingsfile = pygeoj.load(keyPath['Shadingsfile'])
 
-    SimDir = os.path.join(os.getcwd(),'CaseFiles')
+    SimDir = os.path.join(os.getcwd(), 'CaseFiles')
     if not os.path.exists(SimDir):
         os.mkdir(SimDir)
     else:
         for i in os.listdir(SimDir):
-            if os.path.isdir(SimDir+'\\'+i):
-                for j in os.listdir(SimDir+'\\'+i):
-                    os.remove(SimDir+'\\'+i+'\\'+j)
-                os.rmdir(SimDir+'\\'+i)
+            if os.path.isdir(os.path.join(SimDir,i)):
+                for j in os.listdir(os.path.join(SimDir,i)):
+                    os.remove(os.path.join(os.path.join(SimDir,i),j))
+                os.rmdir(os.path.join(SimDir,i))
             else:
-                os.remove(SimDir+'\\'+i)
-    #os.rmdir(RunDir)  # Now the directory is empty of files
+                os.remove(os.path.join(SimDir,i))
+    # os.rmdir(RunDir)  # Now the directory is empty of files
     os.chdir(SimDir)
 
     Res = {}

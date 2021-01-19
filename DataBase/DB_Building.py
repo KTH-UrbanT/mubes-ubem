@@ -61,8 +61,8 @@ class BuildingList:
 
     def addBuilding(self,name,Buildingsfile,Shadingsfile,nbcase,MainPath,epluspath):
         #idf object is created here
-        IDF.setiddname(epluspath + "Energy+.idd")
-        idf = IDF(epluspath + "ExampleFiles\\Minimal.idf")
+        IDF.setiddname(os.path.join(epluspath,"Energy+.idd"))
+        idf = IDF(os.path.normcase(os.path.join(epluspath,"ExampleFiles/Minimal.idf")))
         idf.idfname = name
         #building object is created here
         building = Building(name, Buildingsfile, Shadingsfile, nbcase, MainPath)
@@ -286,7 +286,7 @@ class Building:
 
     def getIntLoad(self, MainPath):
         #we should integrate the loads depending on the number of appartemnent in the building
-        files_path = os.path.join(MainPath,'InputFiles')+'\\P_Mean_over_10.txt'
+        files_path = os.path.join(os.path.join(MainPath,'InputFiles'),'P_Mean_over_10.txt')
         IntLoad = files_path
         eleval = 0
         for x in self.EPCMeters['ElecLoad']:

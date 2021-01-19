@@ -1,3 +1,3 @@
-Buildingsfile:C:\Users\xav77\Documents\FAURE\DataBase\Minneberg_Sweref99TM\Buildings.geojson
-Shadingsfile:C:\Users\xav77\Documents\FAURE\DataBase\Minneberg_Sweref99TM\Walls.geojson
-epluspath:C:\EnergyPlusV9-1-0\
+Buildingsfile:C:/Users/xav77/Documents/FAURE/DataBase/Minneberg_Sweref99TM/Buildings.geojson
+Shadingsfile:C:/Users/xav77/Documents/FAURE/DataBase/Minneberg_Sweref99TM/Walls.geojson
+epluspath:C:/EnergyPlusV9-1-0/

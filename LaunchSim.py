@@ -7,15 +7,13 @@ import shutil
 import CoreFiles.Set_Outputs as Set_Outputs
 import CoreFiles.csv2tabdelim as csv2tabdelim
 from subprocess import check_call
-
-
-path2addgeom = os.path.dirname(os.getcwd()) + '\\geomeppy'
+path2addgeom = os.path.join(os.path.dirname(os.getcwd()) ,'geomeppy')
 sys.path.append(path2addgeom)
 from geomeppy import IDF
 
 
 def initiateprocess(MainPath):
-    filepath = MainPath + '\\CaseFiles\\'
+    filepath = os.path.join(MainPath,'CaseFiles')
     listOfFiles = os.listdir(filepath)
     file2run = []
     for file in listOfFiles:
@@ -23,10 +21,10 @@ def initiateprocess(MainPath):
             file2run.append(file)
     return file2run
 
-def runcase(file,filepath):
+def runcase(file,filepath,epluspath):
 
-    filepath = filepath+'\\CaseFiles\\'
-    ResSimpath = filepath + '\\Sim_Results\\'
+    filepath = os.path.join(filepath,'CaseFiles')
+    ResSimpath = os.path.join(filepath,'Sim_Results')
     if not os.path.exists(ResSimpath):
         os.mkdir(ResSimpath)
     with open(filepath+file[:-4]+'.pickle', 'rb') as handle:
@@ -42,10 +40,9 @@ def runcase(file,filepath):
     os.chdir(RunDir)
     CaseName = 'Run'
 
-    epluspath = 'C:\\EnergyPlusV9-1-0\\'
     IDF.setiddname(epluspath + "Energy+.idd")
     idf = IDF(Runfile)
-    idf.epw = epluspath + 'WeatherData\\'+ idf.idfobjects['SITE:LOCATION'][0].Name+'.epw' #the weather path is taken from the epluspath
+    idf.epw = os.path.join(os.path.join(epluspath , 'WeatherData')+ idf.idfobjects['SITE:LOCATION'][0].Name+'.epw') #the weather path is taken from the epluspath
     # os.mkdir(caseDir)
     # os.chdir(caseDir)
     idf.run(output_prefix=CaseName, verbose='q')
@@ -57,8 +54,8 @@ def runcase(file,filepath):
     print(file[:-4] + ' is finished')
 
 def savecase(CaseName,RunDir,building,ResSimpath,file,idf,filepath):
-    ResEso = Set_Outputs.Read_OutputsEso(RunDir + '\\' + CaseName, ZoneOutput=False)
-    Res, Endinfo = Set_Outputs.Read_Outputhtml(RunDir + '\\' + CaseName)
+    ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir,CaseName), ZoneOutput=False)
+    Res, Endinfo = Set_Outputs.Read_Outputhtml(os.path.join(RunDir,CaseName))
     Res['BuildDB'] = building
     # Res['DataBaseArea'] = building.surface
     # Res['NbFloors'] = building.nbfloor
@@ -75,10 +72,10 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,idf,filepath):
             Res[key1]['Data_' + key2] = ResEso[key1][key2]['GlobData']
             Res[key1]['TimeStep_' + key2] = ResEso[key1][key2]['TimeStep']
             Res[key1]['Unit_' + key2] = ResEso[key1][key2]['Unit']
-    shutil.copyfile(RunDir + '\\' + 'Runout.err', ResSimpath + file[:-4] + '.err')
+    shutil.copyfile(os.path.join(RunDir,'Runout.err'), os.path.join(ResSimpath,file[:-4] + '.err'))
     #shutil.copyfile(RunDir + '\\' + 'Runtbl.htm', ResSimpath + file[:-4] + '.html')
     #shutil.copyfile(RunDir + '\\' + 'Runout.csv', ResSimpath + file[:-4] + '.csv')
-    with open(ResSimpath + '\\' + file[:-4]+'.pickle', 'wb') as handle:
+    with open(os.path.join(ResSimpath, file[:-4]+'.pickle'), 'wb') as handle:
         pickle.dump(Res, handle, protocol=pickle.HIGHEST_PROTOCOL)
     #csv2tabdelim.convert(ResSimpath + file[:-4] + '.csv')
     #csv2tabdelim.WriteCSVFile(ResSimpath+'\\'+file[:-4] + '.csv', ResEso)
@@ -89,12 +86,12 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,idf,filepath):
 
     os.chdir(filepath)
     for i in os.listdir(RunDir):
-       os.remove(RunDir+'\\'+i)
+       os.remove(os.path.join(RunDir,i))
     os.rmdir(RunDir)  # Now the directory is empty of files
 
 
 
-def RunMultiProc(file2run,filepath,multi,maxcpu):
+def RunMultiProc(file2run,filepath,multi,maxcpu,epluspath):
      #this is just to maje tries as the method1 seem to block the file saving process after the first shot on each core
     #thoe other methods works fine BUT it laucnhe all the case so CPU saturation is not the solutions neither
     print('Launching cases :')
@@ -103,22 +100,17 @@ def RunMultiProc(file2run,filepath,multi,maxcpu):
         pool = mp.Pool(processes = int(nbcpu*maxcpu)) #let us allow 80% of CPU usage
         for i in range(len(file2run)):
              #runcase(file2run[i], filepath)
-             pool.apply_async(runcase, args=(file2run[i], filepath))
+             pool.apply_async(runcase, args=(file2run[i], filepath, epluspath))
         pool.close()
         pool.join()
     else:
-        processes = [mp.Process(target=runcase, args=(file2run[i], filepath)) for i in range(len(file2run))]
+        processes = [mp.Process(target=runcase, args=(file2run[i], filepath,epluspath)) for i in range(len(file2run))]
         for p in processes:
             p.start()
         for p in processes:
             p.join()
     print('Done with this one !')
 
-def main():
-    MainPath = os.getcwd()
-    filepath = MainPath + '\\CaseFiles\\'
-    file2run = initiateprocess(filepath)
-    RunMultiProc(file2run, filepath, multi=True, maxcpu=0.8)
 
 # if __name__ == '__main__' :
 #     main()

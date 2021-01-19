@@ -270,7 +270,7 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
                 create_Occupant(idf, zone, 'OccuSchedule'+str(idx), 'OccupActivity', 1)
                 if building.OffOccRandom:   #if random occupancy is wished (in DB_data)
                     #lets create a beta distribution random file for the number of ccupant
-                    pathfile = MainPath + '\\InputFiles\\'
+                    pathfile = os.path.join(MainPath,'InputFiles')
                     name = idf.idfname + '.txt' #building.name + 'nbUsers.txt'
                     #from now, random value are taken from 20 to 100% of the people density (the min value id DB_Data is not considered yet)
                     ProbGenerator.BuildData(name,pathfile,round(FloorArea*min(PeopleDensity)),round(FloorArea*max(PeopleDensity)), building)
