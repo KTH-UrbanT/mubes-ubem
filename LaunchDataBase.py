@@ -22,17 +22,21 @@ import os
 
 start = time.time()
 
-#e+ parameters
-epluspath = 'C:\\EnergyPlusV9-1-0\\'
-#selecting the E+ version and .idd file
-IDF.setiddname(epluspath+"Energy+.idd")
 
 #district / building input files (from main database)
-loadedfile = 'C:\\Users\\xav77\\Documents\\FAURE\\DataBase\\Minneberg_Sweref99TM\\Buildings.geojson'
-Buildingsfile = pygeoj.load(loadedfile)
-loadedfile = 'C:\\Users\\xav77\\Documents\\FAURE\\DataBase\\Minneberg_Sweref99TM\\Walls.geojson'
-Shadingsfile = pygeoj.load(loadedfile)
+keyPath = {'epluspath': '', 'Buildingsfile': '', 'Shadingsfile': ''}
+with open('Pathways.txt', 'r') as PathFile:
+    Paths = PathFile.readlines()
+    for line in Paths:
+        for key in keyPath:
+            if key in line:
+                keyPath[key] = line[line.find(':') + 1:-1]
 
+epluspath = keyPath['epluspath']
+Buildingsfile = pygeoj.load(keyPath['Buildingsfile'])
+Shadingsfile = pygeoj.load(keyPath['Shadingsfile'])
+#selecting the E+ version and .idd file
+IDF.setiddname(epluspath+"Energy+.idd")
 MainPath = os.getcwd()
 SimDir = os.path.join(MainPath,'Sim_Results')
 if not os.path.exists(SimDir):

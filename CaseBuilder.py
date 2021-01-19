@@ -66,11 +66,17 @@ def LaunchProcess(nbsim,VarName2Change = [], Var2Change = []):
 #this main is written for validation of the global workflow. and as an example for other simulation
 #the cases are build in a for loop and then all cases are launched in a multiprocess mode, the maximum %of cpu is given as input
     MainPath = os.getcwd()
-    epluspath = 'C:\\EnergyPlusV9-1-0\\'
-    loadedfile = 'C:\\Users\\xav77\\Documents\\FAURE\\DataBase\\Minneberg_Sweref99TM\\Buildings.geojson'
-    Buildingsfile = pygeoj.load(loadedfile)
-    loadedfile = 'C:\\Users\\xav77\\Documents\\FAURE\\DataBase\\Minneberg_Sweref99TM\\Walls.geojson'
-    Shadingsfile = pygeoj.load(loadedfile)
+    keyPath = {'epluspath' : '','Buildingsfile' : '','Shadingsfile' : ''}
+    with open('Pathways.txt', 'r') as PathFile:
+        Paths = PathFile.readlines()
+        for line in Paths:
+            for key in keyPath:
+                if key in line:
+                    keyPath[key] = line[line.find(':')+1:-1]
+
+    epluspath = keyPath['epluspath']
+    Buildingsfile = pygeoj.load(keyPath['Buildingsfile'])
+    Shadingsfile = pygeoj.load(keyPath['Shadingsfile'])
 
     SimDir = os.path.join(os.getcwd(),'CaseFiles')
     if not os.path.exists(SimDir):
