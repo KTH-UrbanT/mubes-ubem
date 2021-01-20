@@ -155,5 +155,5 @@ if __name__ == '__main__' :
     VarName2Change = ['EnvLeak','wwr']
     Bounds = [[0.2,4],[0.1,0.8]]
     for i in BuildNum:
-        LaunchProcess(i,VarName2Change,Bounds,1)
+        LaunchProcess(i,VarName2Change,Bounds,2000)
         os.rename(os.path.join(os.getcwd(), 'CaseFiles'), os.path.join(os.getcwd(), 'CaseFiles'+str(i)))

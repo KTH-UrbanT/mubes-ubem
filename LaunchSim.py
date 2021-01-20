@@ -27,22 +27,22 @@ def runcase(file,filepath,epluspath):
     ResSimpath = os.path.join(filepath,'Sim_Results')
     if not os.path.exists(ResSimpath):
         os.mkdir(ResSimpath)
-    with open(filepath+file[:-4]+'.pickle', 'rb') as handle:
+    with open(os.path.join(filepath,file[:-4]+'.pickle'), 'rb') as handle:
          loadB = pickle.load(handle)
     #idf = loadB['BuildIDF'] #currently the idf object losses some required information...don't know why (inheritances of class and classmtehod... to be investigate
     #the work around is to read the idf.file
     building = loadB['BuildData']
-    Runfile = filepath + file
-    RunDir = filepath + file[:-4]
+    Runfile = os.path.join(filepath,file)
+    RunDir = os.path.join(filepath,file[:-4])
     print(RunDir)
     if not os.path.exists(RunDir):
         os.mkdir(RunDir)
     os.chdir(RunDir)
     CaseName = 'Run'
 
-    IDF.setiddname(epluspath + "Energy+.idd")
+    IDF.setiddname(os.path.join(epluspath,'Energy+.idd'))
     idf = IDF(Runfile)
-    idf.epw = os.path.join(os.path.join(epluspath , 'WeatherData')+ idf.idfobjects['SITE:LOCATION'][0].Name+'.epw') #the weather path is taken from the epluspath
+    idf.epw = os.path.join(os.path.join(epluspath ,'WeatherData'),idf.idfobjects['SITE:LOCATION'][0].Name+'.epw') #the weather path is taken from the epluspath
     # os.mkdir(caseDir)
     # os.chdir(caseDir)
     idf.run(output_prefix=CaseName, verbose='q')
