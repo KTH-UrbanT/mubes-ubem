@@ -7,6 +7,7 @@ SCD = DB_Data.BasisElement
 GE = DB_Data.GeomElement
 EPC = DB_Data.EPCMeters
 import re
+import CoreFiles.ProbGenerator as ProbGenerator
 #this class defines the building characteristics regarding available data in the geojson file
 
 #function that checks if value is out of limits
@@ -286,13 +287,16 @@ class Building:
 
     def getIntLoad(self, MainPath):
         #we should integrate the loads depending on the number of appartemnent in the building
-        files_path = os.path.join(os.path.join(MainPath,'InputFiles'),'P_Mean_over_10.txt')
-        IntLoad = files_path
+        Input_path = os.path.join(MainPath,'InputFiles')
+        IntLoad = os.path.join(Input_path,'P_Mean_over_10.txt')
         eleval = 0
         for x in self.EPCMeters['ElecLoad']:
             if self.EPCMeters['ElecLoad'][x]:
-                eleval += self.EPCMeters['ElecLoad'][x]*1000/8760 #division by number of hours to convert Wh into W
-        IntLoad = eleval/self.EPHeatedArea #this value is thus in W/m2
+                eleval += self.EPCMeters['ElecLoad'][x]*1000 #division by number of hours to convert Wh into W
+        IntLoad = eleval/self.EPHeatedArea/8760 #this value is thus in W/m2
+        # if eleval>0:
+        #     IntLoad = os.path.join(Input_path, self.name + '_Winter.txt')
+        #     ProbGenerator.SigmoFile('Summer', 5, eleval/self.EPHeatedArea*100, IntLoad) #the *100 is because we have considered 100m2 for the previous file
         return IntLoad
 
 

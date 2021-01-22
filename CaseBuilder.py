@@ -57,9 +57,9 @@ def setOutputLevel(idf):
     #ouputs definitions
     Set_Outputs.AddOutputs(idf)
 
-def RunProcess(MainPath):
+def RunProcess(MainPath,epluspath):
     file2run = LaunchSim.initiateprocess(MainPath)
-    LaunchSim.RunMultiProc(file2run, MainPath, multi=True, maxcpu=0.8)
+    LaunchSim.RunMultiProc(file2run, MainPath, True, 0.8,epluspath)
 
 
 def LaunchProcess(nbsim,VarName2Change = [], Var2Change = []):
@@ -99,7 +99,7 @@ def LaunchProcess(nbsim,VarName2Change = [], Var2Change = []):
     #theretheless this organization still enable to order things !
     StudiedCase = BuildingList()
     for nbcase in range(len(Buildingsfile)):
-        #if nbcase==5 or nbcase==6:
+        if nbcase<7:
             print('Building ', nbcase, '/', len(Buildingsfile), 'process starts')
             CaseName = 'run'
             # erasing all older file from previous simulation if present
@@ -134,13 +134,13 @@ def LaunchProcess(nbsim,VarName2Change = [], Var2Change = []):
                     pickle.dump(StudiedCase.building[-1], handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-    RunProcess(MainPath)
+    RunProcess(MainPath,epluspath)
     sys.path.remove(path2addgeom)
     os.chdir(MainPath)
 
 if __name__ == '__main__' :
     #saveContext()
-    CaseName = ['DFalgo']
+    CaseName = ['Naeim']
     VarName2Change = []
     Var2Change = []
     for id,name in enumerate(CaseName): #range(7,8):

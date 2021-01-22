@@ -106,7 +106,7 @@ BasisElement = \
  'EnvLeak': 0.89,# l/s/m2 at 50Pa
  'BasementAirLeak': 0.1, #in Air change rate [vol/hour]
  'wwr': 0.3,
- 'ExternalInsulation' : False,
+ 'ExternalInsulation' : True,
  'OffOccRandom' : False,
  'setTempUpL' : 25,
  'setTempLoL' : 21,

@@ -1,9 +1,36 @@
 import numpy as np
+import math
 import os
 
-def gives1Val(min,max):
+def BetaDistVal(min,max):
     Val = min + (np.random.beta(2, 1.3) * (max - min))
     return Val
+
+def sigmoid(x,coef):
+  return 1 / (1 + math.exp(-x*coef))
+
+def NormVar(x):
+    var = [((i-min(x))/(max(x)-min(x))) for i in x]
+    return var
+
+def SigmoFile(Season,width,AnnualLoad,name):
+    x = np.linspace(-1, 1, 8761)
+    y = NormVar([sigmoid(i,width) for i in x])
+    Conso = AnnualLoad
+    if 'Summer' in Season:
+        time = [i*(8760/2)+(8760/2) for i in x]
+        val = [Conso*i for i in y]
+        dval = np.diff(val)
+    else:
+        p1 = [i - 0.5 for i in y[round(len(y) / 2):]]
+        p2 = [i + 0.5 for i in y[1:round(len(y) / 2)]]
+        y1 = p1 + p2
+        time = [i*8760 for i in y]
+        val = [Conso*i for i in y1]
+        val.append(val[-1])
+        dval = np.diff(val)
+    Write2file(dval, name)
+
 
 def Write2file(val,name):
     with open(name, 'w') as f:
@@ -25,7 +52,7 @@ def BuildData(name,path,min,max,building):
             TsetUp.append(50)
             TsetLo.append(21)
         else:
-            nbocc.append(gives1Val(min,max))
+            nbocc.append(BetaDistVal(min,max))
             TsetUp.append(50)
             TsetLo.append(21)
     Write2file(nbocc,path+name)

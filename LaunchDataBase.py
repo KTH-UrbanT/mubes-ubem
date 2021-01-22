@@ -44,7 +44,7 @@ if not os.path.exists(SimDir):
 
 Res = {}
 for nbcase in range(len(Buildingsfile)):
-    if nbcase==7:
+    if nbcase==6:
         print('Building ', nbcase, '/', len(Buildingsfile), 'process starts')
         CaseName = 'run'
         # erasing all older file from previous simulation if present

@@ -1,9 +1,23 @@
 #Importing packages
+import os
+import sys
+path2addgeom = os.path.join(os.path.dirname(os.getcwd()),'geomeppy')
+#path2addeppy = os.path.dirname(os.getcwd()) + '\\eppy'
+#sys.path.append(path2addeppy)
+sys.path.append(path2addgeom)
 from geomeppy import IDF, extractor
 import esoreader
 import matplotlib.pyplot as plt
 
-epluspath = '//usr//local//'
+keyPath = {'epluspath' : ''}
+with open('Pathways.txt', 'r') as PathFile:
+    Paths = PathFile.readlines()
+    for line in Paths:
+        for key in keyPath:
+            if key in line:
+                keyPath[key] = os.path.normcase(line[line.find(':')+1:-1])
+
+    epluspath = keyPath['epluspath']
 
 #selecting the E+ version and .idd file
 IDF.setiddname(epluspath+"Energy+.idd")

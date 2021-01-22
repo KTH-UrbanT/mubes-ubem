@@ -16,7 +16,7 @@ OutputsVar = \
      #"Zone Ideal Loads Supply Air Total Cooling Rate",
      "Zone Ideal Loads Supply Air Total Heating Rate",
     # "Zone Ideal Loads Heat Recovery Active Time",
-    #"Zone Ideal Loads Heat Recovery Total Cooling Rate",
+    #'Zone Ideal Loads Heat Recovery Total Cooling Rate",
     #"Zone Ideal Loads Heat Recovery Total Heating Rate",
     # "System Node Mass Flow Rate",
     # "System Node Wind Speed",
