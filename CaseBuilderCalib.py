@@ -129,8 +129,17 @@ def LaunchProcess(nbcase,VarName2Change = [],Bounds = [],nbruns = 1):
         Case['BuildData'] = building
         print('Building ', i, '/', len(Param), 'process starts')
 
+        if i<round(nbruns/2):
+            building.ExternalInsulation = True
+        else:
+            building.ExternalInsulation = False
         for varnum,var in enumerate(VarName2Change):
-            setattr(building, var, Param[i,varnum])
+            if 'InternalMass' in var:
+                intmass = building.InternalMass
+                intmass['HeatedZoneIntMass']['WeightperZoneArea'] = Param[i, varnum]
+                setattr(building, var, intmass)
+            else:
+                setattr(building, var, Param[i,varnum])
             if 'MaxShadingDist' in var:
                 building.shades = building.getshade(Buildingsfile[nbcase], Shadingsfile, Buildingsfile)
 
@@ -150,10 +159,10 @@ def LaunchProcess(nbcase,VarName2Change = [],Bounds = [],nbruns = 1):
     os.chdir(MainPath)
 
 if __name__ == '__main__' :
-    CaseName = ['EnvLeakWWR']
+    CaseName = ['Thermal mass']
     BuildNum = [10]
-    VarName2Change = ['EnvLeak','wwr']
-    Bounds = [[0.2,4],[0.1,0.8]]
+    VarName2Change = ['InternalMass']
+    Bounds = [[10,200]]
     for i in BuildNum:
-        LaunchProcess(i,VarName2Change,Bounds,2000)
+        LaunchProcess(i,VarName2Change,Bounds,1000)
         os.rename(os.path.join(os.getcwd(), 'CaseFiles'), os.path.join(os.getcwd(), 'CaseFiles'+str(i)))

@@ -109,6 +109,9 @@ class Building:
         self.WeatherDataFile = DB_Data.WeatherFile['Loc']
         self.InternalMass = DB_Data.InternalMass
         self.IntLoad = self.getIntLoad(MainPath)
+        self.ACH_freecool = SCD['ACH_freecool']
+        self.intT_freecool = SCD['intT_freecool']
+        self.dT_freeCool = SCD['dT_freeCool']
         #if there are no cooling comsumption, lets considerer a set point at 50deg max
         for key in self.EPCMeters['Cooling']:
             if self.EPCMeters['Cooling'][key]>0:

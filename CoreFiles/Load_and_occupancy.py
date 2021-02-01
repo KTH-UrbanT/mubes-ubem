@@ -159,7 +159,7 @@ def CreateEnvLeakage(idf, zone, building, ExtWallArea):
         "ZONEINFILTRATION:FLOWCOEFFICIENT",
         Name=zone.Name+'Leak',
         Zone_Name = zone.Name,
-        Schedule_Name='EnvLeakage',
+        Schedule_Name='AlwaysON',
         Flow_Coefficient= FlowCoef,
         Stack_Coefficient= StackCoefVal,
         Pressure_Exponent = PressureExp,
@@ -173,7 +173,7 @@ def CreateBasementLeakage(idf, zone, ACH):
         "ZONEINFILTRATION:DESIGNFLOWRATE",
         Name=zone.Name+'Leak',
         Zone_or_ZoneList_Name = zone.Name,
-        Schedule_Name='EnvLeakage',
+        Schedule_Name='AlwaysON',
         Design_Flow_Rate_Calculation_Method = 'AirChanges/Hour',
         Air_Changes_per_Hour = ACH,
     )
@@ -189,6 +189,22 @@ def CreateInternalMass(idf,zone,FloorArea,name,Material):
         Surface_Area=round(surf),
     )
     return idf
+
+def ZoneFreeCooling(idf,zone,building,schedule):
+    #this function defines a flow rate when ext. temp gives potential for extra cooling
+    idf.newidfobject(
+        "ZONEVENTILATION:DESIGNFLOWRATE",
+        Name=zone.Name + 'FreeCool',
+        Zone_or_ZoneList_Name=zone.Name,
+        Schedule_Name=schedule,
+        Design_Flow_Rate_Calculation_Method = 'AirChanges/Hour',
+        Air_Changes_per_Hour = building.ACH_freecool,
+        Ventilation_Type = 'Natural',
+        Minimum_Indoor_Temperature = building.intT_freecool,
+        Delta_Temperature = building.dT_freeCool
+    )
+    return idf
+
 
 def CreateZoneLoadAndCtrl(idf,building,MainPath):
     # create the schedule type if not created before
@@ -206,7 +222,7 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
         isfile = False
     # we need a schedule for the infiltration rates in each zone. there will a unique one
     # the set point is 1 (multiplayer)
-    ScheduleCompact(idf, 'EnvLeakage', 1)
+    ScheduleCompact(idf, 'AlwaysON', 1)
     # we need to define the occupancy activity level in order to avoid a warning and maybe later, compute the heat generated !
     # the set point is defined in DB_data
     ScheduleCompact(idf, 'OccupActivity', building.OccupHeatRate)
@@ -284,10 +300,11 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
                     ScheduleCompactOccup(idf, 'OccuSchedule'+str(idx), building, SetPoint=round(FloorArea*max(PeopleDensity)))
                     OfficeTypeZone = 0 #this just to give the correct thermostat type to the ZoneCtrl function below.
             # Internal load profile could be taken from the number of appartement. see building.IntLoad in DB_Building
-            ZoneLoad(idf, zone,'LoadSchedule' if isfile else 'EnvLeakage' ,building, isfile)
+            ZoneLoad(idf, zone,'LoadSchedule' if isfile else 'AlwaysON' ,building, isfile)
             # HVAC equipment for each zone including ventilation systems (exhaust, balanced with or not heat recovery)
             ThermostatType = 'ResidZone'  if OfficeTypeZone==0 else 'OfficeZone'+ str(idx)
             ZoneCtrl(idf, zone, building, max(PeopleDensity),ThermostatType)
+            ZoneFreeCooling(idf,zone,building,'AlwaysON')
 
 if __name__ == '__main__' :
     print('LoadAndOccupancy Main')
