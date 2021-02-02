@@ -11,12 +11,18 @@ from geomeppy import IDF
 
 MainPath = os.getcwd()
 signature =False
+<<<<<<< HEAD
 path = os.path.join(MainPath,os.path.normcase('CaseFilesWinterW5/Sim_Results'))
 path1zone = os.path.join(MainPath,os.path.normcase('CaseFilesSummerW5/Sim_Results'))
+=======
+path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles10\\Sim_Results\\'
+path1zone = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles10\\Sim_Results\\'
+>>>>>>> main
 
 os.chdir(path1zone)
 liste = os.listdir()
 zone1 = {}
+SimNumb = []
 for i in liste:
     if '.pickle' in i:
         with open(i, 'rb') as handle:
@@ -24,12 +30,18 @@ for i in liste:
                 num = int(i[i.index('v') + 1:i.index('.')])
             except:
                 num = int(i[i.index('_') + 1:i.index('.')])
+<<<<<<< HEAD
             zone1[num] = pickle.load(handle)
+=======
+            SimNumb.append(num)
+            zone1[SimNumb[-1]] = pickle.load(handle)
+>>>>>>> main
 
 
 os.chdir(path)
 liste = os.listdir()
 zone2 = {}
+SimNumb = []
 for i in liste:
     if '.pickle' in i:
         with open(i, 'rb') as handle:
@@ -37,7 +49,12 @@ for i in liste:
                 num = int(i[i.index('v') + 1:i.index('.')])
             except:
                 num = int(i[i.index('_') + 1:i.index('.')])
+<<<<<<< HEAD
             zone2[num] = pickle.load(handle)
+=======
+            SimNumb.append(num)
+            zone2[SimNumb[-1]] = pickle.load(handle)
+>>>>>>> main
 
 
 

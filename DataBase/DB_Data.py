@@ -110,6 +110,9 @@ BasisElement = \
  'OffOccRandom' : False,
  'setTempUpL' : 25,
  'setTempLoL' : 21,
+ 'ACH_freecool' :4,     #this the the vol/hr of extra ventilation when free cooling is on
+ 'intT_freecool' : 26,  #internal temperature threshold for free coolong (opening windows with fixed ACH
+ 'dT_freeCool': 1,      #Tint-Text to authorize free cooling to be turned on
  }
 
 # definition of person/m2...complytely abritrary, but we still need some vaalues
