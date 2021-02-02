@@ -11,25 +11,37 @@ from geomeppy import IDF
 
 
 signature =False
-path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles\\Sim_Results\\'
-path1zone = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles1zoneperstoreyIntIns\\Sim_Results\\'
+path = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles10\\Sim_Results\\'
+path1zone = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles10\\Sim_Results\\'
 
 os.chdir(path1zone)
 liste = os.listdir()
 zone1 = {}
+SimNumb = []
 for i in liste:
     if '.pickle' in i:
         with open(i, 'rb') as handle:
-            zone1[int(i[i.index('_')+1:i.index('.')])] = pickle.load(handle)
+            try:
+                num = int(i[i.index('v') + 1:i.index('.')])
+            except:
+                num = int(i[i.index('_') + 1:i.index('.')])
+            SimNumb.append(num)
+            zone1[SimNumb[-1]] = pickle.load(handle)
 
 
 os.chdir(path)
 liste = os.listdir()
 zone2 = {}
+SimNumb = []
 for i in liste:
     if '.pickle' in i:
         with open(i, 'rb') as handle:
-            zone2[int(i[i.index('_')+1:i.index('.')])] = pickle.load(handle)
+            try:
+                num = int(i[i.index('v') + 1:i.index('.')])
+            except:
+                num = int(i[i.index('_') + 1:i.index('.')])
+            SimNumb.append(num)
+            zone2[SimNumb[-1]] = pickle.load(handle)
 
 
 
@@ -91,11 +103,11 @@ for i,key in enumerate(zone1):
     EPareas1.append(zone1[key]['EPlusHeatArea'])
     EPareas2.append(zone2[key]['EPlusHeatArea'])
     DBareas.append(val.surface)
-    TotelPower[key] = [zone2[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Cooling Rate'][i] +
-                      zone2[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate'][i] +
-                      zone2[key]['HeatedArea']['Data_Electric Equipment Total Heating Rate'][i]
-                      for i in range(len(zone2[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate']))]
-    EnergieTot.append(sum(TotelPower[key])/1000/zone2[key]['EPlusHeatArea'])
+    # TotelPower[key] = [zone2[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Cooling Rate'][i] +
+    #                   zone2[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate'][i] +
+    #                   zone2[key]['HeatedArea']['Data_Electric Equipment Total Heating Rate'][i]
+    #                   for i in range(len(zone2[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate']))]
+    # EnergieTot.append(sum(TotelPower[key])/1000/zone2[key]['EPlusHeatArea'])
     nbbuild.append(key)
 
 fig =plt.figure(0)

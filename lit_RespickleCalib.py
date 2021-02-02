@@ -14,12 +14,17 @@ def GetData(path):
     liste = os.listdir()
     zone1 = {}
     SimNumb = []
+    ErrFiles = []
     print('reading file...')
     for i in liste:
         if '.pickle' in i:
             with open(i, 'rb') as handle:
                 SimNumb.append(int(i[i.index('v')+1:i.index('.')]))
                 zone1[SimNumb[-1]] = pickle.load(handle)
+            try:
+                ErrFiles.append(os.path.getsize(i[:i.index('.pickle')]+'.err'))
+            except:
+                ErrFiles.append(0)
     elec1 = []
     heat1 = []
     cool1 = []
@@ -36,6 +41,9 @@ def GetData(path):
     EnvLeak = []
     Dist = []
     WWR = []
+    IntMass = []
+    ExtMass = []
+    ExtIns = []
     print('organizing data...')
     for i,key in enumerate(zone1):
         elec1.append(zone1[key]['EnergyConsVal'][1]/3.6/zone1[key]['EPlusHeatArea']*1000) #convert GJ in kWh/m2
@@ -59,11 +67,17 @@ def GetData(path):
         EPC_Tot.append((eleval+heatval+coolval)/zone1[key]['EPlusHeatArea'])
         EPareas1.append(zone1[key]['EPlusHeatArea'])
         DBareas.append(val.surface)
-        TotalPower[key] = [zone1[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Cooling Rate'][i] +
+        try:
+            TotalPower[key] = [zone1[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Cooling Rate'][i] +
                           zone1[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate'][i] +
                           zone1[key]['HeatedArea']['Data_Electric Equipment Total Heating Rate'][i]
                           for i in range(len(zone1[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate']))]
-        EnergieTot.append(sum(TotalPower[key])/1000/zone1[key]['EPlusHeatArea'])
+            EnergieTot.append(sum(TotalPower[key])/1000/zone1[key]['EPlusHeatArea'])
+        except:
+            pass
+        IntMass.append(val.InternalMass['HeatedZoneIntMass']['WeightperZoneArea'])
+        ExtMass.append(val.Materials['Wall Inertia']['Thickness'])
+        ExtIns.append(val.ExternalInsulation)
         nbbuild.append(key)
         EnvLeak.append(val.EnvLeak)
         WWR.append(val.wwr)
@@ -81,6 +95,10 @@ def GetData(path):
             'Dist' : Dist,
             'WWR' : WWR,
             'SimNumb' :SimNumb,
+            'IntMass' : IntMass,
+            'ExtMass' : ExtMass,
+            'ErrFiles' : ErrFiles,
+            'ExtIns' : ExtIns
             }
 
 def GetSingleSim(path,buildList=[]):
@@ -227,7 +245,7 @@ def wwrLeakAnalyse(path):
 def Datafilter(Data, Var, range):
     NewSet = {}
     for key in Data:
-        NewSet[key] = [val for i,val in enumerate(Data[key]) if Data[Var][i]<range[1] and Data[Var][i]>range[0]]
+        NewSet[key] = [val for i,val in enumerate(Data[key]) if Data[Var][i]<=range[1] and Data[Var][i]>=range[0]]
     return NewSet
 
 def DynAnalyse(path,BuildList = []):
@@ -289,8 +307,41 @@ def OccupancyAnalyses(path):
                     'Reduction factor of total needs (-)')
         #DynAnalyse([current_path],BuildList=['Building_10v0.pickle','Building_10v1.pickle'])
 
+def InertiaAnalyses(path,keyword):
+    for i,current_path in enumerate(path):
+        Res = GetData(current_path)
+        range = [0, 0.75]
+        Res = Datafilter(Res, 'ExtMass', range)
+        range = [0.5, 1]
+        Res1 = Datafilter(Res, 'ExtIns', range)
+        range = [0, 0.5]
+        Res2 = Datafilter(Res, 'ExtIns', range)
+        if i==0:
+            NewFig = createSimpleFig()
+        plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res1[keyword], Res1['heat1'], keyword+' (m)',
+                    'HeatNeeds Ext Ins (kW/m2)',keyword+'_Impact')
+        plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res2[keyword], Res2['heat1'], keyword + ' (m)',
+                    'HeatNeeds Int Ins (kW/m2)', keyword + '_Impact')
+        if i==0:
+            NewFig1 = createSimpleFig()
+        plotResBase(NewFig1['fig_name'].number, NewFig1['ax0'], Res1[keyword], Res1['ErrFiles'],
+                    keyword+' (kg/m2)',
+                    'ErrFile size', 'Error Files')
+        plotResBase(NewFig1['fig_name'].number, NewFig1['ax0'], Res2[keyword], Res2['ErrFiles'],
+                    keyword + ' (kg/m2)',
+                    'ErrFile size', 'Error Files')
+        if i==0:
+            NewFig2 = createSimpleFig()
+        plotResBase(NewFig2['fig_name'].number, NewFig2['ax0'], Res1['nbbuild'], Res1['heat1'],
+                    keyword+' (kg/m2)',
+                    'heat1', 'Error Files')
+        plotResBase(NewFig2['fig_name'].number, NewFig2['ax0'], Res2['nbbuild'], Res2['heat1'],
+                    keyword + ' (kg/m2)',
+                    'heat1', 'Error Files')
+
 if __name__ == '__main__' :
-    path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles10\\Sim_Results\\']
+    path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\GlobResults\\CaseFilesExtMass\\Sim_Results\\']
+    #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles\\Sim_Results\\']
     #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\LeakWWR\\CaseFiles7\\Sim_Results\\']
     #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\DistShadingWWR03\\CaseFiles8\\Sim_Results\\']
 
@@ -300,12 +351,12 @@ if __name__ == '__main__' :
     #path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFilesIntIns\\Sim_Results\\')
     #path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles1zoneperstoreyExtIns05mWall\\Sim_Results\\')
     #DynAnalyseUnity(path,BuildList=['Building_11.pickle'])
-
+    InertiaAnalyses(path,'ExtMass')
     #OccupancyAnalyses(path)
 
     #this is to plot results from LHC sampling for the three building 7, 9 and 13 from now
-    wwrLeakAnalyse(path[0])
-    path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\DistShadingWWR03\\CaseFiles']
+    #wwrLeakAnalyse(path[0])
+    #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\DistShadingWWR03\\CaseFiles']
     # this is to plot results shading distance simulation in DistShading folder
     #DistAnalyse(path[0])
     plt.show()

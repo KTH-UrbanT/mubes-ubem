@@ -138,6 +138,10 @@ def LaunchProcess(nbcase,VarName2Change = [],Bounds = [],nbruns = 1):
                 intmass = building.InternalMass
                 intmass['HeatedZoneIntMass']['WeightperZoneArea'] = Param[i, varnum]
                 setattr(building, var, intmass)
+            elif 'ExtMass' in var:
+                exttmass = building.Materials
+                exttmass['Wall Inertia']['Thickness'] = round(Param[i, varnum]*1000)/1000
+                setattr(building, var, exttmass)
             else:
                 setattr(building, var, Param[i,varnum])
             if 'MaxShadingDist' in var:
@@ -161,8 +165,8 @@ def LaunchProcess(nbcase,VarName2Change = [],Bounds = [],nbruns = 1):
 if __name__ == '__main__' :
     CaseName = ['Thermal mass']
     BuildNum = [10]
-    VarName2Change = ['InternalMass']
-    Bounds = [[10,200]]
+    VarName2Change = ['ExtMass']
+    Bounds = [[0.05,1]]
     for i in BuildNum:
         LaunchProcess(i,VarName2Change,Bounds,1000)
         os.rename(os.path.join(os.getcwd(), 'CaseFiles'), os.path.join(os.getcwd(), 'CaseFiles'+str(i)))
