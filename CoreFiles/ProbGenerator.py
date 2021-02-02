@@ -2,6 +2,7 @@ import numpy as np
 import math
 import os
 
+
 def BetaDistVal(min,max):
     Val = min + (np.random.beta(2, 1.3) * (max - min))
     return Val
