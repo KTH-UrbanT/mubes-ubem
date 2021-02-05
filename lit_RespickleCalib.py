@@ -4,7 +4,7 @@ from matplotlib import gridspec
 import numpy as np
 import os, sys
 #add the required path
-path2addgeom = os.path.dirname(os.getcwd()) + '\\geomeppy'
+path2addgeom = os.path.join(os.path.dirname(os.getcwd()),'geomeppy')
 #path2addeppy = os.path.dirname(os.getcwd()) + '\\eppy'
 #sys.path.append(path2addeppy)
 sys.path.append(path2addgeom)
@@ -511,7 +511,8 @@ def InertiaAnalyses(path,keyword):
                     'Maximum Pic Power Int Ins (kW)', 'Maximum Pic Power')
 
 if __name__ == '__main__' :
-    path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\GlobResults\\CaseFilesIntMass\\Sim_Results\\']
+    main =os.getcwd()
+    path = [os.path.join(main,os.path.normcase('CaseFiles10/Sim_Results'))]
     #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles\\Sim_Results\\']
     #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\LeakWWR\\CaseFiles7\\Sim_Results\\']
     #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\DistShadingWWR03\\CaseFiles8\\Sim_Results\\']
@@ -529,13 +530,13 @@ if __name__ == '__main__' :
     #GlobRes(path)
 
     #DynAnalyse(path, BuildList=['Building_5.pickle'])
-    #DynAnalyseUnity(path,BuildList=['Building_5.pickle','Building_6.pickle'])
+    DynAnalyseUnity(path,BuildList=['Building_10v0.pickle','Building_10v1.pickle'])
     #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles\\Sim_Results\\']
     #path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles1zoneperstoreyExtIns\\Sim_Results\\')
     #path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFilesIntIns\\Sim_Results\\')
     #path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles1zoneperstoreyExtIns05mWall\\Sim_Results\\')
     #DynAnalyseUnity(path,BuildList=['Building_11.pickle'])
-    InertiaAnalyses(path,'IntMass')
+    #InertiaAnalyses(path,'IntMass')
 
     #OccupancyAnalyses(path)
 

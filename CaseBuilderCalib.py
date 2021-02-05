@@ -170,5 +170,5 @@ if __name__ == '__main__' :
     VarName2Change = ['InternalMass']
     Bounds = [[10,200]]
     for i in BuildNum:
-        LaunchProcess(i,VarName2Change,Bounds,1)
+        LaunchProcess(i,VarName2Change,Bounds,2)
         os.rename(os.path.join(os.getcwd(), 'CaseFiles'), os.path.join(os.getcwd(), 'CaseFiles'+str(i)))
