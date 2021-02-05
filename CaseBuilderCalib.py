@@ -165,8 +165,8 @@ def LaunchProcess(nbcase,VarName2Change = [],Bounds = [],nbruns = 1):
 if __name__ == '__main__' :
     CaseName = ['Thermal mass']
     BuildNum = [10]
-    VarName2Change = ['ExtMass']
-    Bounds = [[0.05,1]]
+    VarName2Change = ['InternalMass']
+    Bounds = [[10,200]]
     for i in BuildNum:
         LaunchProcess(i,VarName2Change,Bounds,1000)
         os.rename(os.path.join(os.getcwd(), 'CaseFiles'), os.path.join(os.getcwd(), 'CaseFiles'+str(i)))

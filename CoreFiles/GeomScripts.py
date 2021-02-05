@@ -104,16 +104,20 @@ def createEnvelope(idf,building):
                 Wall_Cstr.append(id_win.Name)
         if len(Wall_Cstr)>0:
             # identification of the order between insulation and inertia
+            inertia_idx = 0
             if 'Inertia' in Wall_Cstr[0] and building.ExternalInsulation:
                 Wall_Cstr.reverse()
+                inertia_idx = 1
             if 'Insulation' in Wall_Cstr[0] and not building.ExternalInsulation:
                 Wall_Cstr.reverse()
             # if Rev is present, then we need to reverse the order of the materials because same construction but seen from two adjacent zone (heated and not heated zones)
             if 'Rev' in id_cstr.Name:
                 Wall_Cstr.reverse()
-            # the reversed construction needed for adjacent zone is not realized yet !!!! to be done
-            id_cstr.Outside_Layer =  Wall_Cstr[0]
-            if len(Wall_Cstr)>1:# and 'Basement' not in id_cstr.Name:
+            if 'Basement' in id_cstr.Name:
+                id_cstr.Outside_Layer = Wall_Cstr[inertia_idx]
+            else:
+                id_cstr.Outside_Layer =  Wall_Cstr[0]
+            if len(Wall_Cstr)>1 and 'Basement' not in id_cstr.Name:
                 id_cstr.Layer_2 = Wall_Cstr[1] #cannot create a liste comprehension for this because the else '' creates an error....
 
 

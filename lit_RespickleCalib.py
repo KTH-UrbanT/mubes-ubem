@@ -1,6 +1,7 @@
 import pickle
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
+import numpy as np
 import os, sys
 #add the required path
 path2addgeom = os.path.dirname(os.getcwd()) + '\\geomeppy'
@@ -48,6 +49,9 @@ def GetData(path):
     IntMass = []
     ExtMass = []
     ExtIns = []
+    TempOP27 = []
+    PowerPic=[]
+    MaxPowDay=[]
     print('organizing data...')
     for i,key in enumerate(zone1):
         elec1.append(zone1[key]['EnergyConsVal'][1]/3.6/zone1[key]['EPlusHeatArea']*1000) #convert GJ in kWh/m2
@@ -71,13 +75,11 @@ def GetData(path):
         EPC_Tot.append((eleval+heatval+coolval)/zone1[key]['EPlusHeatArea'])
         EPareas1.append(zone1[key]['EPlusHeatArea'])
         DBareas.append(val.surface)
-<<<<<<< HEAD
         # TotalPower[key] = [zone1[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Cooling Rate'][i] +
         #                   zone1[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate'][i] +
         #                   zone1[key]['HeatedArea']['Data_Electric Equipment Total Heating Rate'][i]
         #                   for i in range(len(zone1[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate']))]
         #EnergieTot.append(sum(TotalPower[key])/1000/zone1[key]['EPlusHeatArea'])
-=======
         try:
             TotalPower[key] = [zone1[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Cooling Rate'][i] +
                           zone1[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate'][i] +
@@ -89,11 +91,29 @@ def GetData(path):
         IntMass.append(val.InternalMass['HeatedZoneIntMass']['WeightperZoneArea'])
         ExtMass.append(val.Materials['Wall Inertia']['Thickness'])
         ExtIns.append(val.ExternalInsulation)
->>>>>>> main
         nbbuild.append(key)
         EnvLeak.append(val.EnvLeak)
         WWR.append(val.wwr)
         Dist.append(val.MaxShadingDist)
+        TempOP = zone1[key]['HeatedArea']['Data_Zone Operative Temperature']
+        TempOP27.append(len([i for i in TempOP if i > 27]))
+        Pow = zone1[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate']
+        Pow = [i/1000 for i in Pow]
+        PowerPic.append(max(Pow))
+        var = np.array(Pow)
+        MaxPowDay.append(Pow.index(max(Pow))/24)
+        var = var.reshape(365,24,1)
+        if i ==0 :
+            Powjr = var
+        else:
+            Powjr = np.append(Powjr,var,axis = 2)
+        var = np.array(zone1[key]['HeatedArea']['Data_Zone Operative Temperature'])
+        var = var.reshape(365, 24, 1)
+        if i == 0:
+            TempInt = var
+        else:
+            TempInt = np.append(TempInt, var, axis=2)
+    TempExt = zone1[key]['OutdoorSite']['Data_Site Outdoor Air Drybulb Temperature']
     return {'elec1' : elec1,
             'heat1' : heat1,
             'cool1' : cool1,
@@ -110,7 +130,13 @@ def GetData(path):
             'IntMass' : IntMass,
             'ExtMass' : ExtMass,
             'ErrFiles' : ErrFiles,
-            'ExtIns' : ExtIns
+            'ExtIns' : ExtIns,
+            'TempOP27' : TempOP27,
+            'PowerPic' : PowerPic,
+            'Powjr' : Powjr,
+            'MaxPowDay' : MaxPowDay,
+            'TempExt' : TempExt,
+            'TempInt' : TempInt,
             }
 
 def GetSingleSim(path,buildList=[]):
@@ -173,7 +199,7 @@ def plotResBase(fig_name,ax0,varx,vary,varxname,varyname,title):
 def plotRelRes(fig_name,ax0,varx,vary,varxname,varyname):
     plt.figure(fig_name)
     relval = [vary[i] / max(vary) for i in range(len(vary))]
-    ax0.plot(varx, relval,'.',label= varyname)
+    ax0.plot(varx, relval,label= varyname)
     ax0.set_xlabel(varxname)
     ax0.legend()
     print(min(relval))
@@ -261,7 +287,14 @@ def wwrLeakAnalyse(path):
 def Datafilter(Data, Var, range):
     NewSet = {}
     for key in Data:
-        NewSet[key] = [val for i,val in enumerate(Data[key]) if Data[Var][i]<=range[1] and Data[Var][i]>=range[0]]
+        if 'TempExt'not in key:
+            if len(np.shape(Data[key]))==1:
+                NewSet[key] = [val for i,val in enumerate(Data[key]) if Data[Var][i]<=range[1] and Data[Var][i]>=range[0]]
+            else:
+                idx = [i for i,val in enumerate(Data[Var]) if val<= range[1] and val>= range[0]]
+                NewSet[key] = np.array(Data[key][:,:,idx])
+        else:
+            NewSet[key] = Data[key]
     return NewSet
 
 def DynAnalyse(path,BuildList = []):
@@ -323,7 +356,6 @@ def OccupancyAnalyses(path):
                     'Reduction factor of total needs (-)')
         #DynAnalyse([current_path],BuildList=['Building_10v0.pickle','Building_10v1.pickle'])
 
-<<<<<<< HEAD
 def GlobRes(path):
     Res= {}
     tot=[]
@@ -345,23 +377,100 @@ def GlobRes(path):
     FigName = createDualFig('Elec Loads')
     plotRes(FigName['fig_name'].number, FigName['ax0'], FigName['ax1'], Res[0]['nbbuild'], elec, 'Nb Build', varyname)
 
-if __name__ == '__main__' :
-    MainPath = os.getcwd()
-    path = [os.path.join(MainPath,os.path.normcase('CaseFilesNaeim/Sim_Results'))]
-    # path.append(os.path.join(MainPath, os.path.normcase('CaseFilesSummerW3/Sim_Results')))
-    # path.append(os.path.join(MainPath, os.path.normcase('CaseFilesSummerW5/Sim_Results')))
-    # path.append(os.path.join(MainPath, os.path.normcase('CaseFilesWinterW3/Sim_Results')))
-    # path.append(os.path.join(MainPath, os.path.normcase('CaseFilesWinterW5/Sim_Results')))
-=======
+
+
 def InertiaAnalyses(path,keyword):
     for i,current_path in enumerate(path):
         Res = GetData(current_path)
-        range = [0, 0.75]
-        Res = Datafilter(Res, 'ExtMass', range)
-        range = [0.5, 1]
-        Res1 = Datafilter(Res, 'ExtIns', range)
-        range = [0, 0.5]
-        Res2 = Datafilter(Res, 'ExtIns', range)
+        bounds = [0, 150]
+        Res = Datafilter(Res, 'IntMass', bounds)
+        bounds = [0.5, 1]
+        Res1 = Datafilter(Res, 'ExtIns', bounds)
+        bounds = [0, 0.5]
+        Res2 = Datafilter(Res, 'ExtIns', bounds)
+
+        idx = Res1[keyword].index(min(Res1[keyword]))
+        var = Res1['TempInt'][:, :, idx]
+        TempIntmMExtIns = var.reshape(8760,1)
+        PmassminiExtIns = Res1['Powjr'][:, :, idx]
+        PmassminExtIns = PmassminiExtIns.reshape(8760, 1)
+        idx = Res1[keyword].index(max(Res1[keyword]))
+        var = Res1['TempInt'][:, :, idx]
+        TempIntMMExtIns = var.reshape(8760, 1)
+        PmassmaxiExtIns = Res1['Powjr'][:, :, idx]
+        PmassmaxExtIns = PmassmaxiExtIns.reshape(8760, 1)
+        EcartPmassExtIns = [(-pi+PmassmaxExtIns[idx]) for idx,pi in enumerate(PmassminExtIns)]
+        idx = Res2[keyword].index(min(Res2[keyword]))
+        var = Res2['TempInt'][:, :, idx]
+        TempIntmMIntIns = var.reshape(8760, 1)
+        PmassminiIntIns = Res2['Powjr'][:, :, idx]
+        PmassminIntIns = PmassminiIntIns.reshape(8760, 1)
+        idx = Res2[keyword].index(max(Res2[keyword]))
+        var = Res2['TempInt'][:, :, idx]
+        TempIntMMIntIns = var.reshape(8760, 1)
+        PmassmaxiIntIns = Res2['Powjr'][:, :, idx]
+        PmassmaxIntIns = PmassmaxiIntIns.reshape(8760, 1)
+        EcartPmassIntIns = [(-pi + PmassmaxIntIns[idx]) for idx, pi in enumerate(PmassminIntIns)]
+
+        fig = plt.figure()
+        plt.title('Power analyses (kW)')
+        gs = gridspec.GridSpec(3, 1)
+        ax1 = plt.subplot(gs[0, 0])
+        ax1.grid()
+        ax1.plot([hr for hr in range(8760)],PmassmaxExtIns,label='P MMass ExtIns')
+        ax1.plot([hr for hr in range(8760)], PmassminExtIns, label='P mMass Ext Ins')
+        ax1.plot([hr for hr in range(8760)], PmassmaxIntIns, label='P MMass IntIns')
+        ax1.plot([hr for hr in range(8760)], PmassminIntIns, label='P mMass Int Ins')
+        ax1.set_ylabel('kW')
+        ax1.legend()
+        ax0 = plt.subplot(gs[1, 0],sharex=ax1)
+        ax0.grid()
+        ax0.plot([hr for hr in range(8760)], EcartPmassExtIns, label='P (M-m)Mass ExtIns')
+        ax0.plot([hr for hr in range(8760)], EcartPmassIntIns, label='P (M-m)Mass Int Ins')
+        ax0.legend()
+        ax0.set_ylabel('kW')
+        ax0 = plt.subplot(gs[2, 0], sharex=ax1)
+        ax0.grid()
+        ax0.plot([hr for hr in range(8760)], TempIntMMExtIns, label='int Temp MMass ExtIns')
+        ax0.plot([hr for hr in range(8760)], TempIntmMExtIns, label='int Temp mMass ExtIns')
+        ax0.plot([hr for hr in range(8760)], TempIntMMIntIns, label='int Temp MMass IntIns')
+        ax0.plot([hr for hr in range(8760)], TempIntmMIntIns, label='int Temp mMass IntIns')
+        ax0.plot([hr for hr in range(8760)], Res['TempExt'], label='Ext Temp')
+        ax0.legend()
+        ax0.set_ylabel('deg C')
+        ax0.set_xlabel('Time (hr)')
+        plt.figure()
+        plt.title('Cumulative difference cumsum(M-m) (kWh)')
+        plt.grid()
+        plt.plot([hr for hr in range(8760)], np.cumsum(EcartPmassExtIns), label='P (M-m)Mass ExtIns')
+        plt.plot([hr for hr in range(8760)], np.cumsum(EcartPmassIntIns), label='P (M-m)Mass Int Ins')
+        plt.legend()
+        plt.xlabel('Time (hr)')
+        plt.ylabel('kWh')
+        plt.figure()
+        plt.title('Pow difference vers ExtTemp')
+        plt.grid()
+        plt.plot(Res['TempExt'], EcartPmassExtIns,'.', label='P (M-m)Mass ExtIns')
+        plt.plot(Res['TempExt'], EcartPmassIntIns,'.', label='P (M-m)Mass Int Ins')
+        plt.legend()
+        plt.xlabel('Ext Temp')
+        plt.ylabel('kWh')
+
+        Dist =[]
+        for k in range(len(Res1['Powjr'][1, :, 1])):
+            distrib = [(Res1['Powjr'][26, k, j]-np.mean(Res1['Powjr'][26, k, :])) for j in range(len(Res1['Powjr'][26,k, :]))]
+            Dist.append(np.std(distrib))
+        Distrib = createSimpleFig()
+        plotResBase(Distrib['fig_name'].number, Distrib['ax0'], [hr for hr in range(24)], Dist, keyword + ' (m)',
+                    'Standard deviation Ext Ins (W)', keyword + '_Impact')
+        Dist = []
+        for k in range(len(Res2['Powjr'][1, :, 1])):
+            distrib = [(Res2['Powjr'][26, k, j] - np.mean(Res2['Powjr'][26, k, :])) for j in
+                       range(len(Res2['Powjr'][26, k, :]))]
+            Dist.append(np.std(distrib))
+        plotResBase(Distrib['fig_name'].number, Distrib['ax0'],  [hr for hr in range(24)], Dist, keyword + ' (m)',
+                    'Standard deviation Int Ins (W)', keyword + '_Impact')
+
         if i==0:
             NewFig = createSimpleFig()
         plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res1[keyword], Res1['heat1'], keyword+' (m)',
@@ -379,24 +488,39 @@ def InertiaAnalyses(path,keyword):
         if i==0:
             NewFig2 = createSimpleFig()
         plotResBase(NewFig2['fig_name'].number, NewFig2['ax0'], Res1['nbbuild'], Res1['heat1'],
-                    keyword+' (kg/m2)',
+                    keyword+' (m)',
                     'heat1', 'Error Files')
         plotResBase(NewFig2['fig_name'].number, NewFig2['ax0'], Res2['nbbuild'], Res2['heat1'],
-                    keyword + ' (kg/m2)',
+                    keyword + ' (m)',
                     'heat1', 'Error Files')
+        if i==0:
+            NewFig3 = createSimpleFig()
+        plotResBase(NewFig2['fig_name'].number, NewFig3['ax0'], Res1[keyword], Res1['TempOP27'],
+                    keyword+' (m)',
+                    'OP Temp > 27 Ext Ins (hr)', 'Error Files')
+        plotResBase(NewFig3['fig_name'].number, NewFig3['ax0'], Res2[keyword], Res2['TempOP27'],
+                    keyword + ' (m)',
+                    'OP Temp > 27 Int Ins (hr)', 'nb hours with Temp OP above 27')
+        if i==0:
+            NewFig4 = createSimpleFig()
+        plotResBase(NewFig4['fig_name'].number, NewFig4['ax0'], Res1[keyword], Res1['PowerPic'],
+                    keyword+' (m)',
+                    'Maximum Pic Power Ext Ins (kW)', 'Temp')
+        plotResBase(NewFig4['fig_name'].number, NewFig4['ax0'], Res2[keyword], Res2['PowerPic'],
+                    keyword + ' (m)',
+                    'Maximum Pic Power Int Ins (kW)', 'Maximum Pic Power')
 
 if __name__ == '__main__' :
-    path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\GlobResults\\CaseFilesExtMass\\Sim_Results\\']
+    path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\GlobResults\\CaseFilesIntMass\\Sim_Results\\']
     #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles\\Sim_Results\\']
     #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\LeakWWR\\CaseFiles7\\Sim_Results\\']
     #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\DistShadingWWR03\\CaseFiles8\\Sim_Results\\']
->>>>>>> main
 
     #path = [os.path.join(MainPath,os.path.normcase('LeakWWR/CaseFiles7/Sim_Results'))]
     #path = [os.path.join(MainPath,os.path.normcase('DistShadingWWR03/CaseFiles8/Sim_Results'))]
     #path.append(os.path.join(MainPath, os.path.normcase('CaseFilesTry/Sim_Results')))
     #this is to plot time series of all variables
-<<<<<<< HEAD
+
     #path = [os.path.join(MainPath,os.path.normcase('CaseFiles/Sim_Results'))]
     #path.append(os.path.join(MainPath,os.path.normcase('CaseFiles1zoneperstoreyExtIns/Sim_Results')))
     #path.append(os.path.join(MainPath, os.path.normcase('CaseFilesIntIns/Sim_Results')))
@@ -405,25 +529,16 @@ if __name__ == '__main__' :
     #GlobRes(path)
 
     #DynAnalyse(path, BuildList=['Building_5.pickle'])
-    DynAnalyseUnity(path,BuildList=['Building_5.pickle','Building_6.pickle'])
-
-=======
+    #DynAnalyseUnity(path,BuildList=['Building_5.pickle','Building_6.pickle'])
     #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles\\Sim_Results\\']
     #path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles1zoneperstoreyExtIns\\Sim_Results\\')
     #path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFilesIntIns\\Sim_Results\\')
     #path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles1zoneperstoreyExtIns05mWall\\Sim_Results\\')
     #DynAnalyseUnity(path,BuildList=['Building_11.pickle'])
-    InertiaAnalyses(path,'ExtMass')
->>>>>>> main
+    InertiaAnalyses(path,'IntMass')
+
     #OccupancyAnalyses(path)
 
-    #this is to plot results from LHC sampling for the three building 7, 9 and 13 from now
-    #wwrLeakAnalyse(path[0])
-<<<<<<< HEAD
-    #path = [os.path.join(MainPath,os.path.normcase('DistShadingWWR03/CaseFiles'))]
-=======
-    #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\DistShadingWWR03\\CaseFiles']
->>>>>>> main
     # this is to plot results shading distance simulation in DistShading folder
     #DistAnalyse(path[0])
     plt.show()
