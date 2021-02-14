@@ -189,9 +189,9 @@ def createSimpleFig():
     return {'fig_name' : fig_name, 'ax0': ax0}
 
 
-def plotResBase(fig_name,ax0,varx,vary,varxname,varyname,title):
+def plotResBase(fig_name,ax0,varx,vary,varxname,varyname,title,sign):
     plt.figure(fig_name)
-    ax0.plot(varx, vary,label= varyname)
+    ax0.plot(varx, vary,sign,label= varyname)
     ax0.set_xlabel(varxname)
     ax0.legend()
     plt.title(title)
@@ -262,26 +262,24 @@ def DistAnalyse(mainPath):
 
 
 def wwrLeakAnalyse(path):
-    Res = GetData(path)
+    Res = GetData(path[0])
     NewFig = createSimpleFig()
-    plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['WWR'], Res['EnvLeak'], 'Window Wall Ratio (-)', 'Env Leak (l/s/m2 for 50Pa)','')
-    wwrrange = [0.2,0.35]
-    Res = Datafilter(Res, 'WWR', wwrrange)
-    evlerange = [0.4, 2]
+    plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['EnvLeak'], Res['PowerPic'], 'Env Leak (l/s/m2 for 50Pa)', 'PowerPic','','.')
+    evlerange = [1, 2]
     Res = Datafilter(Res, 'EnvLeak', evlerange)
-    plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['WWR'], Res['EnvLeak'], 'Window Wall Ratio (-)','Env Leak (l/s/m2 for 50Pa)','')
+    plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['EnvLeak'], Res['PowerPic'], 'Env Leak (l/s/m2 for 50Pa)', 'PowerPic','','o')
     # fig_name, ax0, ax1 = createDualFig()
     # plotRes(fig_name.number,ax0,ax1,Res['EnvLeak'],Res['tot1'],Res['EPC_Tot'],'EnvLeak','Total Sim (kW/m2)','Total Mes (kW/m2)')
     # fig_name, ax0, ax1 = createDualFig()
     # plotRes(fig_name.number,ax0,ax1,Res['WWR'], Res['tot1'], Res['EPC_Tot'], 'WWR', 'Total Sim (kW/m2)', 'Total Mes (kW/m2)')
-    NewFig = createSimpleFig()
-    plotAdimRes(NewFig['fig_name'].number, NewFig['ax0'], Res['EnvLeak'], Res['tot1'], 'Normalized Parameter (-)', 'Normalized Heat needs (-)','Ext Env Leak' + str(evlerange))
-    plotAdimRes(NewFig['fig_name'].number, NewFig['ax0'], Res['WWR'], Res['tot1'], 'Normalized Parameter (-)', 'Normalized Heat needs (-)','Window Wall Ratio' +str(wwrrange))
-    NewFig = createSimpleFig()
-    plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['EnvLeak'], Res['tot1'], 'Env Leak (l/s/m2 for 50Pa)',
-                'Total needs (kWh/m2)','')
-    NewFig = createSimpleFig()
-    plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['WWR'], Res['tot1'], 'Window Wall Ratio (-)', 'Total needs (kWh/m2)','')
+    # NewFig = createSimpleFig()
+    # plotAdimRes(NewFig['fig_name'].number, NewFig['ax0'], Res['EnvLeak'], Res['tot1'], 'Normalized Parameter (-)', 'Normalized Heat needs (-)','Ext Env Leak' + str(evlerange))
+    # plotAdimRes(NewFig['fig_name'].number, NewFig['ax0'], Res['WWR'], Res['tot1'], 'Normalized Parameter (-)', 'Normalized Heat needs (-)','Window Wall Ratio' +str(wwrrange))
+    # NewFig = createSimpleFig()
+    # plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['EnvLeak'], Res['tot1'], 'Env Leak (l/s/m2 for 50Pa)',
+    #             'Total needs (kWh/m2)','')
+    # NewFig = createSimpleFig()
+    # plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['WWR'], Res['tot1'], 'Window Wall Ratio (-)', 'Total needs (kWh/m2)','')
 
 
 def Datafilter(Data, Var, range):
@@ -316,7 +314,7 @@ def DynAnalyse(path,BuildList = []):
                 if 'Data_' in key1:
                     if i==0:
                         NewFig[key][key1] = createSimpleFig()
-                    plotResBase(NewFig[key][key1]['fig_name'].number, NewFig[key][key1]['ax0'], [i for i in range(0,len(Res[key][key1]))], Res[key][key1], 'Time', key1,key)
+                    plotResBase(NewFig[key][key1]['fig_name'].number, NewFig[key][key1]['ax0'], [i for i in range(0,len(Res[key][key1]))], Res[key][key1], 'Time', key1,key,'-')
 
 def DynAnalyseUnity(path,BuildList = []):
     liste2load = path
@@ -511,8 +509,10 @@ def InertiaAnalyses(path,keyword):
                     'Maximum Pic Power Int Ins (kW)', 'Maximum Pic Power')
 
 if __name__ == '__main__' :
-    main =os.getcwd()
-    path = [os.path.join(main,os.path.normcase('GlobResults\CaseFilesIntMass\Sim_Results'))]
+    mainpath =os.getcwd()
+    path = [(mainpath+os.path.normcase('\CaseFiles10\Sim_Results'))]
+    wwrLeakAnalyse(path)
+    DynAnalyse(path,['Building_10v0.pickle','Building_10v15.pickle','Building_10v4.pickle','Building_10v5.pickle','Building_10v19.pickle'])
     #GetData(path[0])
     #path = [os.path.join(main,os.path.normcase('CaseFiles/Sim_Results'))]
 
@@ -531,7 +531,7 @@ if __name__ == '__main__' :
     #DynAnalyse(path, BuildList=['Building_5.pickle'])
     #DynAnalyseUnity(path,BuildList=['Building_10v0.pickle','Building_10v1.pickle'])
     #DynAnalyseUnity(path,BuildList=['Building_11.pickle'])
-    InertiaAnalyses(path,'IntMass')
+    #InertiaAnalyses(path,'IntMass')
 
     #OccupancyAnalyses(path)
 

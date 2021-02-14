@@ -163,10 +163,10 @@ def LaunchProcess(nbcase,VarName2Change = [],Bounds = [],nbruns = 1):
     os.chdir(MainPath)
 
 if __name__ == '__main__' :
-    CaseName = ['Thermal mass']
+    CaseName = ['LEak']
     BuildNum = [10]
-    VarName2Change = ['InternalMass']
-    Bounds = [[10,200]]
+    VarName2Change = ['EnvLeak']
+    Bounds = [[0.4,3]]
     for i in BuildNum:
-        LaunchProcess(i,VarName2Change,Bounds,1)
+        LaunchProcess(i,VarName2Change,Bounds,20)
         os.rename(os.path.join(os.getcwd(), 'CaseFiles'), os.path.join(os.getcwd(), 'CaseFiles'+str(i)))
