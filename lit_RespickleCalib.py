@@ -512,10 +512,9 @@ def InertiaAnalyses(path,keyword):
 
 if __name__ == '__main__' :
     main =os.getcwd()
-    path = [os.path.join(main,os.path.normcase('CaseFiles10/Sim_Results'))]
-    #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles\\Sim_Results\\']
-    #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\LeakWWR\\CaseFiles7\\Sim_Results\\']
-    #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\DistShadingWWR03\\CaseFiles8\\Sim_Results\\']
+    path = [os.path.join(main,os.path.normcase('GlobResults\CaseFilesIntMass\Sim_Results'))]
+    #GetData(path[0])
+    #path = [os.path.join(main,os.path.normcase('CaseFiles/Sim_Results'))]
 
     #path = [os.path.join(MainPath,os.path.normcase('LeakWWR/CaseFiles7/Sim_Results'))]
     #path = [os.path.join(MainPath,os.path.normcase('DistShadingWWR03/CaseFiles8/Sim_Results'))]
@@ -530,13 +529,9 @@ if __name__ == '__main__' :
     #GlobRes(path)
 
     #DynAnalyse(path, BuildList=['Building_5.pickle'])
-    DynAnalyseUnity(path,BuildList=['Building_10v0.pickle','Building_10v1.pickle'])
-    #path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles\\Sim_Results\\']
-    #path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles1zoneperstoreyExtIns\\Sim_Results\\')
-    #path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFilesIntIns\\Sim_Results\\')
-    #path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CaseFiles1zoneperstoreyExtIns05mWall\\Sim_Results\\')
+    #DynAnalyseUnity(path,BuildList=['Building_10v0.pickle','Building_10v1.pickle'])
     #DynAnalyseUnity(path,BuildList=['Building_11.pickle'])
-    #InertiaAnalyses(path,'IntMass')
+    InertiaAnalyses(path,'IntMass')
 
     #OccupancyAnalyses(path)
 

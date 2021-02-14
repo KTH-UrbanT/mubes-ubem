@@ -99,11 +99,6 @@ def LaunchProcess(nbsim,VarName2Change = [], Var2Change = []):
     #theretheless this organization still enable to order things !
     StudiedCase = BuildingList()
     for nbcase in range(len(Buildingsfile)):
-<<<<<<< .mine
-        if nbcase<7:
-=======
-        if nbcase==5:
->>>>>>> .theirs
             print('Building ', nbcase, '/', len(Buildingsfile), 'process starts')
             CaseName = 'run'
             # erasing all older file from previous simulation if present
@@ -144,11 +139,7 @@ def LaunchProcess(nbsim,VarName2Change = [], Var2Change = []):
 
 if __name__ == '__main__' :
     #saveContext()
-<<<<<<< .mine
-    CaseName = ['Naeim']
-=======
-    CaseName = ['TestFreecool']
->>>>>>> .theirs
+    CaseName = ['Area2']
     VarName2Change = []
     Var2Change = []
     for id,name in enumerate(CaseName): #range(7,8):

@@ -63,7 +63,6 @@ def setOutputLevel(idf):
 
 def RunProcess(MainPath,epluspath):
     file2run = LaunchSim.initiateprocess(MainPath)
-    print('Hi, I am there')
     LaunchSim.RunMultiProc(file2run, MainPath, True, 0.7,epluspath)
 
 def LaunchProcess(nbcase,VarName2Change = [],Bounds = [],nbruns = 1):
@@ -159,7 +158,6 @@ def LaunchProcess(nbcase,VarName2Change = [],Bounds = [],nbruns = 1):
         with open('Building_' + str(nbcase) +  'v'+str(i)+ '.pickle', 'wb') as handle:
             pickle.dump(Case, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    print('Hej, I am here')
     RunProcess(MainPath,epluspath)
     sys.path.remove(path2addgeom)
     os.chdir(MainPath)
@@ -170,5 +168,5 @@ if __name__ == '__main__' :
     VarName2Change = ['InternalMass']
     Bounds = [[10,200]]
     for i in BuildNum:
-        LaunchProcess(i,VarName2Change,Bounds,2)
+        LaunchProcess(i,VarName2Change,Bounds,1)
         os.rename(os.path.join(os.getcwd(), 'CaseFiles'), os.path.join(os.getcwd(), 'CaseFiles'+str(i)))
