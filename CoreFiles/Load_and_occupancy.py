@@ -181,13 +181,22 @@ def CreateBasementLeakage(idf, zone, ACH):
 
 def CreateInternalMass(idf,zone,FloorArea,name,Material):
     surf = 2*Material['WeightperZoneArea']*FloorArea/Material['Density']/Material['Thickness']
-    idf.newidfobject(
-        "INTERNALMASS",
-        Name=zone.Name + 'IntMass',
-        Zone_Name=zone.Name,
-        Construction_Name=name,
-        Surface_Area=round(surf),
-    )
+    if idf.idd_version[1] == 1:
+        idf.newidfobject(
+            "INTERNALMASS",
+            Name=zone.Name + 'IntMass',
+            Zone_Name=zone.Name,
+            Construction_Name=name,
+            Surface_Area=round(surf),
+        )
+    else:
+        idf.newidfobject(
+            "INTERNALMASS",
+            Name=zone.Name + 'IntMass',
+            Zone_or_ZoneList_Name=zone.Name,
+            Construction_Name=name,
+            Surface_Area=round(surf),
+        )
     return idf
 
 def ZoneFreeCooling(idf,zone,building,schedule):
