@@ -113,6 +113,8 @@ class Building:
         self.ACH_freecool = SCD['ACH_freecool']
         self.intT_freecool = SCD['intT_freecool']
         self.dT_freeCool = SCD['dT_freeCool']
+        self.Footprint_area_Sweref = DB.properties['Footprint_area_Sweref']
+        self.Footprint_area_AZMEA = DB.properties['Footprint_area_AZMEA']
         #if there are no cooling comsumption, lets considerer a set point at 50deg max
         for key in self.EPCMeters['Cooling']:
             if self.EPCMeters['Cooling'][key]>0:
