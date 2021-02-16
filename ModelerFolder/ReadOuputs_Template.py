@@ -8,12 +8,14 @@ path2addgeom = os.path.join(os.path.dirname(os.getcwd()),'geomeppy')
 #path2addeppy = os.path.dirname(os.getcwd()) + '\\eppy'
 #sys.path.append(path2addeppy)
 sys.path.append(path2addgeom)
+sys.path.append("..")
+from DataBase import DB_Building
 from geomeppy import IDF
 
 def GetData(path):
     os.chdir(path)
     liste = os.listdir()
-    zone1 = {}
+    ResBld = {}
     SimNumb = []
     ErrFiles = []
     print('reading file...')
@@ -25,119 +27,78 @@ def GetData(path):
                 except:
                     num = int(i[i.index('_') + 1:i.index('.')])
                 SimNumb.append(num)
-                zone1[SimNumb[-1]] = pickle.load(handle)
+                ResBld[SimNumb[-1]] = pickle.load(handle)
             try:
                 ErrFiles.append(os.path.getsize(i[:i.index('.pickle')]+'.err'))
             except:
                 ErrFiles.append(0)
-    elec1 = []
-    heat1 = []
-    cool1 = []
-    tot1 = []
-    nbbuild = []
-    EPC_elec = []
-    EPC_Heat = []
-    EPC_Cool = []
-    EPC_Tot = []
-    TotalPower = {}
-    EPareas1 =[]
-    DBareas = []
-    EnergieTot = []
-    EnvLeak = []
-    Dist = []
-    WWR = []
-    IntMass = []
-    ExtMass = []
-    ExtIns = []
-    TempOP27 = []
-    PowerPic=[]
-    MaxPowDay=[]
+
+    variables={'elec','heat','cool','tot','nbbuild','EPC_elec','EPC_Heat','EPC_Cool','EPC_Tot',
+               'DBareas','EnergieTot','EnvLeak','Dist','WWR','IntMass','ExtMass','ExtIns','TempOP27',
+               'PowerPic','MaxPowDay','EPareas1'}
+
+    Res =dict.fromkeys(variables, [])
+
     print('organizing data...')
-    for i,key in enumerate(zone1):
-        elec1.append(zone1[key]['EnergyConsVal'][1]/3.6/zone1[key]['EPlusHeatArea']*1000) #convert GJ in kWh/m2
-        cool1.append(zone1[key]['EnergyConsVal'][4]/3.6/zone1[key]['EPlusHeatArea']*1000)
-        heat1.append(zone1[key]['EnergyConsVal'][5]/3.6/zone1[key]['EPlusHeatArea']*1000)
-        tot1.append((zone1[key]['EnergyConsVal'][1]+zone1[key]['EnergyConsVal'][4]+zone1[key]['EnergyConsVal'][5])/3.6/zone1[key]['EPlusHeatArea']*1000) #to have GJ into kWh/m2
+    for i,key in enumerate(ResBld):
+        Res['elec'].append(ResBld[key]['EnergyConsVal'][1]/3.6/ResBld[key]['EPlusHeatArea']*1000) #convert GJ in kWh/m2
+        Res['cool'].append(ResBld[key]['EnergyConsVal'][4]/3.6/ResBld[key]['EPlusHeatArea']*1000)
+        Res['heat'].append(ResBld[key]['EnergyConsVal'][5]/3.6/ResBld[key]['EPlusHeatArea']*1000)
+        Res['tot'].append((ResBld[key]['EnergyConsVal'][1]+ResBld[key]['EnergyConsVal'][4]+ResBld[key]['EnergyConsVal'][5])/3.6/ResBld[key]['EPlusHeatArea']*1000) #to have GJ into kWh/m2
         eleval = 0
-        val = zone1[key]['BuildDB']
+        val = ResBld[key]['BuildDB']
         for x in val.EPCMeters['ElecLoad']:
             if val.EPCMeters['ElecLoad'][x]:
                 eleval += val.EPCMeters['ElecLoad'][x]
-        EPC_elec.append(eleval/zone1[key]['EPlusHeatArea'])
+        Res['EPC_elec'].append(eleval/ResBld[key]['EPlusHeatArea'])
         heatval = 0
         for x in val.EPCMeters['Heating']:
             heatval += val.EPCMeters['Heating'][x]
-        EPC_Heat.append(heatval/zone1[key]['EPlusHeatArea'])
+        Res['EPC_Heat'].append(heatval/ResBld[key]['EPlusHeatArea'])
         coolval = 0
         for x in val.EPCMeters['Cooling']:
             coolval += val.EPCMeters['Cooling'][x]
-        EPC_Cool.append(coolval/zone1[key]['EPlusHeatArea'])
-        EPC_Tot.append((eleval+heatval+coolval)/zone1[key]['EPlusHeatArea'])
-        EPareas1.append(zone1[key]['EPlusHeatArea'])
-        DBareas.append(val.surface)
-        # TotalPower[key] = [zone1[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Cooling Rate'][i] +
-        #                   zone1[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate'][i] +
-        #                   zone1[key]['HeatedArea']['Data_Electric Equipment Total Heating Rate'][i]
-        #                   for i in range(len(zone1[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate']))]
-        #EnergieTot.append(sum(TotalPower[key])/1000/zone1[key]['EPlusHeatArea'])
+        Res['EPC_Cool'].append(coolval/ResBld[key]['EPlusHeatArea'])
+        Res['EPC_Tot'].append((eleval+heatval+coolval)/ResBld[key]['EPlusHeatArea'])
+        Res['EPareas1'].append(ResBld[key]['EPlusHeatArea'])
+        Res['DBareas'].append(val.surface)
+
         try:
-            TotalPower[key] = [zone1[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Cooling Rate'][i] +
-                          zone1[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate'][i] +
-                          zone1[key]['HeatedArea']['Data_Electric Equipment Total Heating Rate'][i]
-                          for i in range(len(zone1[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate']))]
-            EnergieTot.append(sum(TotalPower[key])/1000/zone1[key]['EPlusHeatArea'])
+            TotalPower[key] = [ResBld[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Cooling Rate'][i] +
+                          ResBld[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate'][i] +
+                          ResBld[key]['HeatedArea']['Data_Electric Equipment Total Heating Rate'][i]
+                          for i in range(len(ResBld[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate']))]
+            Res['EnergieTot'].append(sum(TotalPower[key])/1000/ResBld[key]['EPlusHeatArea'])
         except:
             pass
-        IntMass.append(val.InternalMass['HeatedZoneIntMass']['WeightperZoneArea'])
-        ExtMass.append(val.Materials['Wall Inertia']['Thickness'])
-        ExtIns.append(val.ExternalInsulation)
-        nbbuild.append(key)
-        EnvLeak.append(val.EnvLeak)
-        WWR.append(val.wwr)
-        Dist.append(val.MaxShadingDist)
-        TempOP = zone1[key]['HeatedArea']['Data_Zone Operative Temperature']
-        TempOP27.append(len([i for i in TempOP if i > 27]))
-        Pow = zone1[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate']
+        Res['IntMass'].append(val.InternalMass['HeatedZoneIntMass']['WeightperZoneArea'])
+        Res['ExtMass'].append(val.Materials['Wall Inertia']['Thickness'])
+        Res['ExtIns'].append(val.ExternalInsulation)
+        Res['nbbuild'].append(key)
+        Res['EnvLeak'].append(val.EnvLeak)
+        Res['WWR'].append(val.wwr)
+        Res['Dist'].append(val.MaxShadingDist)
+        TempOP = ResBld[key]['HeatedArea']['Data_Zone Operative Temperature']
+        Res['TempOP27'].append(len([i for i in TempOP if i > 27]))
+        Pow = ResBld[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate']
         Pow = [i/1000 for i in Pow]
-        PowerPic.append(max(Pow))
+        Res['PowerPic'].append(max(Pow))
         var = np.array(Pow)
-        MaxPowDay.append(Pow.index(max(Pow))/24)
+        Res['MaxPowDay'].append(Pow.index(max(Pow))/24)
         var = var.reshape(365,24,1)
         if i ==0 :
             Powjr = var
         else:
             Powjr = np.append(Powjr,var,axis = 2)
-        var = np.array(zone1[key]['HeatedArea']['Data_Zone Operative Temperature'])
+        var = np.array(ResBld[key]['HeatedArea']['Data_Zone Operative Temperature'])
         var = var.reshape(365, 24, 1)
         if i == 0:
             TempInt = var
         else:
             TempInt = np.append(TempInt, var, axis=2)
-    TempExt = zone1[key]['OutdoorSite']['Data_Site Outdoor Air Drybulb Temperature']
-    return {'elec1' : elec1,
-            'heat1' : heat1,
-            'cool1' : cool1,
-            'tot1' : tot1,
-            'nbbuild' : nbbuild,
-            'EPC_elec' : EPC_elec,
-            'EPC_Heat': EPC_Heat,
-            'EPC_Cool': EPC_Cool,
-            'EPC_Tot': EPC_Tot,
-            'EnvLeak' : EnvLeak,
-            'Dist' : Dist,
-            'WWR' : WWR,
-            'SimNumb' :SimNumb,
-            'IntMass' : IntMass,
-            'ExtMass' : ExtMass,
-            'ErrFiles' : ErrFiles,
-            'ExtIns' : ExtIns,
-            'TempOP27' : TempOP27,
-            'PowerPic' : PowerPic,
-            'Powjr' : Powjr,
-            'MaxPowDay' : MaxPowDay,
-            'TempExt' : TempExt,
-            'TempInt' : TempInt,
-            }
+    Res['TempInt'] = TempInt
+    Res['TempExt'] = ResBld[key]['OutdoorSite']['Data_Site Outdoor Air Drybulb Temperature']
+    return Res
 
 def GetSingleSim(path,buildList=[]):
     os.chdir(path)
@@ -145,7 +106,7 @@ def GetSingleSim(path,buildList=[]):
         liste = os.listdir()
     else:
         liste = [buildList]
-    zone1 = {}
+    ResBld = {}
     SimNumb = []
     print('reading file...')
     for i in liste:
@@ -156,17 +117,17 @@ def GetSingleSim(path,buildList=[]):
                 except:
                     num = int(i[i.index('_') + 1:i.index('.')])
                 SimNumb.append(num)
-                zone1[SimNumb[-1]] = pickle.load(handle)
+                ResBld[SimNumb[-1]] = pickle.load(handle)
     print('organizing data...')
-    if len(zone1)>1:
+    if len(ResBld)>1:
         print('Sorry, ti seems that there are at least 2 simulation results file in this path...')
     else:
         Res = {}
-        toget = ['HeatedArea','NonHeatedArea','OutdoorSite']
-        for key in zone1:
-            for key1 in zone1[key]:
+        toget = ['HeatedArea','NotHeatedArea','OutdoorSite']
+        for key in ResBld:
+            for key1 in ResBld[key]:
                 if key1 in toget:
-                    Res[key1] = zone1[key][key1]
+                    Res[key1] = ResBld[key][key1]
     return Res
 
 def createDualFig(title):
@@ -265,8 +226,7 @@ def wwrLeakAnalyse(path):
     Res = GetData(path[0])
     NewFig = createSimpleFig()
     plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['EnvLeak'], Res['PowerPic'], 'Env Leak (l/s/m2 for 50Pa)', 'PowerPic','','.')
-    evlerange = [1, 2]
-    Res = Datafilter(Res, 'EnvLeak', evlerange)
+
     plotResBase(NewFig['fig_name'].number, NewFig['ax0'], Res['EnvLeak'], Res['PowerPic'], 'Env Leak (l/s/m2 for 50Pa)', 'PowerPic','','o')
     # fig_name, ax0, ax1 = createDualFig()
     # plotRes(fig_name.number,ax0,ax1,Res['EnvLeak'],Res['tot1'],Res['EPC_Tot'],'EnvLeak','Total Sim (kW/m2)','Total Mes (kW/m2)')
@@ -509,34 +469,30 @@ def InertiaAnalyses(path,keyword):
                     'Maximum Pic Power Int Ins (kW)', 'Maximum Pic Power')
 
 if __name__ == '__main__' :
+
+    #the main idea of this file is to present some way for analyzing the data.
+    #some usful function are implemented such as agregating the data from several simulation in one disctionary
+    #this enable to make easy plots of variables over others.
+    #some generic function to create figure and make plots are also available.
+    #but specific function are to be created for specific anaylses. some are left as example but they might not be
+    # compatible with other simulations than the one they were created for.
+    # some propose plot for timeseries with overplots of other specific cases while other function enable to plot not timedependent variables
+    #the ain paradigm is to give the path or a list of path and data are gathered in one element
+
     mainpath =os.getcwd()
-    path = [(mainpath+os.path.normcase('/CaseFiles10Linux/CaseFiles10/Sim_Results'))]
+    path = [(mainpath+os.path.normcase('/ForTest/Sim_Results'))]
+    # path.append(os.path.join(MainPath, os.path.normcase('CaseFilesTry/Sim_Results')))
 
-
+# available functions
     wwrLeakAnalyse(path)
-    DynAnalyse(path,['Building_10v0.pickle','Building_10v2.pickle'])
-    #GetData(path[0])
-    #path = [os.path.join(main,os.path.normcase('CaseFiles/Sim_Results'))]
-
-    #path = [os.path.join(MainPath,os.path.normcase('LeakWWR/CaseFiles7/Sim_Results'))]
-    #path = [os.path.join(MainPath,os.path.normcase('DistShadingWWR03/CaseFiles8/Sim_Results'))]
-    #path.append(os.path.join(MainPath, os.path.normcase('CaseFilesTry/Sim_Results')))
-    #this is to plot time series of all variables
-
-    #path = [os.path.join(MainPath,os.path.normcase('CaseFiles/Sim_Results'))]
-    #path.append(os.path.join(MainPath,os.path.normcase('CaseFiles1zoneperstoreyExtIns/Sim_Results')))
-    #path.append(os.path.join(MainPath, os.path.normcase('CaseFilesIntIns/Sim_Results')))
-    #path.append(os.path.join(MainPath, os.path.normcase('CaseFiles1zoneperstoreyExtIns05mWall/Sim_Results')))
-
-    #GlobRes(path)
-
+    DynAnalyse(path,['Building_6v0.pickle','Building_5v0.pickle'])#,'Building_7v0.pickle','Building_8v0.pickle','Building_9v0.pickle'])
+    #GlobRes(path[0])
     #DynAnalyse(path, BuildList=['Building_5.pickle'])
     #DynAnalyseUnity(path,BuildList=['Building_10v0.pickle','Building_10v1.pickle'])
     #DynAnalyseUnity(path,BuildList=['Building_11.pickle'])
     #InertiaAnalyses(path,'IntMass')
-
     #OccupancyAnalyses(path)
-
     # this is to plot results shading distance simulation in DistShading folder
     #DistAnalyse(path[0])
+
     plt.show()

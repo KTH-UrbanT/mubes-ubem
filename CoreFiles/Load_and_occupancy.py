@@ -112,7 +112,7 @@ def CreateThermostatFile(idf,name,namesetUp,namesetLo):
 
 def ZoneCtrl(idf,zone,building,PeopleDensity,ThermostatName):
     #to all zones adding an ideal load element driven by the above thermostat
-    #DCV stands for Demand Controlled Ventilation
+    #DCV stands for Demand Controlled Ventilation, the airflow is in m#/s/m2 thus divded by 1000 from DB_Data
     idf.newidfobject(
         "HVACTEMPLATE:ZONE:IDEALLOADSAIRSYSTEM",
         Zone_Name=zone.Name,
@@ -121,7 +121,7 @@ def ZoneCtrl(idf,zone,building,PeopleDensity,ThermostatName):
         Sensible_Heat_Recovery_Effectiveness= 0.7 if building.VentSyst['BalX'] or building.VentSyst['ExhX'] else 0,
         #Design_Specification_Outdoor_Air_Object_Name = AirNode,
         Outdoor_Air_Method='Sum' if PeopleDensity>0 and building.DCV else 'Flow/Area',
-        Outdoor_Air_Flow_Rate_per_Zone_Floor_Area=building.AreaBasedFlowRate + building.OccupBasedFlowRate*PeopleDensity*(1-building.DCV),
+        Outdoor_Air_Flow_Rate_per_Zone_Floor_Area=building.AreaBasedFlowRate/1000 + building.OccupBasedFlowRate*PeopleDensity*(1-building.DCV),
         Outdoor_Air_Flow_Rate_per_Person=building.OccupBasedFlowRate,
         Demand_Controlled_Ventilation_Type = 'OccupancySchedule' if PeopleDensity>0 and building.DCV else 'None',
         #Outdoor_Air_Inlet_Node_Name = 'OutdoorAirNode'

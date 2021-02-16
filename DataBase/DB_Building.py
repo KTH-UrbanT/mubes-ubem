@@ -273,9 +273,9 @@ class Building:
         try:
             AreaBasedFlowRate = float(DB.properties[DBL['AreaBasedFlowRate_key']])
         except:
-            AreaBasedFlowRate = 0  #l/s/m2, minimum flowrate
+            AreaBasedFlowRate = SCD['AreaBasedFlowRate']  #l/s/m2, minimum flowrate
         AreaBasedFlowRate = checkLim(AreaBasedFlowRate,DBL['AreaBasedFlowRate_lim'][0],DBL['AreaBasedFlowRate_lim'][1])
-        return AreaBasedFlowRate/1000 #in order to have it in m3/s/m2
+        return AreaBasedFlowRate
 
     def getOccupType(self,DB):
         OccupType = {}
@@ -292,16 +292,27 @@ class Building:
 
     def getIntLoad(self, MainPath):
         #we should integrate the loads depending on the number of appartemnent in the building
+        type = SCD['IntLoadType']
         Input_path = os.path.join(MainPath,'InputFiles')
-        IntLoad = os.path.join(Input_path,'P_Mean_over_10.txt')
+        #lets used StROBE package by defaults (average over 10 profile
+        IntLoad = os.path.join(Input_path, 'P_Mean_over_10.txt')
+        #now we compute power time series in order to match the measures form EPCs
         eleval = 0
-        for x in self.EPCMeters['ElecLoad']:
-            if self.EPCMeters['ElecLoad'][x]:
-                eleval += self.EPCMeters['ElecLoad'][x]*1000 #division by number of hours to convert Wh into W
-        IntLoad = eleval/self.EPHeatedArea/8760 #this value is thus in W/m2
-        # if eleval>0:
-        #     IntLoad = os.path.join(Input_path, self.name + '_Winter.txt')
-        #     ProbGenerator.SigmoFile('Summer', 5, eleval/self.EPHeatedArea*100, IntLoad) #the *100 is because we have considered 100m2 for the previous file
+        try :
+            for x in self.EPCMeters['ElecLoad']:
+                if self.EPCMeters['ElecLoad'][x]:
+                    eleval += self.EPCMeters['ElecLoad'][x]*1000 #division by number of hours to convert Wh into W
+        except:
+            pass
+        if eleval>0:
+            if 'Cste' in type:
+                IntLoad = eleval/self.EPHeatedArea/8760 #this value is thus in W/m2
+            if 'winter' in type:
+                IntLoad = os.path.join(Input_path, self.name + '_winter.txt')
+                ProbGenerator.SigmoFile('winter', 3, eleval/self.EPHeatedArea*100, IntLoad) #the *100 is because we have considered 100m2 for the previous file
+            if 'summer' in type:
+                IntLoad = os.path.join(Input_path, self.name + '_summer.txt')
+                ProbGenerator.SigmoFile('summer', 3, eleval / self.EPHeatedArea * 100,IntLoad)  # the *100 is because we have considered 100m2 for the previous file
         return IntLoad
 
 

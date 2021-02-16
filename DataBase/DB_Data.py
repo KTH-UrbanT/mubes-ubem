@@ -1,5 +1,5 @@
 WeatherFile = \
- {'Loc' : "SWE_Stockholm.Arlanda.024600_IWEC"
+ {'Loc' : 'USA_CA_San.Francisco.Intl.AP.724940_TMY3', #"SWE_Stockholm.Arlanda.024600_IWEC"
   }
 
 #Thisdict gives all the materials characteristics.
@@ -104,10 +104,12 @@ BasisElement = \
  'OccupBasedFlowRate': 7,  # l/s/person
  'OccupHeatRate' : 70, #W per person
  'EnvLeak': 0.89,# l/s/m2 at 50Pa
- 'BasementAirLeak': 0.1, #in Air change rate [vol/hour]
+ 'BasementAirLeak': 1, #in Air change rate [vol/hour]
  'wwr': 0.3,
  'ExternalInsulation' : True,
+ 'IntLoadType' : 'Cste', #change either by 'Cste', 'winter', or 'summer' for reversed sigmoid or sigmoid
  'OffOccRandom' : False,
+ 'AreaBasedFlowRate' : 0.35, #l/s/m2
  'setTempUpL' : 25,
  'setTempLoL' : 21,
  'ACH_freecool' :4,     #this the the vol/hr of extra ventilation when free cooling is on

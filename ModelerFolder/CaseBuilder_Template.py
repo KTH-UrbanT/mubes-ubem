@@ -14,7 +14,7 @@ import CoreFiles.GeomScripts as GeomScripts
 import CoreFiles.Set_Outputs as Set_Outputs
 import CoreFiles.Sim_param as Sim_param
 import CoreFiles.Load_and_occupancy as Load_and_occupancy
-import ModelerFolder.LaunchSim as LaunchSim
+import CoreFiles.LaunchSim as LaunchSim
 from DataBase.DB_Building import BuildingList
 import multiprocessing as mp
 
@@ -68,42 +68,44 @@ def setOutputLevel(idf,MainPath):
 #     #so the argument are saved into a pickle and reloaded in the main (see if __name__ == '__main__' in LaunchSim file)
 #     with open(os.path.join(MainPath, 'MultiProcInputs.pickle'), 'wb') as handle:
 #         pickle.dump(MultiProcInputs, handle, protocol=pickle.HIGHEST_PROTOCOL)
-#     #LaunchSim()
-#     LaunchSim.RunMultiProc(file2run, MainPath, True, CPUusage,epluspath)
+#     LaunchSim.RunMultiProc(file2run, MainPath, False, CPUusage,epluspath)
 
-def LaunchProcess(nbcase,VarName2Change = [],Bounds = [],nbruns = 1,CPUusage = 1):
-#this main is written for validation of the global workflow. and as an example for other simulation
-#the cases are build in a for loop and then all cases are launched in a multiprocess mode, the maximum %of cpu is given as input
-    MainPath = os.getcwd()
-    keyPath = {'epluspath' : '','Buildingsfile' : '','Shadingsfile' : ''}
+def readPathfile():
+    keyPath = {'epluspath': '', 'Buildingsfile': '', 'Shadingsfile': ''}
     with open('Pathways.txt', 'r') as PathFile:
         Paths = PathFile.readlines()
         for line in Paths:
             for key in keyPath:
                 if key in line:
-                    keyPath[key] = os.path.normcase(line[line.find(':')+1:-1])
+                    keyPath[key] = os.path.normcase(line[line.find(':') + 1:-1])
 
+    return keyPath
+
+def LaunchProcess(keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns = 1,CPUusage = 1):
+#this main is written for validation of the global workflow. and as an example for other simulation
+#the cases are build in a for loop and then all cases are launched in a multiprocess mode, the maximum %of cpu is given as input
+    MainPath = os.getcwd()
     epluspath = keyPath['epluspath']
     Buildingsfile = pygeoj.load(keyPath['Buildingsfile'])
     Shadingsfile = pygeoj.load(keyPath['Shadingsfile'])
 
-    SimDir = os.path.join(os.getcwd(), 'CaseFiles')
+    SimDir = os.path.join(os.getcwd(), 'RunningFolder')
     if not os.path.exists(SimDir):
         os.mkdir(SimDir)
-    else:
-        for i in os.listdir(SimDir):
-            if os.path.isdir(os.path.join(SimDir,i)):
-                for j in os.listdir(os.path.join(SimDir,i)):
-                    os.remove(os.path.join(os.path.join(SimDir,i),j))
-                os.rmdir(os.path.join(SimDir,i))
-            else:
-                os.remove(os.path.join(SimDir,i))
+    # else:
+    #     for i in os.listdir(SimDir):
+    #         if os.path.isdir(os.path.join(SimDir,i)):
+    #             for j in os.listdir(os.path.join(SimDir,i)):
+    #                 os.remove(os.path.join(os.path.join(SimDir,i),j))
+    #             os.rmdir(os.path.join(SimDir,i))
+    #         else:
+    #             os.remove(os.path.join(SimDir,i))
     # os.rmdir(RunDir)  # Now the directory is empty of files
     os.chdir(SimDir)
 
     #Sampling process if someis define int eh function's arguments
     #It is currently using the latin hyper cube methods for the sampling generation (latin.sample)
-    Param = 1
+    Param = [1]
     if len(VarName2Change)>0:
         problem = {}
         problem['names'] = VarName2Change
@@ -121,6 +123,10 @@ def LaunchProcess(nbcase,VarName2Change = [],Bounds = [],nbruns = 1,CPUusage = 1
     #lets build the two main object we'll be playing with in the following'
     idf_ref, building_ref = appendBuildCase(StudiedCase, epluspath, nbcase, Buildingsfile, Shadingsfile, MainPath)
 
+    if building_ref.height == 0:
+        print('This Building does not have any height, process abort for this one')
+        os.chdir(MainPath)
+        return MainPath, epluspath
     # change on the building __init__ class in the simulation level should be done here
     setSimLevel(idf_ref, building_ref)
     # change on the building __init__ class in the building level should be done here
@@ -136,13 +142,13 @@ def LaunchProcess(nbcase,VarName2Change = [],Bounds = [],nbruns = 1,CPUusage = 1
         Case={}
         Case['BuildIDF'] = idf
         Case['BuildData'] = building
-        print('Building ', i, '/', len(Param), 'process starts')
 
-        #example of modification with half of the runs with external insulation and half of the runs with internal insulation
-        if i<round(nbruns/2):
-            building.ExternalInsulation = True
-        else:
-            building.ExternalInsulation = False
+        # # example of modification with half of the runs with external insulation and half of the runs with internal insulation
+        # if i < round(nbruns / 2):
+        #     building.ExternalInsulation = True
+        # else:
+        #     building.ExternalInsulation = False
+
         #now lets go along the VarName2Change list and change the building object attributes
         #if these are embedded into several layer dictionnary than there is a need to make checks and change accordingly the correct element
         #here are examples for InternalMass impact using 'InternalMass' keyword in the VarName2Change list to play with the 'WeightperZoneArea' parameter
@@ -181,30 +187,66 @@ def LaunchProcess(nbcase,VarName2Change = [],Bounds = [],nbruns = 1,CPUusage = 1
         idf.saveas('Building_' + str(nbcase) +  'v'+str(i)+'.idf')
         with open('Building_' + str(nbcase) +  'v'+str(i)+ '.pickle', 'wb') as handle:
             pickle.dump(Case, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        print('Input IDF file ', i+1, '/', len(Param), ' is done')
+    #RunProcess(MainPath,epluspath,CPUusage)
 
+    # lets get back to the Main Folder we were at the very beginning
+    os.chdir(MainPath)
     return MainPath, epluspath
 
 if __name__ == '__main__' :
 
-    CaseName = 'Leak'                   #name of the current study (the ouput folder will be using this entry
-    BuildNum = [7,5]                    #list of numbers : number of the buildings to be simulated works only for two building for the moment ...(threading issue with multiprocessing)
-    VarName2Change = ['EnvLeak']        #list of strings: Variable names (same as Class Building attribute, if different see LaunchProcess 'for' loop)
-    Bounds = [[0.4,3]]                  #list of 2 value list :bounds in which the above variable will be allowed to change
-    NbRuns = 2                         #number of run to launch for each building (all VarName2Change will have automotaic allocated value (see sampling in LaunchProcess)
-    CPUusage = 0.7                      #factor of possible use of total CPU for multiprocessing. If only one core is available, this value should be 1
+######################################################################################################################
+########        MAIN INPUT PART     ##################################################################################
+######################################################################################################################
+#The Modeler have to fill in the following parameter to define its choices
+
+# CaseName = 'String'                   #name of the current study (the ouput folder will be renamed using this entry)
+# BuildNum = [1,2,3,4]                  #list of numbers : number of the buildings to be simulated (order respecting the
+#                                       geojsonfile)
+# VarName2Change = ['String','String']  #list of strings: Variable names (same as Class Building attribute, if different
+#                                       see LaunchProcess 'for' loopfor examples)
+# Bounds = [[x1,y1],[x2,y2]]            #list of 2 values list :bounds in which the above variable will be allowed to change
+# NbRuns = 1000                         #number of run to launch for each building (all VarName2Change will have automotaic
+#                                       allocated value (see sampling in LaunchProcess)
+# CPUusage = 0.7                        #factor of possible use of total CPU for multiprocessing. If only one core is available,
+#                                       this value should be 1
+# SepThreads = False / True             #True = multiprocessing will be run for each building and outputs will have specific
+#                                       folders (CaseName string + number of the building. False = all input files for all
+#                                       building will be generated first, all results will be saved in one single folder
+
+    CaseName = 'ForTest'
+    BuildNum = [i for i in range(10)]
+    VarName2Change = []
+    Bounds = []
+    NbRuns = 1
+    CPUusage = 0.7
+    SepThreads = False
+
+######################################################################################################################
+########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
+######################################################################################################################
+    keyPath = readPathfile()
     for nbBuild in BuildNum:
-        MainPath, epluspath = LaunchProcess(nbBuild,VarName2Change,Bounds,NbRuns,CPUusage)
-        # Now that all the input files have been generated, we can launch the computing phase using multiprocessing package
+        print('Building '+str(nbBuild)+' is starting')
+        MainPath , epluspath  = LaunchProcess(keyPath,nbBuild,VarName2Change,Bounds,NbRuns,CPUusage)
+        if SepThreads:
+            file2run = LaunchSim.initiateprocess(MainPath)
+            nbcpu = mp.cpu_count()*CPUusage
+            pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
+            for i in range(len(file2run)):
+                pool.apply_async(LaunchSim.runcase, args=(file2run[i], MainPath, epluspath))
+            pool.close()
+            pool.join()
+            os.rename(os.path.join(os.getcwd(), 'RunningFolder'), os.path.join(os.getcwd(), CaseName+'_Build_'+str(nbBuild)))
+    if not SepThreads:
         file2run = LaunchSim.initiateprocess(MainPath)
-        nbcpu = mp.cpu_count()*CPUusage
+        nbcpu = mp.cpu_count() * CPUusage
         pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
         for i in range(len(file2run)):
-            # runcase(file2run[i], filepath)
             pool.apply_async(LaunchSim.runcase, args=(file2run[i], MainPath, epluspath))
         pool.close()
         pool.join()
-        # lets supress the path we needed for geomeppy
-        sys.path.remove(path2addgeom)
-        # lets get back to the Main Folder we were at the very beginning
-        os.chdir(MainPath)
-        os.rename(os.path.join(os.getcwd(), 'CaseFiles'), os.path.join(os.getcwd(), CaseName+'_Build_'+str(nbBuild)))
+        os.rename(os.path.join(os.getcwd(), 'RunningFolder'), os.path.join(os.getcwd(), CaseName))
+    # lets supress the path we needed for geomeppy
+    sys.path.remove(path2addgeom)

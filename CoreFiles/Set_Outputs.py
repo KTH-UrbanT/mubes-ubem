@@ -34,7 +34,7 @@ OutputsVar1 = \
 def getOutputList(path):
     OutputsVar = {}
     OutputsVar['Var'] = []
-    outputs = open(os.path.join(path,'OutputsDefinition.txt'), 'r')
+    outputs = open(os.path.join(path,'Outputs.txt'), 'r')
     Lines = outputs.readlines()
     for line in Lines:
         tofind = 'Reporting_Frequency ='
