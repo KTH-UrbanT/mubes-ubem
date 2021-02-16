@@ -5,21 +5,25 @@ It is based on 2 main packages: [EPPY](https://github.com/santoshphilip/eppy) an
 
 ## Installation process
 EPPY can be installed directly from pip (eppy 0.5.53), see the requirements.txt file.
-GeomEppy needs to be taken from https://github.com/xavfa/geomeppy as many changes have be done in order to comply with more complex building footprints.
+GeomEppy needs to be taken from https://github.com/xavfa/geomeppy and make sure it is pointing on the correct branch (MultiFloor_complexe_Building)
+as many changes have be done in order to comply with more complex building footprints.
 Besides, other changes might be also needed as MUBES_UBEM is just at the beginning of its development.
 
 ## Run simulation case
-the file CaseBuilder.py handles the input file creation and launches the simulation in multicore mode. The % of CPU capacity can be modified in the script.
-The if __name__ == '__main__' (in CaseBuilder.py) gives an example. The Pathways.txt file should give the correct path on once computer. The pathes to EnergyPlus and to both geojson files (Building and walls). These are not part of the suite.
-It highlights were can be introduced specific changes in the building parameters. The paradigm of input files creation rely on a 'for' loop for the moment. Thus, some object's deepcopy should be introduced if ones wants to make several cases with same geometry for example.
-New folders are created during the process :
-'CaseFile' contains the inputs file of each case to be simulated. A subfolder 'Sim_Results' will contain pickle files of each simulated run (for each input case file).
+several templates are proposed. These needs to be copy/paste to your local space, keeping the copy in the ModelerFolder. The local files will thus be your playground
+while the templates remain unchanged and enable to be pulled again if major modification were proposed.
+The copy of Pathway_Template.txt needs to be named Pathways.txt. as shown in the template it gives the paths to the goejson files as well as
+to the energy plus folder.
+The copy of Outputs_Template.txt needs to be named Outputs.txt. As written in the file, the wanted ouputs just haev to be marked by double hashtags with space in front of their name.
+Both copies of CaseBuilder_Template and ReadOutputs_Template should be renamed as one wishes. the Templates gives example of builder files, simulation runs and post-treatment analyses.
+
+New folders are created during the process inside 'ModelerFolder':
+'RunningFolder' contains the inputs file of each case to be simulated. A subfolder 'Sim_Results' will contain pickle files of each simulated run (for each input case file).
 During each run, a specific subfoler is created and then removed after its simulation ends.
-Thus, at the end of the full process, the 'CaseFile' folder remains with, for each run, the .idf and .pickles files (EnergyPlus input file and the building object with its parameters from the geojson file).
-A subfolder 'Sim_Results' contains all the results in .pickle files (but .csv are also possible).
+Thus, at the end of the full process, a new folder remains with, for each run, the .idf and .pickles files (EnergyPlus input file and the building object with its parameters from the geojson file).
+A subfolder 'Sim_Results' contains all the results in .pickle files (but .csv are also possible). the name of this new folder is to be specified in the builder (see template)
 
-Note : The file LaunchDataBase.py is no more usefull even though it is still present. It will be removed in future updates.
-
+The simulation process uses multiprocessing package, thus a maximum CPU factor is to be specified in the builder (see template). in the case of 1 single core, the factor should be fixed to 1.
 
 ## Engine structure
 The paradigm of simulation engine is to automate simulation on several different levels :
