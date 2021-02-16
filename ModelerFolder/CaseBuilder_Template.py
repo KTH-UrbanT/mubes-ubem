@@ -14,7 +14,7 @@ import CoreFiles.GeomScripts as GeomScripts
 import CoreFiles.Set_Outputs as Set_Outputs
 import CoreFiles.Sim_param as Sim_param
 import CoreFiles.Load_and_occupancy as Load_and_occupancy
-import CoreFiles.LaunchSim as LaunchSim
+import ModelerFolder.LaunchSim as LaunchSim
 from DataBase.DB_Building import BuildingList
 import multiprocessing as mp
 
