@@ -4,6 +4,7 @@ import time
 import multiprocessing as mp
 import pickle
 import shutil
+sys.path.append("..")
 import CoreFiles.Set_Outputs as Set_Outputs
 import CoreFiles.csv2tabdelim as csv2tabdelim
 from subprocess import check_call
@@ -13,7 +14,7 @@ from geomeppy import IDF
 
 
 def initiateprocess(MainPath):
-    filepath = os.path.join(MainPath,'CaseFiles')
+    filepath = os.path.join(MainPath, 'CaseFiles')
     listOfFiles = os.listdir(filepath)
     file2run = []
     for file in listOfFiles:
@@ -23,7 +24,7 @@ def initiateprocess(MainPath):
 
 def runcase(file,filepath,epluspath):
 
-    filepath = os.path.join(filepath,'CaseFiles')
+    filepath = os.path.join(filepath, 'CaseFiles')
     ResSimpath = os.path.join(filepath,'Sim_Results')
     if not os.path.exists(ResSimpath):
         os.mkdir(ResSimpath)
@@ -89,29 +90,32 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,idf,filepath):
        os.remove(os.path.join(RunDir,i))
     os.rmdir(RunDir)  # Now the directory is empty of files
 
-
-
-def RunMultiProc(file2run,filepath,multi,maxcpu,epluspath):
-     #this is just to maje tries as the method1 seem to block the file saving process after the first shot on each core
-    #thoe other methods works fine BUT it laucnhe all the case so CPU saturation is not the solutions neither
-    print('Launching cases :')
-    if multi:
-        nbcpu = mp.cpu_count()
-        pool = mp.Pool(processes = int(nbcpu*maxcpu)) #let us allow 80% of CPU usage
-        for i in range(len(file2run)):
-             #runcase(file2run[i], filepath)
-             pool.apply_async(runcase, args=(file2run[i], filepath, epluspath))
-        pool.close()
-        pool.join()
-    else:
-        processes = [mp.Process(target=runcase, args=(file2run[i], filepath,epluspath)) for i in range(len(file2run))]
-        for p in processes:
-            p.start()
-        for p in processes:
-            p.join()
-    print('Done with this one !')
-
-
+# def RunMultiProc(file2run,filepath,multi = True, maxcpu = 1, epluspath = []):
+#      #this is just to maje tries as the method1 seem to block the file saving process after the first shot on each core
+#     #thoe other methods works fine BUT it laucnhe all the case so CPU saturation is not the solutions neither
+#     print('Launching cases :')
+#     if multi:
+#         nbcpu = mp.cpu_count()
+#         pool = mp.Pool(processes = int(nbcpu*maxcpu)) #let us allow 80% of CPU usage
+#         for i in range(len(file2run)):
+#              #runcase(file2run[i], filepath)
+#              pool.apply_async(runcase, args=(file2run[i], filepath, epluspath))
+#         pool.close()
+#         pool.join()
+#     else:
+#         processes = [mp.Process(target=runcase, args=(file2run[i], filepath,epluspath)) for i in range(len(file2run))]
+#         for p in processes:
+#             p.start()
+#         for p in processes:
+#             p.join()
+#     print('Done with this one !')
+#
 # if __name__ == '__main__' :
-#     main()
+#     MainPath= os.getcwd()
+#     filepath = os.path.join(os.path.dirname(MainPath),'ModelerFolder')
+#     file = os.path.join(filepath,'MultiProcInputs.pickle')
+#     with open(file, 'rb') as handle:
+#         MultiProcInputs = pickle.load(handle)
+#     RunMultiProc(MultiProcInputs['file2run'],MultiProcInputs['filepath'],True,MultiProcInputs['CPUmax'],MultiProcInputs['epluspath'])
+
 

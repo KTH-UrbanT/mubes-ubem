@@ -1,9 +1,10 @@
 from eppy.results import readhtml
 import esoreader
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-OutputsVar = \
+OutputsVar1 = \
     {"Site Outdoor Air Drybulb Temperature",
     #"Zone Ideal Loads Zone Total Cooling Rate",
     #"Zone Ideal Loads Zone Total Heating Rate",
@@ -30,8 +31,24 @@ OutputsVar = \
     "Zone People Total Heating Rate",
     }
 
-def AddOutputs(idf):
+def getOutputList(path):
+    OutputsVar = {}
+    OutputsVar['Var'] = []
+    outputs = open(os.path.join(path,'OutputsDefinition.txt'), 'r')
+    Lines = outputs.readlines()
+    for line in Lines:
+        tofind = 'Reporting_Frequency ='
+        if tofind in line:
+            OutputsVar['Reportedfrequency'] = line[line.index(tofind)+len(tofind)+1:-1]
+        if '## ' in line[:3]:
+            var = line[3:][::-1]
+            var2add = var[var.index('[')+2:var.index(',')][::-1]
+            OutputsVar['Var'].append(var2add)
+    return OutputsVar
 
+def AddOutputs(idf,path):
+
+    OutputsVar = getOutputList(path)
     #we shall start by removing all predclared outputes from the template
     predef = idf.idfobjects["OUTPUT:VARIABLE"]
     for i in reversed(predef):
@@ -41,11 +58,11 @@ def AddOutputs(idf):
         Key_1="DISPLAYEXTRAWARNINGS",
     )
 
-    for key in OutputsVar:
+    for var in OutputsVar['Var']:
         idf.newidfobject(
             "OUTPUT:VARIABLE",
-            Variable_Name=key,
-            Reporting_Frequency="Hourly",
+            Variable_Name=var,
+            Reporting_Frequency=OutputsVar['Reportedfrequency'],
         )
     return idf
 

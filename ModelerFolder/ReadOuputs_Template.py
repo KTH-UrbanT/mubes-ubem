@@ -510,9 +510,11 @@ def InertiaAnalyses(path,keyword):
 
 if __name__ == '__main__' :
     mainpath =os.getcwd()
-    path = [(mainpath+os.path.normcase('\CaseFiles10\Sim_Results'))]
+    path = [(mainpath+os.path.normcase('/CaseFiles10Linux/CaseFiles10/Sim_Results'))]
+
+
     wwrLeakAnalyse(path)
-    DynAnalyse(path,['Building_10v0.pickle','Building_10v15.pickle','Building_10v4.pickle','Building_10v5.pickle','Building_10v19.pickle'])
+    DynAnalyse(path,['Building_10v0.pickle','Building_10v2.pickle'])
     #GetData(path[0])
     #path = [os.path.join(main,os.path.normcase('CaseFiles/Sim_Results'))]
 
