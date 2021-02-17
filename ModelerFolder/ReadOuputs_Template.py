@@ -33,11 +33,13 @@ def GetData(path):
             except:
                 ErrFiles.append(0)
 
-    variables={'elec','heat','cool','tot','nbbuild','EPC_elec','EPC_Heat','EPC_Cool','EPC_Tot',
+    variables=['elec','heat','cool','tot','nbbuild','EPC_elec','EPC_Heat','EPC_Cool','EPC_Tot',
                'DBareas','EnergieTot','EnvLeak','Dist','WWR','IntMass','ExtMass','ExtIns','TempOP27',
-               'PowerPic','MaxPowDay','EPareas1'}
+               'PowerPic','MaxPowDay','EPareas1']
 
-    Res =dict.fromkeys(variables, [])
+    Res = {}
+    for key in variables:
+        Res[key] = []
 
     print('organizing data...')
     for i,key in enumerate(ResBld):
