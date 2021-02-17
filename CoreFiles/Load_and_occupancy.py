@@ -86,7 +86,7 @@ def ZoneLoad(idf, zone, LoadSchedule, building, isfile):
         Schedule_Name = LoadSchedule,
         Design_Level_Calculation_Method = 'Watts/Area',
         #Design_Level = floor_area/100 if isfile else building.IntLoad, #is a multiplier. this means that the file value will be the full zone's load in W
-        Watts_per_Zone_Floor_Area = 1/100 if isfile else building.IntLoad
+        Watts_per_Zone_Floor_Area = 1/100*building.IntLoadMultiplier if isfile else building.IntLoad*building.IntLoadMultiplier
         )
     return idf
 

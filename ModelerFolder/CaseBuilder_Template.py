@@ -81,7 +81,7 @@ def readPathfile():
 
     return keyPath
 
-def LaunchProcess(keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns = 1,CPUusage = 1):
+def LaunchProcess(bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns = 1,CPUusage = 1, SepThreads = True):
 #this main is written for validation of the global workflow. and as an example for other simulation
 #the cases are build in a for loop and then all cases are launched in a multiprocess mode, the maximum %of cpu is given as input
     MainPath = os.getcwd()
@@ -92,15 +92,14 @@ def LaunchProcess(keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns = 1,CPUu
     SimDir = os.path.join(os.getcwd(), 'RunningFolder')
     if not os.path.exists(SimDir):
         os.mkdir(SimDir)
-    # else:
-    #     for i in os.listdir(SimDir):
-    #         if os.path.isdir(os.path.join(SimDir,i)):
-    #             for j in os.listdir(os.path.join(SimDir,i)):
-    #                 os.remove(os.path.join(os.path.join(SimDir,i),j))
-    #             os.rmdir(os.path.join(SimDir,i))
-    #         else:
-    #             os.remove(os.path.join(SimDir,i))
-    # os.rmdir(RunDir)  # Now the directory is empty of files
+    elif SepThreads or bldidx==0:
+        for i in os.listdir(SimDir):
+            if os.path.isdir(os.path.join(SimDir,i)):
+                for j in os.listdir(os.path.join(SimDir,i)):
+                    os.remove(os.path.join(os.path.join(SimDir,i),j))
+                os.rmdir(os.path.join(SimDir,i))
+            else:
+                os.remove(os.path.join(SimDir,i))
     os.chdir(SimDir)
 
     #Sampling process if someis define int eh function's arguments
@@ -227,9 +226,9 @@ if __name__ == '__main__' :
 ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
 ######################################################################################################################
     keyPath = readPathfile()
-    for nbBuild in BuildNum:
+    for idx,nbBuild in enumerate(BuildNum):
         print('Building '+str(nbBuild)+' is starting')
-        MainPath , epluspath  = LaunchProcess(keyPath,nbBuild,VarName2Change,Bounds,NbRuns,CPUusage)
+        MainPath , epluspath  = LaunchProcess(idx,keyPath,nbBuild,VarName2Change,Bounds,NbRuns,CPUusage,SepThreads)
         if SepThreads:
             file2run = LaunchSim.initiateprocess(MainPath)
             nbcpu = mp.cpu_count()*CPUusage

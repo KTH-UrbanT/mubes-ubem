@@ -3,7 +3,7 @@ from geomeppy import IDF
 import os
 import DataBase.DB_Data as DB_Data
 DBL = DB_Data.DBLimits
-SCD = DB_Data.BasisElement
+BE = DB_Data.BasisElement
 GE = DB_Data.GeomElement
 EPC = DB_Data.EPCMeters
 import re
@@ -93,32 +93,34 @@ class Building:
         self.VentSyst = self.getVentSyst(DB)
         self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB)
         self.OccupType = self.getOccupType(DB)
-        self.EnvLeak = SCD['EnvLeak']
-        self.OccupHeatRate = SCD['OccupHeatRate']
-        self.BasementAirLeak= SCD['BasementAirLeak']
+        self.EnvLeak = BE['EnvLeak']
+        self.OccupHeatRate = BE['OccupHeatRate']
+        self.BasementAirLeak= BE['BasementAirLeak']
         self.nbStairwell = self.getnbStairwell(DB)
-        self.Officehours = [SCD['Office_Open'],SCD['Office_Close']]
-        self.DCV = SCD['DemandControlledVentilation']
-        self.OccupBasedFlowRate = SCD['OccupBasedFlowRate'] / 1000  # the flow rate is thus in m3/s/person
+        self.Officehours = [BE['Office_Open'],BE['Office_Close']]
+        self.DCV = BE['DemandControlledVentilation']
+        self.OccupBasedFlowRate = BE['OccupBasedFlowRate'] / 1000  # the flow rate is thus in m3/s/person
         self.EPHeatedArea = self.getEPHeatedArea()
-        self.wwr = SCD['wwr']
-        self.ExternalInsulation = SCD['ExternalInsulation']
-        self.OffOccRandom = SCD['OffOccRandom']
-        self.setTempUpL =  SCD['setTempUpL']
-        self.setTempLoL = SCD['setTempLoL']
+        self.wwr = BE['wwr']
+        self.ExternalInsulation = BE['ExternalInsulation']
+        self.OffOccRandom = BE['OffOccRandom']
+        self.setTempUpL =  BE['setTempUpL']
+        self.setTempLoL = BE['setTempLoL']
         self.Materials = DB_Data.BaseMaterial
         self.WeatherDataFile = DB_Data.WeatherFile['Loc']
         self.InternalMass = DB_Data.InternalMass
+        self.IntLoadType =  BE['IntLoadType']
+        self.IntLoadMultiplier = BE['IntLoadMultiplier']
         self.IntLoad = self.getIntLoad(MainPath)
-        self.ACH_freecool = SCD['ACH_freecool']
-        self.intT_freecool = SCD['intT_freecool']
-        self.dT_freeCool = SCD['dT_freeCool']
+        self.ACH_freecool = BE['ACH_freecool']
+        self.intT_freecool = BE['intT_freecool']
+        self.dT_freeCool = BE['dT_freeCool']
         #self.Footprint_area_Sweref = DB.properties['Footprint_area_Sweref']
         #self.Footprint_area_AZMEA = DB.properties['Footprint_area_AZMEA']
         #if there are no cooling comsumption, lets considerer a set point at 50deg max
         for key in self.EPCMeters['Cooling']:
             if self.EPCMeters['Cooling'][key]>0:
-                self.setTempUpL = SCD['setTempUpL']
+                self.setTempUpL = BE['setTempUpL']
             else:
                 self.setTempUpL = 50
 
@@ -273,7 +275,7 @@ class Building:
         try:
             AreaBasedFlowRate = float(DB.properties[DBL['AreaBasedFlowRate_key']])
         except:
-            AreaBasedFlowRate = SCD['AreaBasedFlowRate']  #l/s/m2, minimum flowrate
+            AreaBasedFlowRate = BE['AreaBasedFlowRate']  #l/s/m2, minimum flowrate
         AreaBasedFlowRate = checkLim(AreaBasedFlowRate,DBL['AreaBasedFlowRate_lim'][0],DBL['AreaBasedFlowRate_lim'][1])
         return AreaBasedFlowRate
 
@@ -292,7 +294,7 @@ class Building:
 
     def getIntLoad(self, MainPath):
         #we should integrate the loads depending on the number of appartemnent in the building
-        type = SCD['IntLoadType']
+        type = self.IntLoadType
         Input_path = os.path.join(MainPath,'InputFiles')
         #lets used StROBE package by defaults (average over 10 profile
         IntLoad = os.path.join(Input_path, 'P_Mean_over_10.txt')
@@ -309,7 +311,7 @@ class Building:
                 IntLoad = eleval/self.EPHeatedArea/8760 #this value is thus in W/m2
             if 'winter' in type:
                 IntLoad = os.path.join(Input_path, self.name + '_winter.txt')
-                ProbGenerator.SigmoFile('winter', 3, eleval/self.EPHeatedArea*100, IntLoad) #the *100 is because we have considered 100m2 for the previous file
+                ProbGenerator.SigmoFile('winter', 3, eleval/self.EPHeatedArea * 100, IntLoad) #the *100 is because we have considered 100m2 for the previous file
             if 'summer' in type:
                 IntLoad = os.path.join(Input_path, self.name + '_summer.txt')
                 ProbGenerator.SigmoFile('summer', 3, eleval / self.EPHeatedArea * 100,IntLoad)  # the *100 is because we have considered 100m2 for the previous file

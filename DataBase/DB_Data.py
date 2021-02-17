@@ -107,7 +107,8 @@ BasisElement = \
  'BasementAirLeak': 1, #in Air change rate [vol/hour]
  'wwr': 0.3,
  'ExternalInsulation' : True,
- 'IntLoadType' : 'Cste', #change either by 'Cste', 'winter', or 'summer' for reversed sigmoid or sigmoid
+ 'IntLoadType' : 'Cste', #change either by 'Cste', 'winter', or 'summer' for reversed sigmoid or sigmoid this will generate hourly values file in the InputFiles folder
+ 'IntLoadMultiplier': 1, #this is a multiplier the modeler would like to play with for calibration
  'OffOccRandom' : False,
  'AreaBasedFlowRate' : 0.35, #l/s/m2
  'setTempUpL' : 25,
