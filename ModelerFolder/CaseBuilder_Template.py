@@ -240,7 +240,7 @@ if __name__ == '__main__' :
             os.rename(os.path.join(os.getcwd(), 'RunningFolder'), os.path.join(os.getcwd(), CaseName+'_Build_'+str(nbBuild)))
     if not SepThreads:
         file2run = LaunchSim.initiateprocess(MainPath)
-        nbcpu = mp.cpu_count() * CPUusage
+        nbcpu = max(mp.cpu_count()*CPUusage,1)
         pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
         for i in range(len(file2run)):
             pool.apply_async(LaunchSim.runcase, args=(file2run[i], MainPath, epluspath))
