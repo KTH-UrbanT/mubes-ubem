@@ -44,6 +44,7 @@ def Location_and_weather(idf,building):
     ground_Temp.April_Ground_Temperature = 15
     ground_Temp.May_Ground_Temperature = 15
     ground_Temp.June_Ground_Temperature = 15
+    ground_Temp.July_Ground_Temperature = 15
     ground_Temp.August_Ground_Temperature = 15
     ground_Temp.September_Ground_Temperature = 15
     ground_Temp.October_Ground_Temperature = 15
