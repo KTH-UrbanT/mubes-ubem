@@ -231,7 +231,7 @@ if __name__ == '__main__' :
         MainPath , epluspath  = LaunchProcess(idx,keyPath,nbBuild,VarName2Change,Bounds,NbRuns,CPUusage,SepThreads)
         if SepThreads:
             file2run = LaunchSim.initiateprocess(MainPath)
-            nbcpu = mp.cpu_count()*CPUusage
+            nbcpu = max(mp.cpu_count()*CPUusage,1)
             pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
             for i in range(len(file2run)):
                 pool.apply_async(LaunchSim.runcase, args=(file2run[i], MainPath, epluspath))
