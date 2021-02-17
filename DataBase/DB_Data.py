@@ -1,5 +1,5 @@
 WeatherFile = \
- {'Loc' : 'USA_CA_San.Francisco.Intl.AP.724940_TMY3', #"SWE_Stockholm.Arlanda.024600_IWEC"
+ {'Loc' : "SWE_Stockholm.Arlanda.024600_IWEC"
   }
 
 #Thisdict gives all the materials characteristics.

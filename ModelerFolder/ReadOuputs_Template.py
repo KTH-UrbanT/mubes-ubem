@@ -4,7 +4,7 @@ from matplotlib import gridspec
 import numpy as np
 import os, sys
 #add the required path
-path2addgeom = os.path.join(os.path.dirname(os.getcwd()),'geomeppy')
+path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 #path2addeppy = os.path.dirname(os.getcwd()) + '\\eppy'
 #sys.path.append(path2addeppy)
 sys.path.append(path2addgeom)
@@ -123,7 +123,7 @@ def GetSingleSim(path,buildList=[]):
         print('Sorry, ti seems that there are at least 2 simulation results file in this path...')
     else:
         Res = {}
-        toget = ['HeatedArea','NotHeatedArea','OutdoorSite']
+        toget = ['HeatedArea','NonHeatedArea','OutdoorSite']
         for key in ResBld:
             for key1 in ResBld[key]:
                 if key1 in toget:
