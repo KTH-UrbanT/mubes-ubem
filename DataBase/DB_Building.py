@@ -115,6 +115,7 @@ class Building:
         self.ACH_freecool = BE['ACH_freecool']
         self.intT_freecool = BE['intT_freecool']
         self.dT_freeCool = BE['dT_freeCool']
+        self.BuildID = str(DB.properties[GE['BuildingIdKey']])
         #self.Footprint_area_Sweref = DB.properties['Footprint_area_Sweref']
         #self.Footprint_area_AZMEA = DB.properties['Footprint_area_AZMEA']
         #if there are no cooling comsumption, lets considerer a set point at 50deg max
@@ -125,25 +126,74 @@ class Building:
                 self.setTempUpL = 50
 
     def getRefCoord(self,DB):
-        x = DB.geometry.coordinates[0][0][0]
-        y = DB.geometry.coordinates[0][0][1]
+        #check for Multipolygon first
+        #list(Polygon([[0, 0], [1, 0], [1, 1], [0, 1]]).centroid.coords
+        test = DB.geometry.coordinates[0][0][0]
+        if type(test) is list:
+            centroide = list(Polygon(DB.geometry.coordinates[0][0]).centroid.coords)
+            x = centroide[0][0]
+            y = centroide[0][1]
+            self.Multipolygon = True
+        else:
+            centroide = list(Polygon(DB.geometry.coordinates[0]).centroid.coords)
+            x = centroide[0][0]
+            y = centroide[0][1]
+            self.Multipolygon = False
         ref = (x, y)
         return ref
 
+    def CheckFootprintNodes(footprint):
+        node2remove = []
+        newfootprint = []
+        for i in range(len(footprint) - 2):
+            # this was a try making a rotation of the reference and check if the new y is above a threshold...
+            # pt2 = (footprint[i+1][0]-footprint[i][0],footprint[i+1][1]-footprint[i][1])
+            # pt3 = (footprint[i+2][0]-footprint[i][0],footprint[i+2][1]-footprint[i][1])
+            # rotation = math.acos(pt3[0]/(pt3[0]**2+pt3[1]**2)**0.5)
+            # if (pt2[0]*math.sin(rotation)+pt2[1]*math.cos(rotation))<0.1:
+            # we keep the slop thing, but it also mean some offset is needed id the slop is fully vertical...
+            slope1 = abs((footprint[i][1] - footprint[i + 1][1]) / ((footprint[i][0] - footprint[i + 1][0]) + 0.01))
+            slope2 = abs(
+                (footprint[i + 1][1] - footprint[i + 2][1]) / ((footprint[i + 1][0] - footprint[i + 2][0]) + 0.01))
+            if abs(slope1 - slope2) < 1e-1:
+                node2remove.append(i + 1)
+        for idx, node in enumerate(footprint):
+            if not idx in node2remove:
+                newfootprint.append(node)
+        return newfootprint
+
     def getfootprint(self,DB):
         coord = []
-        for i, j in enumerate(DB.geometry.coordinates[0]):
-            x = DB.geometry.coordinates[0][i][0]
-            y = DB.geometry.coordinates[0][i][1]
-            new = (x, y)
-            new_coor = []
-            for ii in range(len(self.RefCoord)):
-                new_coor.append((new[ii] - self.RefCoord[ii]))
-            coord.append(tuple(new_coor))
+        self.MultiHeight = []
+        #we first need to check if it is Multipolygon
+        if self.Multipolygon:
+            for idx1,poly1 in enumerate(DB.geometry.coordinates[:-1]):
+                for idx2,poly2 in enumerate(DB.geometry.coordinates[idx1+1:]):
+                    if poly1 == poly2:
+                        polycoor = []
+                        for j in poly1[0]:
+                            new = (j[0], j[1])
+                            new_coor = []
+                            for ii in range(len(self.RefCoord)):
+                                new_coor.append((new[ii] - self.RefCoord[ii]))
+                            polycoor.append(tuple(new_coor))
+                        coord.append(polycoor)
+                        self.MultiHeight.append(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]))
+
+        else:
+            for j in DB.geometry.coordinates[0]:
+                new = (j[0], j[1])
+                new_coor = []
+                for ii in range(len(self.RefCoord)):
+                    new_coor.append((new[ii] - self.RefCoord[ii]))
+                coord.append(tuple(new_coor))
         return coord
 
     def getEPHeatedArea(self):
-        EPHeatedArea = Polygon(self.footprint).area * self.nbfloor
+        if self.Multipolygon:
+            EPHeatedArea = 1000
+        else:
+            EPHeatedArea = Polygon(self.footprint).area * self.nbfloor
         return EPHeatedArea
 
     def getsurface(self,DB):
@@ -243,9 +293,15 @@ class Building:
             meanPy = ShadeWall[GE['VertexKey']][0][1] + ShadeWall[GE['VertexKey']][1][1]
             coordx = []
             coordy = []
-            for i in self.footprint:
-                coordx.append(i[0])
-                coordy.append(i[1])
+            if self.Multipolygon:
+                for j in self.footprint:
+                    for i in j:
+                        coordx.append(i[0])
+                        coordy.append(i[1])
+            else:
+                for i in self.footprint:
+                    coordx.append(i[0])
+                    coordy.append(i[1])
             coordx = sum(coordx) / len(self.footprint)
             coordy = sum(coordy) / len(self.footprint)
             dist = (abs(meanPx - coordx) ** 2 + abs(meanPy - coordy) ** 2) ** 0.5

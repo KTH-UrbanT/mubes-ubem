@@ -6,28 +6,36 @@ from shapely.ops import cascaded_union
 import CoreFiles.Envelope_Param as Envelope_Param
 
 def createBuilding(idf,building,perim):
-    coord_b1 = building.footprint
+    Full_coord = building.footprint
     #Adding two blocks, one with two storey (the nb of storey defines the nb of Zones)
-    if perim:
-        idf.add_block(
-        name='Build',
-        coordinates= coord_b1,
-        height=building.height,
-        num_stories=building.nbfloor+building.nbBasefloor, #it defines the numbers of zones !
-        below_ground_stories = building.nbBasefloor,
-        # below_ground_storey_height = 1, the value is by default 2,5m
-        zoning = 'core/perim',
-        perim_depth = 3,
-        )
-    else:
-        idf.add_block(
-        name='Build',
-        coordinates= coord_b1,
-        height=building.height,
-        num_stories=building.nbfloor+building.nbBasefloor, #it defines the numbers of zones !
-        below_ground_stories=building.nbBasefloor,
-        #below_ground_storey_height = 3,#1, the value is by default 2,5m
-        )
+    Nb_blocs = 1
+    if building.Multipolygon:
+        Nb_blocs = len(Full_coord)
+    for bloc in range(Nb_blocs):
+        bloc_coord =  Full_coord[bloc] if building.Multipolygon else Full_coord
+        Height = building.MultiHeight[bloc] if building.Multipolygon else building.height
+        nbstories = round(Height/3)
+        print(Height, nbstories)
+        if perim:
+            idf.add_block(
+            name='Build'+str(bloc),
+            coordinates= bloc_coord,
+            height=Height,
+            num_stories=nbstories+building.nbBasefloor, #building.nbfloor+building.nbBasefloor, #it defines the numbers of zones !
+            below_ground_stories = building.nbBasefloor,
+            # below_ground_storey_height = 1, the value is by default 2,5m
+            zoning = 'core/perim',
+            perim_depth = 3,
+            )
+        else:
+            idf.add_block(
+            name='Build'+str(bloc),
+            coordinates= bloc_coord,
+            height=Height,
+            num_stories=nbstories+building.nbBasefloor, #building.nbfloor+building.nbBasefloor, #it defines the numbers of zones !
+            below_ground_stories=building.nbBasefloor,
+            #below_ground_storey_height = 3,#1, the value is by default 2,5m
+            )
     #this function enable to create all the boundary conditions for all surfaces
     idf.intersect_match()
 
