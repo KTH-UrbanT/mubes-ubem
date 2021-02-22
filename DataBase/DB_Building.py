@@ -1,5 +1,6 @@
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, Point
 from geomeppy import IDF
+from geomeppy.geom import core_perim
 import os
 import DataBase.DB_Data as DB_Data
 DBL = DB_Data.DBLimits
@@ -8,6 +9,7 @@ GE = DB_Data.GeomElement
 EPC = DB_Data.EPCMeters
 import re
 import CoreFiles.ProbGenerator as ProbGenerator
+import matplotlib.pyplot as plt
 #this class defines the building characteristics regarding available data in the geojson file
 
 #function that checks if value is out of limits
@@ -127,12 +129,11 @@ class Building:
 
     def getRefCoord(self,DB):
         #check for Multipolygon first
-        #list(Polygon([[0, 0], [1, 0], [1, 1], [0, 1]]).centroid.coords
         test = DB.geometry.coordinates[0][0][0]
         if type(test) is list:
-            centroide = list(Polygon(DB.geometry.coordinates[0][0]).centroid.coords)
-            x = centroide[0][0]
-            y = centroide[0][1]
+            centroide = [list(Polygon(DB.geometry.coordinates[i][0]).centroid.coords) for i in range(len(DB.geometry.coordinates))]
+            x = sum([centroide[i][0][0] for i in range(len(centroide))])/len(centroide)
+            y = sum([centroide[i][0][1] for i in range(len(centroide))])/len(centroide)
             self.Multipolygon = True
         else:
             centroide = list(Polygon(DB.geometry.coordinates[0]).centroid.coords)
@@ -142,30 +143,11 @@ class Building:
         ref = (x, y)
         return ref
 
-    def CheckFootprintNodes(footprint):
-        node2remove = []
-        newfootprint = []
-        for i in range(len(footprint) - 2):
-            # this was a try making a rotation of the reference and check if the new y is above a threshold...
-            # pt2 = (footprint[i+1][0]-footprint[i][0],footprint[i+1][1]-footprint[i][1])
-            # pt3 = (footprint[i+2][0]-footprint[i][0],footprint[i+2][1]-footprint[i][1])
-            # rotation = math.acos(pt3[0]/(pt3[0]**2+pt3[1]**2)**0.5)
-            # if (pt2[0]*math.sin(rotation)+pt2[1]*math.cos(rotation))<0.1:
-            # we keep the slop thing, but it also mean some offset is needed id the slop is fully vertical...
-            slope1 = abs((footprint[i][1] - footprint[i + 1][1]) / ((footprint[i][0] - footprint[i + 1][0]) + 0.01))
-            slope2 = abs(
-                (footprint[i + 1][1] - footprint[i + 2][1]) / ((footprint[i + 1][0] - footprint[i + 2][0]) + 0.01))
-            if abs(slope1 - slope2) < 1e-1:
-                node2remove.append(i + 1)
-        for idx, node in enumerate(footprint):
-            if not idx in node2remove:
-                newfootprint.append(node)
-        return newfootprint
-
     def getfootprint(self,DB):
         coord = []
         self.MultiHeight = []
         #we first need to check if it is Multipolygon
+        #plt.figure()
         if self.Multipolygon:
             for idx1,poly1 in enumerate(DB.geometry.coordinates[:-1]):
                 for idx2,poly2 in enumerate(DB.geometry.coordinates[idx1+1:]):
@@ -177,9 +159,63 @@ class Building:
                             for ii in range(len(self.RefCoord)):
                                 new_coor.append((new[ii] - self.RefCoord[ii]))
                             polycoor.append(tuple(new_coor))
-                        coord.append(polycoor)
-                        self.MultiHeight.append(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]))
 
+                        # xs, ys = zip(*list(polycoor))
+                        # plt.plot(xs, ys,'--.')
+                        #try to use the already made function for core cleaning (length and narrow)
+                        #polycoor = core_perim.check_core(polycoor, 1)
+                        #try to make only length selection
+                        #from geomeppy.geom.polygons import Polygon2D
+                        # newpolycoor = []
+                        # for i, v in enumerate(Polygon2D(polycoor).edges_length[:-1]):
+                        #     if v>2:
+                        #         newpolycoor.append(Polygon2D(polycoor).vertices_list[i])
+                        #     else:
+                        #         a = 1
+                        # polycoor = list(newpolycoor)
+                        #polycoor = [Polygon2D(polycoor).vertices_list[i] if v > 2 else Polygon2D(polycoor).egdes_center[i] for i, v in enumerate(Polygon2D(polycoor).edges_length[:-1]) if v > 2]
+                        #polycoor = list(polycoor)
+                        #append the 2nd value to the end in order to include the first vertex into the check
+                        #polycoor.append(polycoor[1])
+                        polycoorchecked = core_perim.CheckFootprintNodes(polycoor,1e-1)
+                        # if polycoorchecked[0]!=polycoorchecked[-1]:
+                        #     polycoorchecked.append(polycoorchecked[0])
+                        # coord.append(polycoorchecked)
+                        # xs, ys = zip(*list(coord[-1]))
+                        # plt.plot(xs, ys, '--s')
+                        # plt.show()
+                        coord.append(polycoorchecked)
+                        self.MultiHeight.append(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]))
+            # #now we need to check if the polygon has at least one edges in commun.
+            # for idx1,poly1 in enumerate(coord[:-1]):
+            #     for idx2,poly2 in enumerate(coord[idx1+1:]):
+            #         points2add = []
+            #         for point in poly2[:-1]:
+            #             if Polygon(poly1).exterior.distance(Point(point))<1:
+            #                 points2add.append(point)
+            #         plt.figure()
+            #         xs, ys = zip(*list(coord[idx1]))
+            #         plt.plot(xs, ys, '--s')
+            #         pointpos = []
+            #         for nb in range(len(coord[idx1][:-1])):
+            #             a = (coord[idx1][nb+1][1]-coord[idx1][nb][1])/(coord[idx1][nb+1][0]-coord[idx1][nb][0])
+            #             b = coord[idx1][nb+1][1]-a*coord[idx1][nb+1][0]
+            #             for point2add in points2add:
+            #                 if abs(a*point2add[0]+b-point2add[1])<0.1:
+            #                     pointpos.append(nb)
+            #         newcoord = coord[idx1][:pointpos[0]+1]
+            #         for nbpt, point2add in enumerate(points2add[:-1]):
+            #             newcoord.append(point2add)
+            #             for i in (coord[idx1][pointpos[nbpt]+1+nbpt:pointpos[nbpt+1]+1]):
+            #                 newcoord.append(i)
+            #         newcoord.append(points2add[-1])
+            #         for i in coord[idx1][pointpos[nbpt+1]+1+nbpt:]:
+            #             newcoord.append(i)
+            #         coord[idx1]=newcoord
+            #         xs, ys = zip(*list(coord[idx1]))
+            #         plt.plot(xs, ys, '--s')
+            #         plt.show()
+            self.StoreyHeigth = max(self.MultiHeight)/self.nbfloor
         else:
             for j in DB.geometry.coordinates[0]:
                 new = (j[0], j[1])
@@ -187,11 +223,14 @@ class Building:
                 for ii in range(len(self.RefCoord)):
                     new_coor.append((new[ii] - self.RefCoord[ii]))
                 coord.append(tuple(new_coor))
+        #plt.show()
         return coord
 
     def getEPHeatedArea(self):
         if self.Multipolygon:
-            EPHeatedArea = 1000
+            EPHeatedArea = 0
+            for i,foot in enumerate(self.footprint):
+                EPHeatedArea += Polygon(foot).area*(self.MultiHeight[i]/self.StoreyHeigth)
         else:
             EPHeatedArea = Polygon(self.footprint).area * self.nbfloor
         return EPHeatedArea

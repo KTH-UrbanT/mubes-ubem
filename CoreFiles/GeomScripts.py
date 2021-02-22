@@ -14,7 +14,9 @@ def createBuilding(idf,building,perim):
     for bloc in range(Nb_blocs):
         bloc_coord =  Full_coord[bloc] if building.Multipolygon else Full_coord
         Height = building.MultiHeight[bloc] if building.Multipolygon else building.height
-        nbstories = round(Height/3)
+        nbstories = int(Height/building.StoreyHeigth) if building.Multipolygon else building.nbfloor
+        if building.Multipolygon:
+            Height = nbstories*building.StoreyHeigth        #correction of the height in order to have same storey hieght everyware
         print(Height, nbstories)
         if perim:
             idf.add_block(
@@ -42,7 +44,10 @@ def createBuilding(idf,building,perim):
     # this last function on the Geometry is here to split the non convexe surfaces
     # if not, some warning are appended because of shading computation. non convex surfaces can impact itself
     # it should thus be only the roof surfaces. Non convex internal zone are not concerned as Solar distribution is 'FullExterior'
-    split2convex(idf)
+    try:
+        split2convex(idf)
+    except:
+        pass
 
 def createRapidGeomElem(idf,building):
     #enveloppe can be creates now and allocated to to correct surfaces
@@ -270,7 +275,10 @@ def MergeTri(trigle):
                 if newtrigle[key]['EdLg'][0] > lg:
                     lg = newtrigle[key]['EdLg'][0]
                     idx = key  # dict(sorted(PossibleMerge.items(), key=lambda item: item[1]))
-        isconv, newsurf = merge2surf(newtrigle[idx])
+        try :
+            isconv, newsurf = merge2surf(newtrigle[idx])
+        except:
+            a=1
         if isconv:
             newTrigle = composenewtrigle(trigle,newtrigle[idx],newsurf)
             finished = 1
