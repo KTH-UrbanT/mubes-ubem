@@ -117,7 +117,11 @@ class Building:
         self.ACH_freecool = BE['ACH_freecool']
         self.intT_freecool = BE['intT_freecool']
         self.dT_freeCool = BE['dT_freeCool']
-        self.BuildID = str(DB.properties[GE['BuildingIdKey']])
+        try:
+            self.BuildID = str(DB.properties['FormularId'])
+        except:
+            self.BuildID = None
+
         #self.Footprint_area_Sweref = DB.properties['Footprint_area_Sweref']
         #self.Footprint_area_AZMEA = DB.properties['Footprint_area_AZMEA']
         #if there are no cooling comsumption, lets considerer a set point at 50deg max
@@ -159,7 +163,7 @@ class Building:
                             for ii in range(len(self.RefCoord)):
                                 new_coor.append((new[ii] - self.RefCoord[ii]))
                             polycoor.append(tuple(new_coor))
-
+                        # plt.figure()
                         # xs, ys = zip(*list(polycoor))
                         # plt.plot(xs, ys,'--.')
                         #try to use the already made function for core cleaning (length and narrow)
@@ -180,11 +184,11 @@ class Building:
                         polycoorchecked = core_perim.CheckFootprintNodes(polycoor,1e-1)
                         # if polycoorchecked[0]!=polycoorchecked[-1]:
                         #     polycoorchecked.append(polycoorchecked[0])
-                        # coord.append(polycoorchecked)
+                        #coord.append(polycoor)
+                        coord.append(polycoorchecked)
                         # xs, ys = zip(*list(coord[-1]))
                         # plt.plot(xs, ys, '--s')
                         # plt.show()
-                        coord.append(polycoorchecked)
                         self.MultiHeight.append(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]))
             # #now we need to check if the polygon has at least one edges in commun.
             # for idx1,poly1 in enumerate(coord[:-1]):
