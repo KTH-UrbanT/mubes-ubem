@@ -1,12 +1,9 @@
 from shapely.geometry import Polygon, Point
+from geomeppy.geom.polygons import Polygon2D
 from geomeppy import IDF
 from geomeppy.geom import core_perim
 import os
 import DataBase.DB_Data as DB_Data
-DBL = DB_Data.DBLimits
-BE = DB_Data.BasisElement
-GE = DB_Data.GeomElement
-EPC = DB_Data.EPCMeters
 import re
 import CoreFiles.ProbGenerator as ProbGenerator
 import matplotlib.pyplot as plt
@@ -23,7 +20,7 @@ def checkLim(val, ll, ul):
     return val
 
 #find the wall id for the shading surfaces from surrounding buildings
-def findWallId(Id, Shadingsfile, ref):
+def findWallId(Id, Shadingsfile, ref,GE):
     finished = 0
     ii = 0
     ShadeWall = {}
@@ -31,6 +28,10 @@ def findWallId(Id, Shadingsfile, ref):
         if Id in Shadingsfile[ii].properties[GE['ShadingIdKey']]:
             ShadeWall[GE['BuildingIdKey']] = Shadingsfile[ii].properties[GE['BuildingIdKey']]
             ShadeWall[GE['ShadingIdKey']] = Shadingsfile[ii].properties[GE['ShadingIdKey']]
+            try:
+                ShadeWall['height'] = float(Shadingsfile[ii].properties['zmax'])-float(Shadingsfile[ii].properties['zmin'])
+            except:
+                pass
             ShadeWall[GE['VertexKey']] = []
             for jj in Shadingsfile[ii].geometry.coordinates:
                 ShadeWall[GE['VertexKey']].append(tuple([jj[0]-ref[0],jj[1]-ref[1]]))
@@ -43,7 +44,7 @@ def findWallId(Id, Shadingsfile, ref):
     return ShadeWall
 
 #find the height the building's ID
-def findBuildId(Id, Buildingsfile):
+def findBuildId(Id, Buildingsfile,GE):
     finished = 0
     ii = 0
     height = 0
@@ -80,56 +81,53 @@ class Building:
 
     def __init__(self,name,Buildingsfile,Shadingsfile,nbcase,MainPath):
         DB = Buildingsfile[nbcase]
+        DBL = DB_Data.DBLimits
+        BE = DB_Data.BasisElement
+        GE = DB_Data.GeomElement
+        EPC = DB_Data.EPCMeters
+        SD = DB_Data.SimuData
+        self.getBEData(BE)
+        self.getSimData(SD)
         self.name = name
         self.RefCoord = self.getRefCoord(DB)
-        self.nbfloor = self.getnbfloor(DB)
-        self.nbBasefloor = self.getnbBasefloor(DB)
+        self.nbfloor = self.getnbfloor(DB, DBL)
+        self.nbBasefloor = self.getnbBasefloor(DB, DBL)
         self.footprint = self.getfootprint(DB)
-        self.surface = self.getsurface(DB)
-        self.year = self.getyear(DB)
-        self.EPCMeters = self.getEPCMeters(DB)
-        self.nbAppartments = self.getnbAppartments(DB)
-        self.height = self.getheight(DB)
+        self.surface = self.getsurface(DB, DBL)
+        self.year = self.getyear(DB, DBL)
+        self.EPCMeters = self.getEPCMeters(DB,EPC)
+        self.nbAppartments = self.getnbAppartments(DB, DBL)
+        self.height = self.getheight(DB, DBL)
         self.MaxShadingDist = GE['MaxShadingDist']
-        self.shades = self.getshade(DB,Shadingsfile,Buildingsfile)
+        self.shades = self.getshade(DB,Shadingsfile,Buildingsfile,GE)
         self.VentSyst = self.getVentSyst(DB)
-        self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB)
+        self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB,DBL, BE)
         self.OccupType = self.getOccupType(DB)
-        self.EnvLeak = BE['EnvLeak']
-        self.OccupHeatRate = BE['OccupHeatRate']
-        self.BasementAirLeak= BE['BasementAirLeak']
-        self.nbStairwell = self.getnbStairwell(DB)
-        self.Officehours = [BE['Office_Open'],BE['Office_Close']]
-        self.DCV = BE['DemandControlledVentilation']
-        self.OccupBasedFlowRate = BE['OccupBasedFlowRate'] / 1000  # the flow rate is thus in m3/s/person
+        self.nbStairwell = self.getnbStairwell(DB, DBL)
         self.EPHeatedArea = self.getEPHeatedArea()
-        self.wwr = BE['wwr']
-        self.ExternalInsulation = BE['ExternalInsulation']
-        self.OffOccRandom = BE['OffOccRandom']
-        self.setTempUpL =  BE['setTempUpL']
-        self.setTempLoL = BE['setTempLoL']
         self.Materials = DB_Data.BaseMaterial
         self.WeatherDataFile = DB_Data.WeatherFile['Loc']
         self.InternalMass = DB_Data.InternalMass
-        self.IntLoadType =  BE['IntLoadType']
-        self.IntLoadMultiplier = BE['IntLoadMultiplier']
         self.IntLoad = self.getIntLoad(MainPath)
-        self.ACH_freecool = BE['ACH_freecool']
-        self.intT_freecool = BE['intT_freecool']
-        self.dT_freeCool = BE['dT_freeCool']
         try:
-            self.BuildID = str(DB.properties['FormularId'])
+            self.BuildID = GE['BuildIDKey']
         except:
             self.BuildID = None
-
-        #self.Footprint_area_Sweref = DB.properties['Footprint_area_Sweref']
-        #self.Footprint_area_AZMEA = DB.properties['Footprint_area_AZMEA']
         #if there are no cooling comsumption, lets considerer a set point at 50deg max
         for key in self.EPCMeters['Cooling']:
             if self.EPCMeters['Cooling'][key]>0:
                 self.setTempUpL = BE['setTempUpL']
             else:
                 self.setTempUpL = 50
+
+    def getBEData(self,BE):
+        for key in BE.keys():
+            setattr(self, key, BE[key])
+
+    def getSimData(self,SD):
+        for key in SD.keys():
+            setattr(self, key, SD[key])
+
 
     def getRefCoord(self,DB):
         #check for Multipolygon first
@@ -145,14 +143,15 @@ class Building:
             y = centroide[0][1]
             self.Multipolygon = False
         ref = (x, y)
+        #ref = (670000, 6581600) this is the ref taken for multi building 3D plot
         return ref
 
     def getfootprint(self,DB):
         coord = []
         self.MultiHeight = []
         #we first need to check if it is Multipolygon
-        #plt.figure()
         if self.Multipolygon:
+            #then we append all the floor and roff fottprints into one with associate height
             for idx1,poly1 in enumerate(DB.geometry.coordinates[:-1]):
                 for idx2,poly2 in enumerate(DB.geometry.coordinates[idx1+1:]):
                     if poly1 == poly2:
@@ -163,71 +162,18 @@ class Building:
                             for ii in range(len(self.RefCoord)):
                                 new_coor.append((new[ii] - self.RefCoord[ii]))
                             polycoor.append(tuple(new_coor))
-                        # plt.figure()
-                        # xs, ys = zip(*list(polycoor))
-                        # plt.plot(xs, ys,'--.')
-                        #try to use the already made function for core cleaning (length and narrow)
-                        #polycoor = core_perim.check_core(polycoor, 1)
-                        #try to make only length selection
-                        #from geomeppy.geom.polygons import Polygon2D
-                        # newpolycoor = []
-                        # for i, v in enumerate(Polygon2D(polycoor).edges_length[:-1]):
-                        #     if v>2:
-                        #         newpolycoor.append(Polygon2D(polycoor).vertices_list[i])
-                        #     else:
-                        #         a = 1
-                        # polycoor = list(newpolycoor)
-                        #polycoor = [Polygon2D(polycoor).vertices_list[i] if v > 2 else Polygon2D(polycoor).egdes_center[i] for i, v in enumerate(Polygon2D(polycoor).edges_length[:-1]) if v > 2]
-                        #polycoor = list(polycoor)
-                        #append the 2nd value to the end in order to include the first vertex into the check
-                        #polycoor.append(polycoor[1])
-                        polycoorchecked = core_perim.CheckFootprintNodes(polycoor,1e-1)
-                        # if polycoorchecked[0]!=polycoorchecked[-1]:
-                        #     polycoorchecked.append(polycoorchecked[0])
-                        #coord.append(polycoor)
-                        coord.append(polycoorchecked)
-                        # xs, ys = zip(*list(coord[-1]))
-                        # plt.plot(xs, ys, '--s')
-                        # plt.show()
+                        coord.append(polycoor)
                         self.MultiHeight.append(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]))
-            # #now we need to check if the polygon has at least one edges in commun.
-            # for idx1,poly1 in enumerate(coord[:-1]):
-            #     for idx2,poly2 in enumerate(coord[idx1+1:]):
-            #         points2add = []
-            #         for point in poly2[:-1]:
-            #             if Polygon(poly1).exterior.distance(Point(point))<1:
-            #                 points2add.append(point)
-            #         plt.figure()
-            #         xs, ys = zip(*list(coord[idx1]))
-            #         plt.plot(xs, ys, '--s')
-            #         pointpos = []
-            #         for nb in range(len(coord[idx1][:-1])):
-            #             a = (coord[idx1][nb+1][1]-coord[idx1][nb][1])/(coord[idx1][nb+1][0]-coord[idx1][nb][0])
-            #             b = coord[idx1][nb+1][1]-a*coord[idx1][nb+1][0]
-            #             for point2add in points2add:
-            #                 if abs(a*point2add[0]+b-point2add[1])<0.1:
-            #                     pointpos.append(nb)
-            #         newcoord = coord[idx1][:pointpos[0]+1]
-            #         for nbpt, point2add in enumerate(points2add[:-1]):
-            #             newcoord.append(point2add)
-            #             for i in (coord[idx1][pointpos[nbpt]+1+nbpt:pointpos[nbpt+1]+1]):
-            #                 newcoord.append(i)
-            #         newcoord.append(points2add[-1])
-            #         for i in coord[idx1][pointpos[nbpt+1]+1+nbpt:]:
-            #             newcoord.append(i)
-            #         coord[idx1]=newcoord
-            #         xs, ys = zip(*list(coord[idx1]))
-            #         plt.plot(xs, ys, '--s')
-            #         plt.show()
+            #we compute a storey hieght as well to choosen the one that correspond to the highest part of the building afterward
             self.StoreyHeigth = max(self.MultiHeight)/self.nbfloor
         else:
+            #old fashion of making thing with the very first 2D file
             for j in DB.geometry.coordinates[0]:
                 new = (j[0], j[1])
                 new_coor = []
                 for ii in range(len(self.RefCoord)):
                     new_coor.append((new[ii] - self.RefCoord[ii]))
                 coord.append(tuple(new_coor))
-        #plt.show()
         return coord
 
     def getEPHeatedArea(self):
@@ -239,7 +185,7 @@ class Building:
             EPHeatedArea = Polygon(self.footprint).area * self.nbfloor
         return EPHeatedArea
 
-    def getsurface(self,DB):
+    def getsurface(self,DB, DBL):
         "Get the surface from the input file"
         try:
             surf = int(DB.properties[DBL['surface_key'] ])
@@ -248,7 +194,7 @@ class Building:
         surf = checkLim(surf,DBL['surface_lim'][0],DBL['surface_lim'][1])
         return surf
 
-    def getnbfloor(self,DB):
+    def getnbfloor(self,DB, DBL):
         "Get the number of floor above ground"
         try:
             nbfloor = int(DB.properties[DBL['nbfloor_key']])
@@ -257,7 +203,7 @@ class Building:
         nbfloor = checkLim(nbfloor,DBL['nbfloor_lim'][0],DBL['nbfloor_lim'][1])
         return nbfloor
 
-    def getnbStairwell(self,DB):
+    def getnbStairwell(self,DB, DBL):
         "Get the number of floor above ground"
         try:
             nbStairwell = int(DB.properties[DBL['Stairwell_key']])
@@ -267,7 +213,7 @@ class Building:
         return nbStairwell
 
 
-    def getnbBasefloor(self,DB):
+    def getnbBasefloor(self,DB, DBL):
         "Get the number of floor below ground"
         try:
             nbBasefloor = int(DB.properties[DBL['nbBasefloor_key']])
@@ -276,7 +222,7 @@ class Building:
         nbBasefloor = checkLim(nbBasefloor,DBL['nbBasefloor_lim'][0],DBL['nbBasefloor_lim'][1])
         return nbBasefloor
 
-    def getyear(self,DB):
+    def getyear(self,DB, DBL):
         "Get the surface from the input file"
         try:
             year = int(DB.properties[DBL['year_key']])
@@ -285,7 +231,7 @@ class Building:
         year = checkLim(year,DBL['year_lim'][0],DBL['year_lim'][1])
         return year
 
-    def getEPCMeters(self,DB):
+    def getEPCMeters(self,DB,EPC):
         "Get the EPC meters values"
         Meters = {}
         for key1 in EPC:
@@ -299,7 +245,7 @@ class Building:
                         pass
         return Meters
 
-    def getnbAppartments(self, DB):
+    def getnbAppartments(self, DB, DBL):
         "Get the Thermal energy consumptiom"
         try:
             nbApp = int(DB.properties[DBL['nbAppartments_key']])
@@ -308,7 +254,7 @@ class Building:
         nbApp = checkLim(nbApp,DBL['nbAppartments_lim'][0],DBL['nbAppartments_lim'][1])
         return nbApp
 
-    def getheight(self, DB):
+    def getheight(self, DB, DBL):
         "Get the Thermal energy consumptiom"
         try:
             height = int(DB.properties[DBL['height_key']])
@@ -317,7 +263,7 @@ class Building:
         height = checkLim(height,DBL['height_lim'][0],DBL['height_lim'][1])
         return height
 
-    def getshade(self, DB,Shadingsfile,Buildingsfile):
+    def getshade(self, DB,Shadingsfile,Buildingsfile,GE):
         shades = {}
         shadesID = DB.properties[GE['ShadingIdKey']]
         ref = self.RefCoord
@@ -329,9 +275,9 @@ class Building:
                 wallId = shadesID[idlist[ii] + 1:-1]
             else:
                 wallId = shadesID[idlist[ii] + 1:idlist[ii + 1]]
-
-            ShadeWall = findWallId(wallId, Shadingsfile, ref)
-            ShadeWall['height'] = findBuildId(ShadeWall[GE['BuildingIdKey']], Buildingsfile)
+            ShadeWall = findWallId(wallId, Shadingsfile, ref, GE)
+            if not 'height' in ShadeWall.keys():
+                ShadeWall['height'] = findBuildId(ShadeWall[GE['BuildingIdKey']], Buildingsfile,GE)
             meanPx = ShadeWall[GE['VertexKey']][0][0] + ShadeWall[GE['VertexKey']][1][0]
             meanPy = ShadeWall[GE['VertexKey']][0][1] + ShadeWall[GE['VertexKey']][1][1]
             coordx = []
@@ -354,11 +300,16 @@ class Building:
                 try:
                     float(ShadeWall['height'])
                 except:
-                    # print('error on Building ', ShadeWall['byggnadsid'], 'for shading constructions, current building height will be applied')
                     ShadeWall['height'] = self.height
-                shades[wallId] = {}
-                shades[wallId]['Vertex'] = ShadeWall[GE['VertexKey']]
-                shades[wallId]['height'] = ShadeWall['height']
+                keepit = True
+                test = Polygon2D(ShadeWall[GE['VertexKey']]).edges_length
+                if test[0]<0.1:
+                    keepit = False
+                    print('Avoid one shade : '+ ShadeWall[GE['ShadingIdKey']])
+                if keepit:
+                    shades[wallId] = {}
+                    shades[wallId]['Vertex'] = ShadeWall[GE['VertexKey']]
+                    shades[wallId]['height'] = ShadeWall['height']
         return shades
 
     def getVentSyst(self, DB):
@@ -370,7 +321,7 @@ class Building:
                 VentSyst[key] = False
         return VentSyst
 
-    def getAreaBasedFlowRate(self, DB):
+    def getAreaBasedFlowRate(self, DB, DBL, BE):
         try:
             AreaBasedFlowRate = float(DB.properties[DBL['AreaBasedFlowRate_key']])
         except:

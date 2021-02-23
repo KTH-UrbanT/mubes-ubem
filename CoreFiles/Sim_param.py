@@ -1,5 +1,5 @@
 
-def setSimparam(idf):
+def setSimparam(idf,building):
     #changing the running period
     simctrl = idf.idfobjects['SIMULATIONCONTROL'][0]
     simctrl.Run_Simulation_for_Sizing_Periods= 'No'
@@ -13,10 +13,10 @@ def setSimparam(idf):
     #but these are tekan from default value from now
 
     runperiod = idf.idfobjects['RUNPERIOD'][0]
-    runperiod.Begin_Day_of_Month = 1
-    runperiod.Begin_Month = 1
-    runperiod.End_Day_of_Month = 31
-    runperiod.End_Month = 12
+    runperiod.Begin_Day_of_Month = building.Begin_Day_of_Month
+    runperiod.Begin_Month = building.Begin_Month
+    runperiod.End_Day_of_Month = building.End_Day_of_Month
+    runperiod.End_Month = building.End_Month
     #set the heat algorithm
     idf.newidfobject(
         'HEATBALANCEALGORITHM',

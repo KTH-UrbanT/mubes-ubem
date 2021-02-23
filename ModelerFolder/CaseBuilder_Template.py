@@ -30,7 +30,7 @@ def setSimLevel(idf,building):
     #Simulation Level
     #####################################################################
     Sim_param.Location_and_weather(idf,building)
-    Sim_param.setSimparam(idf)
+    Sim_param.setSimparam(idf,building)
 
 def setBuildingLevel(idf,building):
     ######################################################################################

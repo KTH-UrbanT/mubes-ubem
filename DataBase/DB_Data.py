@@ -1,3 +1,11 @@
+SimuData = \
+ {  'Begin_Day_of_Month' : 1,
+    'Begin_Month' : 1,
+    'End_Day_of_Month' : 31,
+    'End_Month' : 12,
+    'SaveLogFiles' : True
+ }
+
 WeatherFile = \
  {'Loc' : "SWE_Stockholm.Arlanda.024600_IWEC"
   }
@@ -88,10 +96,11 @@ InternalMass = \
 #the other one contains for each shading surface id the vertex point and the building Id in order to catch the height of it.
 #to externalize as much as possible, these elements are reported in the dict below
 GeomElement = \
- {'ShadingIdKey' : 'vaggid',
+ {'BuildIDKey' : '50A_UUID',
+  'ShadingIdKey' : 'vaggid',
   'BuildingIdKey' : 'byggnadsid',
   'VertexKey':'geometries',
-  'MaxShadingDist': 300,
+  'MaxShadingDist': 0,
   }
 #this dict gives information on occupancy times each day. If DCV = True, the airflow will follow the number of person
 # and the schedule. if not it will be based only on the extra airflow rate but without schedule (all the time)

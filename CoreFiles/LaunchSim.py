@@ -57,14 +57,7 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,idf,filepath):
     ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir,CaseName), ZoneOutput=False)
     Res, Endinfo = Set_Outputs.Read_Outputhtml(os.path.join(RunDir,CaseName))
     Res['BuildDB'] = building
-    # Res['DataBaseArea'] = building.surface
-    # Res['NbFloors'] = building.nbfloor
     Res['NbZones'] = len(idf.idfobjects['ZONE'])
-    # Res['Year'] = building.year
-    # Res['Residential'] = building.OccupType['Residential']
-    # Res['EPCMeters'] = building.EPCMeters
-    # Res['EPHeatArea'] = building.EPHeatedArea
-    # Res['EnvLeak'] = building.EnvLeak
     for key1 in ResEso:
         # if not 'Environ' in key1:
         Res[key1] = {}
@@ -79,42 +72,14 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,idf,filepath):
         pickle.dump(Res, handle, protocol=pickle.HIGHEST_PROTOCOL)
     #csv2tabdelim.convert(ResSimpath + file[:-4] + '.csv')
     #csv2tabdelim.WriteCSVFile(ResSimpath+'\\'+file[:-4] + '.csv', ResEso)
-    #here we should save the results and introduce some calibration
-    #maybe using the building object...i don't really know yet
-    #it means several runs
-    #let us delete the remainning files
 
     os.chdir(filepath)
-    for i in os.listdir(RunDir):
-       os.remove(os.path.join(RunDir,i))
-    os.rmdir(RunDir)  # Now the directory is empty of files
+    if not building.SaveLogFiles:
+        for i in os.listdir(RunDir):
+           os.remove(os.path.join(RunDir,i))
+        os.rmdir(RunDir)  # Now the directory is empty of files
 
-# def RunMultiProc(file2run,filepath,multi = True, maxcpu = 1, epluspath = []):
-#      #this is just to maje tries as the method1 seem to block the file saving process after the first shot on each core
-#     #thoe other methods works fine BUT it laucnhe all the case so CPU saturation is not the solutions neither
-#     print('Launching cases :')
-#     if multi:
-#         nbcpu = mp.cpu_count()
-#         pool = mp.Pool(processes = int(nbcpu*maxcpu)) #let us allow 80% of CPU usage
-#         for i in range(len(file2run)):
-#              #runcase(file2run[i], filepath)
-#              pool.apply_async(runcase, args=(file2run[i], filepath, epluspath))
-#         pool.close()
-#         pool.join()
-#     else:
-#         processes = [mp.Process(target=runcase, args=(file2run[i], filepath,epluspath)) for i in range(len(file2run))]
-#         for p in processes:
-#             p.start()
-#         for p in processes:
-#             p.join()
-#     print('Done with this one !')
-#
-# if __name__ == '__main__' :
-#     MainPath= os.getcwd()
-#     filepath = os.path.join(os.path.dirname(MainPath),'ModelerFolder')
-#     file = os.path.join(filepath,'MultiProcInputs.pickle')
-#     with open(file, 'rb') as handle:
-#         MultiProcInputs = pickle.load(handle)
-#     RunMultiProc(MultiProcInputs['file2run'],MultiProcInputs['filepath'],True,MultiProcInputs['CPUmax'],MultiProcInputs['epluspath'])
+if __name__ == '__main__' :
+     print('Launch_Sim.py')
 
 

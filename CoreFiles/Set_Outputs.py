@@ -4,33 +4,6 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-OutputsVar1 = \
-    {"Site Outdoor Air Drybulb Temperature",
-    #"Zone Ideal Loads Zone Total Cooling Rate",
-    #"Zone Ideal Loads Zone Total Heating Rate",
-    "Zone Mean Air Temperature",
-     'Zone Operative Temperature',
-    "Electric Equipment Total Heating Rate",
-    # "Zone Ideal Loads Outdoor Air Standard Density Volume Flow Rate",
-    # "Zone Ideal Loads Outdoor Air Total Heating Rate",
-    # "Zone Ideal Loads Outdoor Air Total Cooling Rate",
-     #"Zone Ideal Loads Supply Air Total Cooling Rate",
-     "Zone Ideal Loads Supply Air Total Heating Rate",
-    # "Zone Ideal Loads Heat Recovery Active Time",
-    #'Zone Ideal Loads Heat Recovery Total Cooling Rate",
-    #"Zone Ideal Loads Heat Recovery Total Heating Rate",
-    # "System Node Mass Flow Rate",
-    # "System Node Wind Speed",
-    # "System Node Wind Direction",
-    # "System Node Temperature",
-    "Zone Infiltration Mass Flow Rate",
-    #"Site Wind Speed",
-    # "Site Wind Direction",
-    #"People Occupant Count",
-    #"Zone People Occupant Count",
-    "Zone People Total Heating Rate",
-    }
-
 def getOutputList(path):
     OutputsVar = {}
     OutputsVar['Var'] = []

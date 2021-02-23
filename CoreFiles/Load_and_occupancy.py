@@ -40,9 +40,9 @@ def ScheduleCompactOccup(idf,Name,building,SetPoint):
         Schedule_Type_Limits_Name='Any Number',
         Field_1='Through: 12/31',
         Field_2='For: AllDays',
-        Field_3='Until: '+building.Officehours[0],
+        Field_3='Until: '+building.Office_Open,
         Field_4=0,
-        Field_5='Until: '+building.Officehours[1],
+        Field_5='Until: '+building.Office_Close,
         Field_6=SetPoint,
         Field_7='Until: 24:00',
         Field_8=0,
@@ -120,10 +120,10 @@ def ZoneCtrl(idf,zone,building,PeopleDensity,ThermostatName):
         Heat_Recovery_Type='Sensible' if building.VentSyst['BalX'] or building.VentSyst['ExhX'] else 'None',
         Sensible_Heat_Recovery_Effectiveness= 0.7 if building.VentSyst['BalX'] or building.VentSyst['ExhX'] else 0,
         #Design_Specification_Outdoor_Air_Object_Name = AirNode,
-        Outdoor_Air_Method='Sum' if PeopleDensity>0 and building.DCV else 'Flow/Area',
-        Outdoor_Air_Flow_Rate_per_Zone_Floor_Area=building.AreaBasedFlowRate/1000 + building.OccupBasedFlowRate*PeopleDensity*(1-building.DCV),
-        Outdoor_Air_Flow_Rate_per_Person=building.OccupBasedFlowRate,
-        Demand_Controlled_Ventilation_Type = 'OccupancySchedule' if PeopleDensity>0 and building.DCV else 'None',
+        Outdoor_Air_Method='Sum' if PeopleDensity>0 and building.DemandControlledVentilation else 'Flow/Area',
+        Outdoor_Air_Flow_Rate_per_Zone_Floor_Area=building.AreaBasedFlowRate/1000 + building.OccupBasedFlowRate/1000*PeopleDensity*(1-building.DemandControlledVentilation),
+        Outdoor_Air_Flow_Rate_per_Person=building.OccupBasedFlowRate/1000,
+        Demand_Controlled_Ventilation_Type = 'OccupancySchedule' if PeopleDensity>0 and building.DemandControlledVentilation else 'None',
         #Outdoor_Air_Inlet_Node_Name = 'OutdoorAirNode'
         )
     idf.newidfobject(

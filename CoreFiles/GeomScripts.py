@@ -1,5 +1,4 @@
 
-
 from geomeppy import geom
 from shapely.geometry import Polygon
 from shapely.ops import cascaded_union
@@ -189,7 +188,7 @@ def split2convex(idf):
     surlist = idf.idfobjects['BUILDINGSURFACE:DETAILED']
     idxi = []
     for i, j in enumerate(surlist):
-        if j.Outside_Boundary_Condition.lower() == "outdoors" and not('wall' in j.Surface_Type): #avant c'etait Wall eyt filtre sur construction_name du coup il fallait attirbuer les construction avant et faire le split2convex apres le createenvelope
+        if j.Outside_Boundary_Condition.lower() == "outdoors" and not('wall' in j.Surface_Type):
             roofcoord = j.coords
             coord2split = []
             for nbpt in roofcoord:
@@ -198,7 +197,6 @@ def split2convex(idf):
             if not (isconv):
                 idxi.append(j.Name)
     import tripy
-    #print(idxi)
     for surfi in idxi:
         coord2split = []
         surf2treat = idf.getobject('BUILDINGSURFACE:DETAILED',surfi)
@@ -210,15 +208,6 @@ def split2convex(idf):
         while stillleft:
             mergeTrigle, stillleft = MergeTri(trigle)
             trigle = mergeTrigle
-
-            # import matplotlib.pyplot as plt
-            # plt.figure()
-            # xs, ys = zip(*list(coord2split))
-            # for i in trigle:
-            #     xs, ys = zip(*list(i))  # create lists of x and y values
-            #     plt.plot(xs, ys)
-            # plt.show()
-
         for nbi, subsurfi in enumerate(trigle):
             new_coord = []
             for nbpt in subsurfi:
@@ -226,6 +215,7 @@ def split2convex(idf):
                 y = nbpt[1]
                 z = height
                 new_coord.append((x, y, z))
+            print(surf2treat.Name + str(nbi))
             surftri = idf.newidfobject(
                 "BUILDINGSURFACE:DETAILED",
                 Name=surf2treat.Name + str(nbi),
@@ -236,11 +226,9 @@ def split2convex(idf):
                 Zone_Name=surf2treat.Zone_Name,
                 Wind_Exposure=surf2treat.Wind_Exposure,
             )
-
             surftri.setcoords(new_coord)
             if 'Roof' in surf2treat.Name and surftri.tilt == 180:
                     surftri.setcoords(reversed(new_coord))
-        #print(surf2treat.Name)
         idf.removeidfobject(surf2treat)
     return idf
 
@@ -289,7 +277,6 @@ def MergeTri(trigle):
                 newTrigle = trigle
                 stillleft = False
                 finished = 1
-
     return newTrigle,stillleft
 
 def composenewtrigle(trigle,data,newsurf):
@@ -311,7 +298,6 @@ def merge2surf(data):
     newsurfcoord = list(u.exterior.coords)[:-1]
     isconv = geom.polygons.is_convex_polygon(newsurfcoord)
     return isconv, newsurfcoord
-
 
 def edgeLength(node1,node2):
     return ((node1[0] - node2[0]) ** 2 + (node1[1] - node2[1]) ** 2) ** 0.5
