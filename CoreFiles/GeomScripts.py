@@ -4,39 +4,59 @@ from shapely.geometry import Polygon
 from shapely.ops import cascaded_union
 import CoreFiles.Envelope_Param as Envelope_Param
 
+def BuildBloc(idf,perim,bloc,bloc_coord,Height,nbstories,nbBasementstories,BasementstoriesHeight,Perim_depth):
+    if perim:
+        idf.add_block(
+            name='Build' + str(bloc),
+            coordinates=bloc_coord,
+            height=Height,
+            num_stories=nbstories + nbBasementstories,
+            # building.nbfloor+building.nbBasefloor, #it defines the numbers of zones !
+            below_ground_stories=nbBasementstories,
+            below_ground_storey_height=BasementstoriesHeight if nbBasementstories > 0 else 0,
+            zoning='core/perim',
+            perim_depth=Perim_depth,
+        )
+    else:
+        idf.add_block(
+            name='Build' + str(bloc),
+            coordinates=bloc_coord,
+            height=Height,
+            num_stories=nbstories + nbBasementstories,
+            # building.nbfloor+building.nbBasefloor, #it defines the numbers of zones !
+            below_ground_stories=nbBasementstories,
+            below_ground_storey_height=BasementstoriesHeight if nbBasementstories > 0 else 0
+        )
+
 def createBuilding(idf,building,perim):
     Full_coord = building.footprint
     #Adding two blocks, one with two storey (the nb of storey defines the nb of Zones)
     Nb_blocs = 1
     if building.Multipolygon:
         Nb_blocs = len(Full_coord)
+    print('Number of blocs for this building : '+ str(Nb_blocs))
     for bloc in range(Nb_blocs):
         bloc_coord =  Full_coord[bloc] if building.Multipolygon else Full_coord
-        Height = building.MultiHeight[bloc] if building.Multipolygon else building.height
-        nbstories = int(Height/building.StoreyHeigth) if building.Multipolygon else building.nbfloor
+        Height = building.BlocHeight[bloc] if building.Multipolygon else building.height
+        nbstories = building.BlocNbFloor[bloc] if building.Multipolygon else building.nbfloor
         if building.Multipolygon:
             Height = nbstories*building.StoreyHeigth        #correction of the height in order to have same storey hieght everyware
-        print(Height, nbstories)
-        if perim:
-            idf.add_block(
-            name='Build'+str(bloc),
-            coordinates= bloc_coord,
-            height=Height,
-            num_stories=nbstories+building.nbBasefloor, #building.nbfloor+building.nbBasefloor, #it defines the numbers of zones !
-            below_ground_stories = building.nbBasefloor,
-            # below_ground_storey_height = 1, the value is by default 2,5m
-            zoning = 'core/perim',
-            perim_depth = 3,
-            )
-        else:
-            idf.add_block(
-            name='Build'+str(bloc),
-            coordinates= bloc_coord,
-            height=Height,
-            num_stories=nbstories+building.nbBasefloor, #building.nbfloor+building.nbBasefloor, #it defines the numbers of zones !
-            below_ground_stories=building.nbBasefloor,
-            #below_ground_storey_height = 3,#1, the value is by default 2,5m
-            )
+        #last check of the Zonning level if 1 per floor or 1 per building bloc
+        nbstories = nbstories if building.FloorZoningLevel else 1
+        nbBasementstories = building.nbBasefloor if building.FloorZoningLevel else min(building.nbBasefloor,1)
+        BasementstoriesHeight = 2.5 if building.FloorZoningLevel else 2.5*building.nbBasefloor
+        #function that build the bloc, it is externalize in order to introduce a Try except and reducing the perim depth
+        Perim_depth = 3
+        matched = False
+        while not matched:
+            try:
+                BuildBloc(idf, perim, bloc, bloc_coord, Height, nbstories, nbBasementstories, BasementstoriesHeight, Perim_depth)
+                matched = True
+            except:
+                Perim_depth = Perim_depth/2
+                print('I reduce half the perim depth')
+            if Perim_depth<0.5:
+                return print('Sorry, but this building cannot have Perim/Core option..it failed with perim below 0.75m')
     #this function enable to create all the boundary conditions for all surfaces
     idf.intersect_match()
 
@@ -143,7 +163,10 @@ def createEnvelope(idf,building):
 
     # creating the material and construction for internalMass effect:
     for key in building.InternalMass:
-        if building.InternalMass[key]:
+        BuildIt=True
+        if 'NonHeatedZone' in key and building.nbBasefloor == 0:
+            BuildIt =False
+        if building.InternalMass[key] and BuildIt:
             Envelope_Param.create_MaterialObject(idf, key, building.InternalMass[key])
             Envelope_Param.createNewConstruction(idf, key + 'Obj', key)
 
@@ -215,7 +238,7 @@ def split2convex(idf):
                 y = nbpt[1]
                 z = height
                 new_coord.append((x, y, z))
-            print(surf2treat.Name + str(nbi))
+            #print(surf2treat.Name + str(nbi))
             surftri = idf.newidfobject(
                 "BUILDINGSURFACE:DETAILED",
                 Name=surf2treat.Name + str(nbi),

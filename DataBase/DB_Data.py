@@ -3,7 +3,8 @@ SimuData = \
     'Begin_Month' : 1,
     'End_Day_of_Month' : 31,
     'End_Month' : 12,
-    'SaveLogFiles' : True
+    'SaveLogFiles' : False, #computing folder is not removed thus all energyplus outpus files are preserved
+    'FloorZoningLevel' : False,  #1 zone per floor, if False --> 1 zone per building bloc
  }
 
 WeatherFile = \
@@ -96,11 +97,11 @@ InternalMass = \
 #the other one contains for each shading surface id the vertex point and the building Id in order to catch the height of it.
 #to externalize as much as possible, these elements are reported in the dict below
 GeomElement = \
- {'BuildIDKey' : '50A_UUID',
+ {'BuildIDKey' : ['50A_UUID', 'FormularId'],
   'ShadingIdKey' : 'vaggid',
   'BuildingIdKey' : 'byggnadsid',
   'VertexKey':'geometries',
-  'MaxShadingDist': 0,
+  'MaxShadingDist': 300,
   }
 #this dict gives information on occupancy times each day. If DCV = True, the airflow will follow the number of person
 # and the schedule. if not it will be based only on the extra airflow rate but without schedule (all the time)
@@ -112,18 +113,18 @@ BasisElement = \
  'DemandControlledVentilation' : True,
  'OccupBasedFlowRate': 7,  # l/s/person
  'OccupHeatRate' : 70, #W per person
- 'EnvLeak': 0.89,# l/s/m2 at 50Pa
+ 'EnvLeak': 0.5,# l/s/m2 at 50Pa
  'BasementAirLeak': 1, #in Air change rate [vol/hour]
  'wwr': 0.3,
- 'ExternalInsulation' : True,
- 'IntLoadType' : 'Cste', #change either by 'Cste', 'winter', or 'summer' for reversed sigmoid or sigmoid this will generate hourly values file in the InputFiles folder
+ 'ExternalInsulation' : False,
+ 'IntLoadType' : 'winter', #change either by 'Cste', 'winter', or 'summer' for reversed sigmoid or sigmoid this will generate hourly values file in the InputFiles folder
  'IntLoadMultiplier': 1, #this is a multiplier the modeler would like to play with for calibration
  'OffOccRandom' : False,
  'AreaBasedFlowRate' : 0.35, #l/s/m2
  'setTempUpL' : 25,
  'setTempLoL' : 21,
  'ACH_freecool' :4,     #this the the vol/hr of extra ventilation when free cooling is on
- 'intT_freecool' : 26,  #internal temperature threshold for free coolong (opening windows with fixed ACH
+ 'intT_freecool' : 26,  #internal temperature threshold for free coolong (opening windows with fixed ACH)
  'dT_freeCool': 1,      #Tint-Text to authorize free cooling to be turned on
  }
 

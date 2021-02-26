@@ -66,7 +66,7 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,idf,filepath):
             Res[key1]['TimeStep_' + key2] = ResEso[key1][key2]['TimeStep']
             Res[key1]['Unit_' + key2] = ResEso[key1][key2]['Unit']
     shutil.copyfile(os.path.join(RunDir,'Runout.err'), os.path.join(ResSimpath,file[:-4] + '.err'))
-    #shutil.copyfile(RunDir + '\\' + 'Runtbl.htm', ResSimpath + file[:-4] + '.html')
+    shutil.copyfile(os.path.join(RunDir,'Runtbl.htm'), os.path.join(ResSimpath,file[:-4] + '.html'))
     #shutil.copyfile(RunDir + '\\' + 'Runout.csv', ResSimpath + file[:-4] + '.csv')
     with open(os.path.join(ResSimpath, file[:-4]+'.pickle'), 'wb') as handle:
         pickle.dump(Res, handle, protocol=pickle.HIGHEST_PROTOCOL)

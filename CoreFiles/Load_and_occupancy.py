@@ -74,9 +74,10 @@ def create_Occupant(idf, zone, OccScheduleName, ActScheduleName,NbPeople):
         )
     return idf
 
-def ZoneLoad(idf, zone, LoadSchedule, building, isfile):
+def ZoneLoad(idf, zone, LoadSchedule, building, isfile, ZoningMultiplier):
     #floors_surf = [s for s in zone.zonesurfaces if s.Surface_Type in 'floor']
     #floor_area = floors_surf[0].area
+    Multiplier = building.IntLoadMultiplier*ZoningMultiplier
     #the profil are considered as for 100m2. thus the designlevel is considering this
     #create the equipement tha will apply the load to the zone
     idf.newidfobject(
@@ -86,7 +87,7 @@ def ZoneLoad(idf, zone, LoadSchedule, building, isfile):
         Schedule_Name = LoadSchedule,
         Design_Level_Calculation_Method = 'Watts/Area',
         #Design_Level = floor_area/100 if isfile else building.IntLoad, #is a multiplier. this means that the file value will be the full zone's load in W
-        Watts_per_Zone_Floor_Area = 1/100*building.IntLoadMultiplier if isfile else building.IntLoad*building.IntLoadMultiplier
+        Watts_per_Zone_Floor_Area = 1/100*Multiplier if isfile else building.IntLoad*Multiplier
         )
     return idf
 
@@ -110,7 +111,7 @@ def CreateThermostatFile(idf,name,namesetUp,namesetLo):
         )
     return idf
 
-def ZoneCtrl(idf,zone,building,PeopleDensity,ThermostatName):
+def ZoneCtrl(idf,zone,building,PeopleDensity,ThermostatName, Multiplier):
     #to all zones adding an ideal load element driven by the above thermostat
     #DCV stands for Demand Controlled Ventilation, the airflow is in m#/s/m2 thus divded by 1000 from DB_Data
     idf.newidfobject(
@@ -121,7 +122,7 @@ def ZoneCtrl(idf,zone,building,PeopleDensity,ThermostatName):
         Sensible_Heat_Recovery_Effectiveness= 0.7 if building.VentSyst['BalX'] or building.VentSyst['ExhX'] else 0,
         #Design_Specification_Outdoor_Air_Object_Name = AirNode,
         Outdoor_Air_Method='Sum' if PeopleDensity>0 and building.DemandControlledVentilation else 'Flow/Area',
-        Outdoor_Air_Flow_Rate_per_Zone_Floor_Area=building.AreaBasedFlowRate/1000 + building.OccupBasedFlowRate/1000*PeopleDensity*(1-building.DemandControlledVentilation),
+        Outdoor_Air_Flow_Rate_per_Zone_Floor_Area=Multiplier*building.AreaBasedFlowRate/1000 + Multiplier*building.OccupBasedFlowRate/1000*PeopleDensity*(1-building.DemandControlledVentilation),
         Outdoor_Air_Flow_Rate_per_Person=building.OccupBasedFlowRate/1000,
         Demand_Controlled_Ventilation_Type = 'OccupancySchedule' if PeopleDensity>0 and building.DemandControlledVentilation else 'None',
         #Outdoor_Air_Inlet_Node_Name = 'OutdoorAirNode'
@@ -238,30 +239,41 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
     #Create a single thermostat set points for all the zone (might need some other if different set points desired)
     CreateThermostat(idf,'ResidZone',building.setTempUpL, building.setTempLoL)
     # to all zones adding an ideal load element driven by the above thermostat
-    #we need a flag to check if Office occupancy has been analysed or not
-    Officechek = 0 #it will be turned to 1 when finished to be considered depending on the occupancy rate
 
     #############################################################################################################
     ##this could be part of the building class
     ############################################################################################################
     OfficeOcc = 1 - building.OccupType['Residential'] #all occupancy but residential are taken for the extra airflow of 7l/s/pers
-    #extra variable used below to compute the number of people to be considered in each zone
+    # extra variable used below to compute the number of people to be considered in each zone
     PeopleDensity = [0, 0]
     if OfficeOcc != 0:
         for key in building.OccupType.keys():
             if not key in ['Residential']:
-                PeopleDensity[0] += building.OccupType[key] / OfficeOcc * min(building.OccupRate[key]) #this is the mean number of people per m2
+                PeopleDensity[0] += building.OccupType[key] / OfficeOcc * min(
+                    building.OccupRate[key])  # this is the mean number of people per m2
                 PeopleDensity[1] += building.OccupType[key] / OfficeOcc * max(building.OccupRate[key])
+    #we need to spread this in all existing blocs based on tha area ratio
+    BlocOfficeOcc = [] #if building.Multipolygon else OfficeOcc
+    BlocHeatedArea = []
+    BlocOfficechek = []
+    BlocPeopleDensity = []
+    for i,BlocArea in enumerate(building.BlocFootprintArea):
+        BlocOfficeOcc.append(OfficeOcc*BlocArea/sum(building.BlocFootprintArea))
+        BlocHeatedArea.append(BlocArea*building.BlocNbFloor[i])
+        BlocOfficechek.append(0) #it will be turned to 1 when finished to be considered depending on the occupancy rate
+        BlocPeopleDensity.append(PeopleDensity)
     #############################################################################################################
     #let us go through all the zones but we need to sort them from the lowest ones to the highest one....to have different setting for the basement ones
     zoneStoreylist =[]
+    bloclist = []
     AllZone = idf.idfobjects["ZONE"]
     for idx, zone in enumerate(AllZone):
-        storey = int(zone.Name[zone.Name.find('Storey')+6:]) #the name ends with Storey # so lest get the storey number this way
-        zoneStoreylist.append(storey)
+        bloclist.append(int(zone.Name[zone.Name.rfind('Build')+5:zone.Name.find('Storey')]))
+        zoneStoreylist.append(int(zone.Name[zone.Name.find('Storey')+6:])) #the name ends with Storey # so lest get the storey number this way
     SortedZoneIdx = sorted(range(len(zoneStoreylist)), key=lambda k: zoneStoreylist[k])
     for idx in SortedZoneIdx:
         zone = AllZone[idx]
+        bloc = bloclist[idx]
         # we need to compute the enveloppe area facing outside as well as the floor area (for HVAC)
         ExtWallArea = 0
         for s in zone.zonesurfaces:
@@ -269,13 +281,20 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
                 ExtWallArea += s.area
             if s.Surface_Type in 'floor':
                 FloorArea = s.area
-        #we need to create envelope infiltration for each zone facing outside adn specific ones for the basement
+        #we need to create envelope infiltration for each zone facing outside and specific ones for the basement
         if zoneStoreylist[idx]<0: #means that we are in the basement
+            # Lets modify the floor area depending on the zoning level
+            FloorMultiplier = 1 if building.FloorZoningLevel else building.nbBasefloor
+            FloorArea = FloorArea * FloorMultiplier
+
             CreateBasementLeakage(idf, zone, ACH=building.BasementAirLeak)
             #creating the internalMass element if the dict is not empty
             if building.InternalMass['NonHeatedZoneIntMass']:
                 CreateInternalMass(idf, zone, FloorArea, 'NonHeatedZoneIntMassObj', building.InternalMass['NonHeatedZoneIntMass'])
         else:
+            # Lets modify the floor area depending on the zoning level
+            FloorMultiplier = 1 if building.FloorZoningLevel else building.BlocNbFloor[bloc]
+            FloorArea = FloorArea * FloorMultiplier
             #creating the internalMass element if the dict is not empty
             if building.InternalMass['HeatedZoneIntMass']:
                 CreateInternalMass(idf, zone, FloorArea, 'HeatedZoneIntMassObj', building.InternalMass['HeatedZoneIntMass'])
@@ -283,13 +302,13 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
                 CreateEnvLeakage(idf, zone, building, ExtWallArea)
             # check if Residential occupancy is not a 100% of the building, we shall take into account the ventilation for
             # office hours as well as heat generation from occupancy rates (defined in the DB_Data)
-            #as we go along the zones, we should know how much if left (this is done through the 2 lines below)
+            #as we go along the zones, we should know how much is left (this is done through the 2 lines below)
             #it computes the ratio of the current zone area concerned by office occupation (1 or below for each zone)
-            OfficeTypeZone = min(1, OfficeOcc / (FloorArea/building.EPHeatedArea)) if Officechek == 0 else 0
-            OfficeOcc = OfficeOcc-(FloorArea/building.EPHeatedArea) if OfficeTypeZone==1 else OfficeOcc
-            Officechek = 1 if OfficeTypeZone < 1 else 0 #if 1, it means that this the last round with office occupancy, the next one will be fully residential
+            OfficeTypeZone = min(1, BlocOfficeOcc[bloc]/(FloorArea/BlocHeatedArea[bloc])) if BlocOfficechek[bloc] == 0 else 0
+            BlocOfficeOcc[bloc] = BlocOfficeOcc[bloc]-(FloorArea/BlocHeatedArea[bloc]) if OfficeTypeZone==1 else BlocOfficeOcc[bloc]
+            BlocOfficechek[bloc] = 1 if OfficeTypeZone < 1 else 0 #if 1, it means that this is the last round with office occupancy, the next one will be fully residential
             # We need to define the number of occupant in the current zone depending on the ratio left
-            PeopleDensity = [i*OfficeTypeZone for i in PeopleDensity]
+            BlocPeopleDensity[bloc] = [i*OfficeTypeZone for i in BlocPeopleDensity[bloc]]
             if OfficeTypeZone>0:
                 # for each zone concerned by occupancy : one occupant is defined and the number is controlled  with a schedule
                 create_Occupant(idf, zone, 'OccuSchedule'+str(idx), 'OccupActivity', 1)
@@ -298,7 +317,7 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
                     pathfile = os.path.join(MainPath,'InputFiles')
                     name = idf.idfname + '.txt' #building.name + 'nbUsers.txt'
                     #from now, random value are taken from 20 to 100% of the people density (the min value id DB_Data is not considered yet)
-                    ProbGenerator.BuildData(name,pathfile,round(FloorArea*min(PeopleDensity)),round(FloorArea*max(PeopleDensity)), building)
+                    ProbGenerator.BuildData(name,pathfile,int(FloorArea*min(BlocPeopleDensity[bloc])),int(FloorArea*max(BlocPeopleDensity[bloc])), building)
                     # lets create a schedule file for occupant and the associated file
                     create_ScheduleFile(idf, 'OccuSchedule'+str(idx), pathfile+name)   #we should be careful because of varaition with multiproc
                     create_ScheduleFile(idf, 'OffTsetUp' + str(idx), pathfile+'SetPointUp.txt')
@@ -306,13 +325,15 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
                     CreateThermostatFile(idf, 'OfficeZone'+ str(idx),'OffTsetUp' + str(idx),'OffTsetLo' + str(idx))
                 else:
                     ## here is the scedule that define the number of occupant with fixed number of occupants (same all the time but still linked to shedule).
-                    ScheduleCompactOccup(idf, 'OccuSchedule'+str(idx), building, SetPoint=round(FloorArea*max(PeopleDensity)))
+                    ScheduleCompactOccup(idf, 'OccuSchedule'+str(idx), building, SetPoint=int(FloorArea*max(BlocPeopleDensity[bloc])))
                     OfficeTypeZone = 0 #this just to give the correct thermostat type to the ZoneCtrl function below.
+            # computation of the zonning level multiplier
+            ZoningMultiplier = 1 if building.FloorZoningLevel else building.BlocNbFloor[bloc]
             # Internal load profile could be taken from the number of appartement. see building.IntLoad in DB_Building
-            ZoneLoad(idf, zone,'LoadSchedule' if isfile else 'AlwaysON' ,building, isfile)
+            ZoneLoad(idf, zone,'LoadSchedule' if isfile else 'AlwaysON' ,building, isfile, ZoningMultiplier)
             # HVAC equipment for each zone including ventilation systems (exhaust, balanced with or not heat recovery)
             ThermostatType = 'ResidZone'  if OfficeTypeZone==0 else 'OfficeZone'+ str(idx)
-            ZoneCtrl(idf, zone, building, max(PeopleDensity),ThermostatType)
+            ZoneCtrl(idf, zone, building, max(BlocPeopleDensity[bloc]),ThermostatType, ZoningMultiplier)
             ZoneFreeCooling(idf,zone,building,'AlwaysON')
 
 if __name__ == '__main__' :

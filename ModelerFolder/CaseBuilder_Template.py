@@ -15,6 +15,7 @@ import CoreFiles.Set_Outputs as Set_Outputs
 import CoreFiles.Sim_param as Sim_param
 import CoreFiles.Load_and_occupancy as Load_and_occupancy
 import CoreFiles.LaunchSim as LaunchSim
+import CoreFiles.MUBES_pygeoj as MUBES_pygeoj
 from DataBase.DB_Building import BuildingList
 import multiprocessing as mp
 
@@ -70,9 +71,9 @@ def setOutputLevel(idf,MainPath):
 #         pickle.dump(MultiProcInputs, handle, protocol=pickle.HIGHEST_PROTOCOL)
 #     LaunchSim.RunMultiProc(file2run, MainPath, False, CPUusage,epluspath)
 
-def readPathfile():
+def readPathfile(Pathways):
     keyPath = {'epluspath': '', 'Buildingsfile': '', 'Shadingsfile': ''}
-    with open('Pathways.txt', 'r') as PathFile:
+    with open(Pathways, 'r') as PathFile:
         Paths = PathFile.readlines()
         for line in Paths:
             for key in keyPath:
@@ -86,8 +87,8 @@ def LaunchProcess(bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns =
 #the cases are build in a for loop and then all cases are launched in a multiprocess mode, the maximum %of cpu is given as input
     MainPath = os.getcwd()
     epluspath = keyPath['epluspath']
-    Buildingsfile = pygeoj.load(keyPath['Buildingsfile'])
-    Shadingsfile = pygeoj.load(keyPath['Shadingsfile'])
+    Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'])
+    Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'])
 
     SimDir = os.path.join(os.getcwd(), 'RunningFolder')
     if not os.path.exists(SimDir):
@@ -122,10 +123,16 @@ def LaunchProcess(bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns =
     #lets build the two main object we'll be playing with in the following'
     idf_ref, building_ref = appendBuildCase(StudiedCase, epluspath, nbcase, Buildingsfile, Shadingsfile, MainPath)
 
-    if building_ref.height == 0:
+    Var2check = len(building_ref.BlocHeight) if building_ref.Multipolygon else building_ref.height
+    if len(building_ref.BlocHeight)>0 and min(building_ref.BlocHeight)<1:
+        Var2check = 0
+    if building_ref.EPHeatedArea <80:
+        Var2check = 0
+    if Var2check == 0:
         print('This Building does not have any height, process abort for this one')
         os.chdir(MainPath)
         return MainPath, epluspath
+
     # change on the building __init__ class in the simulation level should be done here
     setSimLevel(idf_ref, building_ref)
     # change on the building __init__ class in the building level should be done here
@@ -137,7 +144,7 @@ def LaunchProcess(bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns =
         # (except if some wanted and thus the above function will have to be in the for loop process
         idf = copy.deepcopy(idf_ref)
         building = copy.deepcopy(building_ref)
-        idf.idfname = 'Building_' + str(nbcase) +  'v'+str(i)
+        idf.idfname = 'Building_' + str(nbcase) +  'v'+str(i)+'_FormularId:'+str(building.BuildID['FormularId'])
         Case={}
         Case['BuildIDF'] = idf
         Case['BuildData'] = building
@@ -175,7 +182,7 @@ def LaunchProcess(bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns =
         setEnvelopeLevel(idf, building)
 
         #just uncomment the line below if some 3D view of the building is wanted. The figure's window will have to be manually closed for the process to continue
-        #idf.view_model(test=False)
+        idf.view_model(test=True)
 
         #change on the building __init__ class in the zone level should be done here
         setZoneLevel(idf, building,MainPath)
@@ -192,6 +199,17 @@ def LaunchProcess(bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns =
     # lets get back to the Main Folder we were at the very beginning
     os.chdir(MainPath)
     return MainPath, epluspath
+
+def SaveCase(MainPath,SepThreads):
+    SaveDir = os.path.join(os.path.dirname(MainPath), 'Results')
+    if not os.path.exists(SaveDir):
+        os.mkdir(SaveDir)
+    if SepThreads:
+        os.rename(os.path.join(MainPath, 'RunningFolder'),
+                  os.path.join(SaveDir, CaseName + '_Build_' + str(nbBuild)))
+    else:
+        os.rename(os.path.join(os.getcwd(), 'RunningFolder'),
+                  os.path.join(os.path.dirname(os.getcwd()), os.path.normcase('Results/' + CaseName)))
 
 if __name__ == '__main__' :
 
@@ -214,18 +232,18 @@ if __name__ == '__main__' :
 #                                       folders (CaseName string + number of the building. False = all input files for all
 #                                       building will be generated first, all results will be saved in one single folder
 
-    CaseName = 'ForTest'
-    BuildNum = [i for i in range(10)]
+    CaseName = 'Archi25Dv71zoneperFloor'
+    BuildNum = [i for i in range(28)]
     VarName2Change = []
     Bounds = []
     NbRuns = 1
-    CPUusage = 0.7
+    CPUusage = 0.8
     SepThreads = False
 
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
 ######################################################################################################################
-    keyPath = readPathfile()
+    keyPath = readPathfile('Pathways25Dv7.txt')
     for idx,nbBuild in enumerate(BuildNum):
         print('Building '+str(nbBuild)+' is starting')
         MainPath , epluspath  = LaunchProcess(idx,keyPath,nbBuild,VarName2Change,Bounds,NbRuns,CPUusage,SepThreads)
@@ -237,7 +255,7 @@ if __name__ == '__main__' :
                 pool.apply_async(LaunchSim.runcase, args=(file2run[i], MainPath, epluspath))
             pool.close()
             pool.join()
-            os.rename(os.path.join(os.getcwd(), 'RunningFolder'), os.path.join(os.getcwd(), CaseName+'_Build_'+str(nbBuild)))
+            SaveCase(MainPath,SepThreads)
     if not SepThreads:
         file2run = LaunchSim.initiateprocess(MainPath)
         nbcpu = max(mp.cpu_count()*CPUusage,1)
@@ -246,6 +264,8 @@ if __name__ == '__main__' :
             pool.apply_async(LaunchSim.runcase, args=(file2run[i], MainPath, epluspath))
         pool.close()
         pool.join()
-        os.rename(os.path.join(os.getcwd(), 'RunningFolder'), os.path.join(os.getcwd(), CaseName))
-    # lets supress the path we needed for geomeppy
+        SaveCase(MainPath, SepThreads)
+    #lets supress the path we needed for geomeppy
+    # import matplotlib.pyplot as plt
+    # plt.show()
     sys.path.remove(path2addgeom)

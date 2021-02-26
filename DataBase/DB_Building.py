@@ -93,7 +93,7 @@ class Building:
         self.nbfloor = self.getnbfloor(DB, DBL)
         self.nbBasefloor = self.getnbBasefloor(DB, DBL)
         self.footprint = self.getfootprint(DB)
-        self.surface = self.getsurface(DB, DBL)
+        self.ATemp = self.getsurface(DB, DBL)
         self.year = self.getyear(DB, DBL)
         self.EPCMeters = self.getEPCMeters(DB,EPC)
         self.nbAppartments = self.getnbAppartments(DB, DBL)
@@ -109,10 +109,8 @@ class Building:
         self.WeatherDataFile = DB_Data.WeatherFile['Loc']
         self.InternalMass = DB_Data.InternalMass
         self.IntLoad = self.getIntLoad(MainPath)
-        try:
-            self.BuildID = GE['BuildIDKey']
-        except:
-            self.BuildID = None
+        self.BuildID = self.getBuildID(DB,GE)
+
         #if there are no cooling comsumption, lets considerer a set point at 50deg max
         for key in self.EPCMeters['Cooling']:
             if self.EPCMeters['Cooling'][key]>0:
@@ -128,8 +126,19 @@ class Building:
         for key in SD.keys():
             setattr(self, key, SD[key])
 
+    def getBuildID(self,DB,GE):
+        BuildID={}
+        for key in GE['BuildIDKey']:
+            try:
+                BuildID[key] = DB.properties[key]
+            except:
+                BuildID[key] = None
+        return BuildID
+
+
 
     def getRefCoord(self,DB):
+        "get the reference coodinates for visualisation afterward"
         #check for Multipolygon first
         test = DB.geometry.coordinates[0][0][0]
         if type(test) is list:
@@ -143,12 +152,14 @@ class Building:
             y = centroide[0][1]
             self.Multipolygon = False
         ref = (x, y)
-        #ref = (670000, 6581600) this is the ref taken for multi building 3D plot
+        #ref = (670000, 6581600) #this is the ref taken for multi building 3D plot
         return ref
 
     def getfootprint(self,DB):
+        "get the footprint coordinate and the height of each building bloc"
         coord = []
-        self.MultiHeight = []
+        self.BlocHeight = []
+        self.BlocNbFloor = []
         #we first need to check if it is Multipolygon
         if self.Multipolygon:
             #then we append all the floor and roff fottprints into one with associate height
@@ -163,9 +174,11 @@ class Building:
                                 new_coor.append((new[ii] - self.RefCoord[ii]))
                             polycoor.append(tuple(new_coor))
                         coord.append(polycoor)
-                        self.MultiHeight.append(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]))
+                        self.BlocHeight.append(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]))
             #we compute a storey hieght as well to choosen the one that correspond to the highest part of the building afterward
-            self.StoreyHeigth = max(self.MultiHeight)/self.nbfloor
+            self.StoreyHeigth = max(self.BlocHeight)/self.nbfloor
+            for Height in self.BlocHeight:
+                self.BlocNbFloor.append(int(Height / self.StoreyHeigth))
         else:
             #old fashion of making thing with the very first 2D file
             for j in DB.geometry.coordinates[0]:
@@ -174,25 +187,30 @@ class Building:
                 for ii in range(len(self.RefCoord)):
                     new_coor.append((new[ii] - self.RefCoord[ii]))
                 coord.append(tuple(new_coor))
+                self.BlocNbFloor.append(self.nbfloor)
         return coord
 
     def getEPHeatedArea(self):
+        "get the heated area based on the footprint and the number of floors"
+        self.BlocFootprintArea=[]
         if self.Multipolygon:
             EPHeatedArea = 0
             for i,foot in enumerate(self.footprint):
-                EPHeatedArea += Polygon(foot).area*(self.MultiHeight[i]/self.StoreyHeigth)
+                EPHeatedArea += Polygon(foot).area*self.BlocNbFloor[i]
+                self.BlocFootprintArea.append(Polygon(foot).area)
         else:
             EPHeatedArea = Polygon(self.footprint).area * self.nbfloor
+            self.BlocFootprintArea.append(Polygon(self.footprint).area)
         return EPHeatedArea
 
     def getsurface(self,DB, DBL):
-        "Get the surface from the input file"
+        "Get the surface from the input file, ATemp"
         try:
-            surf = int(DB.properties[DBL['surface_key'] ])
+            ATemp = int(DB.properties[DBL['surface_key'] ])
         except:
-            surf = 100
-        surf = checkLim(surf,DBL['surface_lim'][0],DBL['surface_lim'][1])
-        return surf
+            ATemp = 100
+        ATemp = checkLim(ATemp,DBL['surface_lim'][0],DBL['surface_lim'][1])
+        return ATemp
 
     def getnbfloor(self,DB, DBL):
         "Get the number of floor above ground"
@@ -204,7 +222,7 @@ class Building:
         return nbfloor
 
     def getnbStairwell(self,DB, DBL):
-        "Get the number of floor above ground"
+        "Get the number of stariwell, need for natural stack effect on infiltration"
         try:
             nbStairwell = int(DB.properties[DBL['Stairwell_key']])
         except:
@@ -223,7 +241,7 @@ class Building:
         return nbBasefloor
 
     def getyear(self,DB, DBL):
-        "Get the surface from the input file"
+        "Get the year of construction in the input file"
         try:
             year = int(DB.properties[DBL['year_key']])
         except:
@@ -246,7 +264,7 @@ class Building:
         return Meters
 
     def getnbAppartments(self, DB, DBL):
-        "Get the Thermal energy consumptiom"
+        "Get the number of appartment in the building"
         try:
             nbApp = int(DB.properties[DBL['nbAppartments_key']])
         except:
@@ -255,7 +273,7 @@ class Building:
         return nbApp
 
     def getheight(self, DB, DBL):
-        "Get the Thermal energy consumptiom"
+        "Get the building height from the input file, but not used if 3D coordinates in the footprints"
         try:
             height = int(DB.properties[DBL['height_key']])
         except:
@@ -264,6 +282,7 @@ class Building:
         return height
 
     def getshade(self, DB,Shadingsfile,Buildingsfile,GE):
+        "Get all the shading surfaces to be build for surrounding building effect"
         shades = {}
         shadesID = DB.properties[GE['ShadingIdKey']]
         ref = self.RefCoord
@@ -313,6 +332,7 @@ class Building:
         return shades
 
     def getVentSyst(self, DB):
+        "Get ventilation system type"
         VentSyst = {}
         for key in DB_Data.VentSyst:
             try:
@@ -322,6 +342,7 @@ class Building:
         return VentSyst
 
     def getAreaBasedFlowRate(self, DB, DBL, BE):
+        "Get the airflow rates based on the floor area"
         try:
             AreaBasedFlowRate = float(DB.properties[DBL['AreaBasedFlowRate_key']])
         except:
@@ -330,6 +351,7 @@ class Building:
         return AreaBasedFlowRate
 
     def getOccupType(self,DB):
+        "get the occupency type of the building"
         OccupType = {}
         self.OccupRate = {}
         for key in DB_Data.OccupType:
@@ -343,6 +365,7 @@ class Building:
         return OccupType
 
     def getIntLoad(self, MainPath):
+        "get the internal load profil or value"
         #we should integrate the loads depending on the number of appartemnent in the building
         type = self.IntLoadType
         Input_path = os.path.join(MainPath,'InputFiles')

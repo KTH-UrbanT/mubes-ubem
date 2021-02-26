@@ -23,7 +23,7 @@ def GetData(path):
         if '.pickle' in i:
             with open(i, 'rb') as handle:
                 try:
-                    num = int(i[i.index('v') + 1:i.index('.')])
+                    num = int(i[i.index('_') + 1:i.index('v')])
                 except:
                     num = int(i[i.index('_') + 1:i.index('.')])
                 SimNumb.append(num)
@@ -80,8 +80,8 @@ def GetData(path):
         Res['EnvLeak'].append(val.EnvLeak)
         Res['WWR'].append(val.wwr)
         Res['Dist'].append(val.MaxShadingDist)
-        TempOP = ResBld[key]['HeatedArea']['Data_Zone Operative Temperature']
-        Res['TempOP27'].append(len([i for i in TempOP if i > 27]))
+        #TempOP = ResBld[key]['HeatedArea']['Data_Zone Operative Temperature']
+        #Res['TempOP27'].append(len([i for i in TempOP if i > 27]))
         Pow = ResBld[key]['HeatedArea']['Data_Zone Ideal Loads Supply Air Total Heating Rate']
         Pow = [i/1000 for i in Pow]
         Res['PowerPic'].append(max(Pow))
@@ -92,7 +92,7 @@ def GetData(path):
             Powjr = var
         else:
             Powjr = np.append(Powjr,var,axis = 2)
-        var = np.array(ResBld[key]['HeatedArea']['Data_Zone Operative Temperature'])
+        #var = np.array(ResBld[key]['HeatedArea']['Data_Zone Operative Temperature'])
         var = var.reshape(365, 24, 1)
         if i == 0:
             TempInt = var
@@ -481,13 +481,20 @@ if __name__ == '__main__' :
     # some propose plot for timeseries with overplots of other specific cases while other function enable to plot not timedependent variables
     #the ain paradigm is to give the path or a list of path and data are gathered in one element
 
-    mainpath =os.getcwd()
-    path = [(mainpath+os.path.normcase('/ForTest/Sim_Results'))]
-    # path.append(os.path.join(MainPath, os.path.normcase('CaseFilesTry/Sim_Results')))
+    mainpath = os.getcwd()
+    path = [mainpath + os.path.normcase('/Archi2D1zoneperBloc/Sim_Results')]
+    path.append(mainpath + os.path.normcase('/Archi2D1zoneperFloor/Sim_Results'))
+
+
+
+    Res = {}
+    for id, curPath in enumerate(path):
+        Res[id] = GetData(curPath)
+    DynAnalyse(path, ['Building_7v0.pickle'])
 
 # available functions
-    wwrLeakAnalyse(path)
-    DynAnalyse(path,['Building_6v0.pickle','Building_5v0.pickle'])#,'Building_7v0.pickle','Building_8v0.pickle','Building_9v0.pickle'])
+    #wwrLeakAnalyse(path)
+    #DynAnalyse(path,['Building_6v0.pickle','Building_5v0.pickle'])#,'Building_7v0.pickle','Building_8v0.pickle','Building_9v0.pickle'])
     #GlobRes(path[0])
     #DynAnalyse(path, BuildList=['Building_5.pickle'])
     #DynAnalyseUnity(path,BuildList=['Building_10v0.pickle','Building_10v1.pickle'])

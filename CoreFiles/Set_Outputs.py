@@ -44,7 +44,7 @@ def Read_OutputsEso(CaseName,ZoneOutput):
     eso = esoreader.read_from_path(CaseName+'out.eso')
     ZoneAgregRes = {}
     BuildAgregRes = {}
-    #on rassemble les donnes par zone et pas de temps
+    #We agregate results per storey
     res ={}
     for idx in eso.dd.variables.keys():
         currentData = eso.dd.variables[idx]
@@ -137,9 +137,9 @@ def Read_Outputhtml(CaseName):
     filehandle = open(fname, 'r',encoding='latin-1').read() # get a file handle to the html file
     htables = readhtml.titletable(filehandle)
     Res = {}
-    Res['EPlusTotArea'] = htables[2][1][1][1]
-    Res['EPlusHeatArea'] = htables[2][1][2][1]
-    Res['EPlusNonHeatArea'] = htables[2][1][3][1]
+    # Res['EPlusTotArea'] = htables[2][1][1][1]
+    # Res['EPlusHeatArea'] = htables[2][1][2][1]
+    # Res['EPlusNonHeatArea'] = htables[2][1][3][1]
     #Res['EnergyConsKey'] = htables[3][1][0]
     Res['EnergyConsVal'] = htables[3][1][-1]
     fname = CaseName+'out.end'
