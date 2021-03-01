@@ -158,6 +158,7 @@ class Building:
     def getfootprint(self,DB):
         "get the footprint coordinate and the height of each building bloc"
         coord = []
+        node2remove =[]
         self.BlocHeight = []
         self.BlocNbFloor = []
         #we first need to check if it is Multipolygon
@@ -173,12 +174,36 @@ class Building:
                             for ii in range(len(self.RefCoord)):
                                 new_coor.append((new[ii] - self.RefCoord[ii]))
                             polycoor.append(tuple(new_coor))
+                        if polycoor[0]==polycoor[-1]:
+                            polycoor = polycoor[:-1]
+                        newpolycoor, node = core_perim.CheckFootprintNodes(polycoor,5)
+                        node2remove.append(node)
                         coord.append(polycoor)
                         self.BlocHeight.append(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]))
             #we compute a storey hieght as well to choosen the one that correspond to the highest part of the building afterward
             self.StoreyHeigth = max(self.BlocHeight)/self.nbfloor
-            for Height in self.BlocHeight:
+            for idx,Height in enumerate(self.BlocHeight):
                 self.BlocNbFloor.append(int(Height / self.StoreyHeigth))
+            #we need to clean the foot print from the node2 remove but not if there are part of another bloc
+            FilteredNode2remove = []
+            newbloccoor= []
+            for idx,coor in enumerate(coord):
+                newcoor = []
+                single = False
+                for node in node2remove[idx]:
+                    single = True
+                    for idx1,coor1 in enumerate(coord):
+                        if idx!=idx1:
+                            if coor[0] in coor1:
+                                single =False
+                if single:
+                    FilteredNode2remove.append(node)
+                for nodeIdx,node in enumerate(coor):
+                    if not nodeIdx in FilteredNode2remove:
+                        newcoor.append(node)
+                newbloccoor.append(newcoor)
+            coord = newbloccoor
+
         else:
             #old fashion of making thing with the very first 2D file
             for j in DB.geometry.coordinates[0]:

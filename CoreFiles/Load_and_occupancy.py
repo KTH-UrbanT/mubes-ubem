@@ -258,10 +258,11 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
     BlocOfficechek = []
     BlocPeopleDensity = []
     for i,BlocArea in enumerate(building.BlocFootprintArea):
-        BlocOfficeOcc.append(OfficeOcc*BlocArea/sum(building.BlocFootprintArea))
+        BlocOfficeOcc.append(OfficeOcc) #because it is already a ratio, no need to add extra for floor areas  *BlocArea/sum(building.BlocFootprintArea))
         BlocHeatedArea.append(BlocArea*building.BlocNbFloor[i])
         BlocOfficechek.append(0) #it will be turned to 1 when finished to be considered depending on the occupancy rate
         BlocPeopleDensity.append(PeopleDensity)
+
     #############################################################################################################
     #let us go through all the zones but we need to sort them from the lowest ones to the highest one....to have different setting for the basement ones
     zoneStoreylist =[]
@@ -273,6 +274,8 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
     SortedZoneIdx = sorted(range(len(zoneStoreylist)), key=lambda k: zoneStoreylist[k])
     for idx in SortedZoneIdx:
         zone = AllZone[idx]
+        if 'Perimeter_Zone_7Build1 Storey 0' in zone.Name:
+            a=1
         bloc = bloclist[idx]
         # we need to compute the enveloppe area facing outside as well as the floor area (for HVAC)
         ExtWallArea = 0

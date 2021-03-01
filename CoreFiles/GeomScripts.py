@@ -46,6 +46,7 @@ def createBuilding(idf,building,perim):
         nbBasementstories = building.nbBasefloor if building.FloorZoningLevel else min(building.nbBasefloor,1)
         BasementstoriesHeight = 2.5 if building.FloorZoningLevel else 2.5*building.nbBasefloor
         #function that build the bloc, it is externalize in order to introduce a Try except and reducing the perim depth
+        #print(nbstories, Height)
         Perim_depth = 3
         matched = False
         while not matched:
@@ -58,15 +59,20 @@ def createBuilding(idf,building,perim):
             if Perim_depth<0.5:
                 return print('Sorry, but this building cannot have Perim/Core option..it failed with perim below 0.75m')
     #this function enable to create all the boundary conditions for all surfaces
+    tutu = idf.idfobjects["BUILDINGSURFACE:DETAILED"]
+    for tyty in tutu:
+        if 'ZoneBuild0 Storey 5 Ceiling' in tyty.Name:
+            print(tyty.Name)
+        if 'ZoneBuild0 Storey 6 Floor' in tyty.Name:
+            print(tyty.Name)
+
+
     idf.intersect_match()
 
     # this last function on the Geometry is here to split the non convexe surfaces
     # if not, some warning are appended because of shading computation. non convex surfaces can impact itself
     # it should thus be only the roof surfaces. Non convex internal zone are not concerned as Solar distribution is 'FullExterior'
-    try:
-        split2convex(idf)
-    except:
-        pass
+    split2convex(idf)
 
 def createRapidGeomElem(idf,building):
     #enveloppe can be creates now and allocated to to correct surfaces

@@ -38,7 +38,7 @@ def setBuildingLevel(idf,building):
     #Building Level
     ######################################################################################
     #this is the function that requires the most time
-    GeomScripts.createBuilding(idf,building, perim = False)
+    GeomScripts.createBuilding(idf,building, perim = True)
 
 
 def setEnvelopeLevel(idf,building):
@@ -125,7 +125,7 @@ def LaunchProcess(bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns =
 
     Var2check = len(building_ref.BlocHeight) if building_ref.Multipolygon else building_ref.height
     if len(building_ref.BlocHeight)>0 and min(building_ref.BlocHeight)<1:
-        Var2check = 0
+       Var2check = 0
     if building_ref.EPHeatedArea <80:
         Var2check = 0
     if Var2check == 0:
@@ -182,7 +182,8 @@ def LaunchProcess(bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns =
         setEnvelopeLevel(idf, building)
 
         #just uncomment the line below if some 3D view of the building is wanted. The figure's window will have to be manually closed for the process to continue
-        idf.view_model(test=True)
+        #print(building.BuildID['50A_UUID'])
+        #idf.view_model(test=True)
 
         #change on the building __init__ class in the zone level should be done here
         setZoneLevel(idf, building,MainPath)
@@ -232,7 +233,7 @@ if __name__ == '__main__' :
 #                                       folders (CaseName string + number of the building. False = all input files for all
 #                                       building will be generated first, all results will be saved in one single folder
 
-    CaseName = 'Archi25Dv71zoneperFloor'
+    CaseName = '2D1zoneperfloorperim'
     BuildNum = [i for i in range(28)]
     VarName2Change = []
     Bounds = []
@@ -243,7 +244,7 @@ if __name__ == '__main__' :
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
 ######################################################################################################################
-    keyPath = readPathfile('Pathways25Dv7.txt')
+    keyPath = readPathfile('Pathways.txt')
     for idx,nbBuild in enumerate(BuildNum):
         print('Building '+str(nbBuild)+' is starting')
         MainPath , epluspath  = LaunchProcess(idx,keyPath,nbBuild,VarName2Change,Bounds,NbRuns,CPUusage,SepThreads)
