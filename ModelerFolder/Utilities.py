@@ -51,7 +51,7 @@ def createDualFig(title,ratio):
     ax1 = plt.subplot(gs[round(ratio*10)+1:, 0])
     ax1.grid()
     ax1.sharex(ax0)
-    plt.tight_layout()
+    #plt.tight_layout()
     plt.title(title)
     return {'fig_name' : fig_name, 'ax0': ax0, 'ax1' : ax1}
 
@@ -65,7 +65,7 @@ def createMultilFig(title,nbFig,linked=True):
         ax[i].grid()
         if i>0 and linked:
             ax[i].sharex(ax[0])
-    plt.tight_layout()
+    #plt.tight_layout()
     plt.title(title)
     return {'fig_name' : fig_name, 'ax': ax}
 
@@ -75,7 +75,7 @@ def createSimpleFig():
     gs = gridspec.GridSpec(4, 1, left=0.1, bottom = 0.1)
     ax0 = plt.subplot(gs[:, 0])
     ax0.grid()
-    plt.tight_layout()
+    #plt.tight_layout()
     return {'fig_name' : fig_name, 'ax0': ax0}
 
 #basic plots

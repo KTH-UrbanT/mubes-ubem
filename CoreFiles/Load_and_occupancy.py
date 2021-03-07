@@ -320,7 +320,7 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
                     pathfile = os.path.join(MainPath,'InputFiles')
                     name = idf.idfname + '.txt' #building.name + 'nbUsers.txt'
                     #from now, random value are taken from 20 to 100% of the people density (the min value id DB_Data is not considered yet)
-                    ProbGenerator.BuildData(name,pathfile,int(FloorArea*min(BlocPeopleDensity[bloc])),int(FloorArea*max(BlocPeopleDensity[bloc])), building)
+                    ProbGenerator.BuildData(name,pathfile,round(FloorArea*min(BlocPeopleDensity[bloc])*100)/100,round(FloorArea*max(BlocPeopleDensity[bloc])*100)/100, building)
                     # lets create a schedule file for occupant and the associated file
                     create_ScheduleFile(idf, 'OccuSchedule'+str(idx), pathfile+name)   #we should be careful because of varaition with multiproc
                     create_ScheduleFile(idf, 'OffTsetUp' + str(idx), pathfile+'SetPointUp.txt')
@@ -328,7 +328,7 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
                     CreateThermostatFile(idf, 'OfficeZone'+ str(idx),'OffTsetUp' + str(idx),'OffTsetLo' + str(idx))
                 else:
                     ## here is the scedule that define the number of occupant with fixed number of occupants (same all the time but still linked to shedule).
-                    ScheduleCompactOccup(idf, 'OccuSchedule'+str(idx), building, SetPoint=int(FloorArea*max(BlocPeopleDensity[bloc])))
+                    ScheduleCompactOccup(idf, 'OccuSchedule'+str(idx), building, SetPoint= round(FloorArea*max(BlocPeopleDensity[bloc])*100)/100)
                     OfficeTypeZone = 0 #this just to give the correct thermostat type to the ZoneCtrl function below.
             # computation of the zonning level multiplier
             ZoningMultiplier = 1 if building.FloorZoningLevel else building.BlocNbFloor[bloc]

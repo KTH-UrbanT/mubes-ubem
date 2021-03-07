@@ -233,7 +233,7 @@ if __name__ == '__main__' :
 #                                       folders (CaseName string + number of the building. False = all input files for all
 #                                       building will be generated first, all results will be saved in one single folder
 
-    CaseName = '2D1zoneperfloorperim'
+    CaseName = '25dv71zoneperfloorperim'
     BuildNum = [i for i in range(28)]
     VarName2Change = []
     Bounds = []
@@ -244,7 +244,7 @@ if __name__ == '__main__' :
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
 ######################################################################################################################
-    keyPath = readPathfile('Pathways.txt')
+    keyPath = readPathfile('Pathways25Dv7.txt')
     for idx,nbBuild in enumerate(BuildNum):
         print('Building '+str(nbBuild)+' is starting')
         MainPath , epluspath  = LaunchProcess(idx,keyPath,nbBuild,VarName2Change,Bounds,NbRuns,CPUusage,SepThreads)
