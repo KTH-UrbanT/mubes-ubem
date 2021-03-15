@@ -4,6 +4,7 @@ import os
 import pickle
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
+import numpy as np
 
 
 def CountAbovethreshold(Data,threshold):
@@ -16,15 +17,107 @@ def DailyVal(Data):
     DailyMax = []
     DailyMin = []
     var = np.array(Data)
-    var.reshape(365, 24, 1)
-    for i in var[:,0,0]:
-        DailyMax.append(max(i))
-        DailyMin.append(min(i))
+    var = var.reshape(365, 24, 1)
+    for i in range(len(var[:,0,0])):
+        DailyMax.append(max(var[i,:,0]))
+        DailyMin.append(min(var[i,:,0]))
         if i==0:
-            DailyDistrib = var
+            DailyDistrib = var[i,:,0]
         else:
-            DailyDistrib = np.append(DailyDistrib, var, axis=2)
+            DailyDistrib = np.vstack((DailyDistrib, var[i,:,0]))
     return {'DailyMax': DailyMax, 'DailyMin' : DailyMin, 'DailyDistrib': DailyDistrib}
+
+def getMatchedIndex(Vary1,Vary2,tol):
+    Relativerror = [(Vary2[i] - Vary1[i]) / Vary2[i] * 100 for i in range(len(Vary1))]
+    GoodIdx = [idx for idx, val in enumerate(Relativerror) if abs(val) <= tol]
+    return GoodIdx
+
+
+#function copy/paste from : https://www.askpython.com/python/examples/principal-component-analysis
+def PCA(X, num_var = 6, plot2D = False, plotSphere = False, plotInertia = False):
+    n, p = X.shape
+    # Step-1
+    X_meaned = (X - np.mean(X, axis=0))/np.std(X, axis=0)
+    # Step-2
+    cov_mat = np.cov(X_meaned, rowvar=False)
+    # Step-3
+    eigen_values, eigen_vectors = np.linalg.eigh(cov_mat)
+    # Step-4
+    sorted_index = np.argsort(eigen_values)[::-1]
+    sorted_eigenvalue = eigen_values[sorted_index]
+    sorted_eigenvectors = eigen_vectors[:, sorted_index]
+    Inertia = [val/sum(sorted_eigenvalue) for val in sorted_eigenvalue]
+    # Step-5
+    eigenvector_subset = sorted_eigenvectors[:, 0:num_var]
+    # Step-6
+    X_reduced = np.dot(eigenvector_subset.transpose(), X_meaned.transpose()).transpose()
+    corvar = np.zeros((p, p))
+    for k in range(p):
+        corvar[:, k] = sorted_eigenvectors.transpose()[k, :] * np.sqrt(sorted_eigenvalue)[k]
+    if plot2D:
+        plotCorCircle(X, corvar, num_var)
+    if plotSphere:
+        plotCorSphere(X, corvar, num_var)
+    if plotInertia:
+        plotPCAsInertia(Inertia)
+    return {'Coord' : X_reduced, 'EigVect':sorted_eigenvectors, 'EigVal': sorted_eigenvalue, 'Inertia': Inertia,
+            'CorVar':corvar}
+
+def plotPCAsInertia(Inertia):
+    fig, axes = plt.subplots(figsize=(6, 6))
+    plt.plot(Inertia)
+    plt.xlabel('PCs')
+    plt.ylabel('Inertia (-)')
+
+def plotCorCircle(X,CorVar,num_var):
+    for i in range(num_var-1):
+        # cercle des corrélations
+        fig, axes = plt.subplots(figsize=(6, 6))
+        axes.set_xlim(-1, 1)
+        axes.set_ylim(-1, 1)
+        # affichage des étiquettes (noms des variables)
+        for j in range(num_var-1):
+            plt.arrow(0, 0, CorVar[j, i], CorVar[j, i + 1])
+            # length_includes_head=True,
+            # head_width=0.08, head_length=0.00002)
+            plt.annotate(X.columns[j], (CorVar[j, i], CorVar[j, i + 1]))
+            plt.xlabel('PC' + str(i))
+            plt.ylabel('PC' + str(i + 1))
+        # ajouter les axes
+        plt.plot([-1, 1], [0, 0], color='silver', linestyle='-', linewidth=1)
+        plt.plot([0, 0], [-1, 1], color='silver', linestyle='-', linewidth=1)
+        cercle = plt.Circle((0, 0), 1, color='blue', fill=False)
+        axes.add_artist(cercle)
+
+def plotCorSphere(X, corvar,p):
+    #Make the last 3D spehere plot
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    # draw sphere
+    u, v = np.mgrid[0:2*np.pi:50j, 0:np.pi:50j]
+    x = np.cos(u)*np.sin(v)
+    y = np.sin(u)*np.sin(v)
+    z = np.cos(v)
+    # alpha controls opacity
+    ax.plot_surface(x, y, z, color="g", alpha=0.3)
+    # tails of the arrows
+    tails= np.zeros(p)
+    # heads of the arrows with adjusted arrow head length
+    ax.quiver(tails,tails,tails,corvar[:,0], corvar[:,1], corvar[:,2],
+              color='r', arrow_length_ratio=0.15)
+    for i in range(p):
+        ax.text(corvar[i,0],corvar[i,1],corvar[i,2],X.columns[i])
+    ax.quiver(np.zeros(3),np.zeros(3),np.zeros(3),[1,0,0], [0,1,0], [0,0,1],
+              length=1.25, normalize=True,color='k', arrow_length_ratio=0.15)
+    ax.text(1.25,0,0,'PC0')
+    ax.text(0,1.25,0,'PC1')
+    ax.text(0,0,1.25,'PC2')
+    ax.grid(False)
+    plt.axis('off')
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_zticks([])
+    ax.set_title('3D plots over the three first PCAs')
 
 def getSortedIdx(reference,Data):
     #return the index order for sake of comparison two different simulation with different buildong order
@@ -126,7 +219,7 @@ def plot2Subplots(fig_name,ax0,ax1,varx,vary,varxname,varyname):
         ax[i].set_ylabel(varyname)
         ax[i].grid()
 
-def GetData(path,extravariables = []):
+def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
     os.chdir(path)
     liste = os.listdir()
     ResBld = {}
@@ -139,27 +232,33 @@ def GetData(path,extravariables = []):
     num =[]
     idx1 = ['_','v']
     idx2 = ['v','.']
-    while StillSearching:
-        for i,file in enumerate(liste):
-            if '.pickle' in file:
-                num.append(int(file[file.index(idx1[0]) + 1:file.index(idx1[1])]))
-            if len(num)==2:
-                if (num[1]-num[0])>0:
-                    idxF = idx1
-                else:
-                    idxF = idx2
-                StillSearching = False
-                break
+    if len(BuildNum)==0:
+        while StillSearching:
+            for i,file in enumerate(liste):
+                if '.pickle' in file:
+                    num.append(int(file[file.index(idx1[0]) + 1:file.index(idx1[1])]))
+                if len(num)==2:
+                    if (num[1]-num[0])>0:
+                        idxF = idx1
+                    else:
+                        idxF = idx2
+                    StillSearching = False
+                    break
+    else:
+        idxF = ['_'+str(BuildNum[0])+'v','.']
     #now that we found this index, lets go along alll the files
     for file in liste:
         if '.pickle' in file:
-            SimNumb.append(int(file[file.index(idxF[0]) + 1:file.index(idxF[1])]))
-            with open(file, 'rb') as handle:
-                ResBld[SimNumb[-1]] = pickle.load(handle)
             try:
-                Res['ErrFiles'].append(os.path.getsize(file[:file.index('.pickle')]+'.err'))
+                SimNumb.append(int(file[file.index(idxF[0]) + len(idxF[0]):file.index(idxF[1])]))
+                with open(file, 'rb') as handle:
+                    ResBld[SimNumb[-1]] = pickle.load(handle)
+                try:
+                    Res['ErrFiles'].append(os.path.getsize(file[:file.index('.pickle')]+'.err'))
+                except:
+                    Res['ErrFiles'].append(0)
             except:
-                Res['ErrFiles'].append(0)
+                pass
 
     #lets get the mandatory variables
     variables=['EP_elec','EP_heat','EP_cool','SimNum','EPC_elec','EPC_Heat','EPC_Cool','EPC_Tot',
@@ -175,29 +274,42 @@ def GetData(path,extravariables = []):
     #lest add the keysin the Res Dict of the extravariables
     for key in extravariables:
         Res[key] = []
+    # lest add the keysin the Res Dict of the extravariables
+    try:
+        for key in Timeseries:
+            varName = Timeseries[key]['Location']+'_'+Timeseries[key]['Data']
+            Res[varName] = []
+    except:
+        pass
     #now we aggregate the data into Res dict
     print('organizing data...')
     for i,key in enumerate(ResBld):
         Res['SimNum'].append(key)
         #lets first read the attribut of the building object (simulation inputs)
         BuildObj = ResBld[key]['BuildDB']
-        Res['BuildID'].append(BuildObj.BuildID)
+        try:
+            Res['BuildID'].append(BuildObj.BuildID)
+        except:
+            Res['BuildID'].append(None)
         Res['EP_Area'].append(BuildObj.EPHeatedArea)
-        Res['ATemp'].append(BuildObj.ATemp)
+        try:
+            Res['ATemp'].append(BuildObj.ATemp)
+        except:
+            Res['ATemp'].append(BuildObj.surface)
         eleval = 0
         for x in BuildObj.EPCMeters['ElecLoad']:
             if BuildObj.EPCMeters['ElecLoad'][x]:
                 eleval += BuildObj.EPCMeters['ElecLoad'][x]
-        Res['EPC_elec'].append(eleval/BuildObj.EPHeatedArea)
+        Res['EPC_elec'].append(eleval/BuildObj.ATemp)
         heatval = 0
         for x in BuildObj.EPCMeters['Heating']:
             heatval += BuildObj.EPCMeters['Heating'][x]
-        Res['EPC_Heat'].append(heatval/BuildObj.EPHeatedArea)
+        Res['EPC_Heat'].append(heatval/BuildObj.ATemp)
         coolval = 0
         for x in BuildObj.EPCMeters['Cooling']:
             coolval += BuildObj.EPCMeters['Cooling'][x]
-        Res['EPC_Cool'].append(coolval/BuildObj.EPHeatedArea)
-        Res['EPC_Tot'].append((eleval+heatval+coolval)/BuildObj.EPHeatedArea)
+        Res['EPC_Cool'].append(coolval/BuildObj.ATemp)
+        Res['EPC_Tot'].append((eleval+heatval+coolval)/BuildObj.ATemp)
 
         for key1 in Res:
             if key1 in ['EP_elec','EP_cool','EP_heat']:
@@ -213,5 +325,14 @@ def GetData(path,extravariables = []):
                     Res[key1].append(eval('BuildObj.'+key1))
                 except:
                     Res[key1].append(-1)
+        try:
+            for key1 in Timeseries:
+                varName = Timeseries[key1]['Location'] + '_' + Timeseries[key1]['Data']
+                if len(Res[varName])==0:
+                    Res[varName] = ResBld[key][Timeseries[key1]['Location']][Timeseries[key1]['Data']]
+                else:
+                    Res[varName] = np.vstack((Res[varName] ,ResBld[key][Timeseries[key1]['Location']][Timeseries[key1]['Data']]))
+        except:
+            pass
 
     return Res

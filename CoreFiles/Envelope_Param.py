@@ -27,6 +27,10 @@ def create_MaterialObject(idf, Name, Material):
     return idf
 
 def CreatAirwallsMat(idf):
+        # idf.newidfobject(         #this was a try to take into account for transperant partition between core/perim nbut also between blocs.... is there any sence ??
+        #     'MATERIAL:INFRAREDTRANSPARENT',
+        #     Name = 'AirWallMaterial',
+        # )
         idf.newidfobject(
             'MATERIAL',
             Name = 'AirWallMaterial',

@@ -264,7 +264,7 @@ class Geometry:
         if "bbox" in self._data:
             del self._data["bbox"]
 
-    def validate(self, fixerrors=True):
+    def validate(self, round_factor, fixerrors=True):
         """
         Validates that the geometry is correctly formatted according to the geometry type. 
 
@@ -296,9 +296,40 @@ class Geometry:
                         self._data['poly3rdcoord'].append(min([point[-1] for point in polygon[0]]))
                         self._data['coordinates'].append([[point[:2] for point in polygon[0]]])
             self._data.pop('geometries')
+        elif len(self._data['coordinates'])>1 and type(self._data['coordinates'][0][0])==list:
+            Multipolygons = self._data['coordinates']
+            self._data.pop('coordinates')
+            self._data['coordinates'] = []
+            self._data['poly3rdcoord'] = []
+            for polygon in Multipolygons:  # self._data['geometries'][0]['coordinates']:
+                alt = [point[-1] for point in polygon[0]]
+                if max([abs(alt[i + 1] - val) for i, val in enumerate(alt[:-1])]) == 0:
+                    self._data['poly3rdcoord'].append(min([point[-1] for point in polygon[0]]))
+                    self._data['coordinates'].append([[point[:2] for point in polygon[0]]])
         elif "type" not in self._data or "coordinates" not in self._data:
             raise Exception("A geometry dictionary or instance must have the type and coordinates entries")
-        
+
+        #lets round the values frst for all data
+        newcoord=[]
+        try:
+            for poly in self._data['coordinates']:
+                newcoord.append([[[round(point[0],round_factor),round(point[1],round_factor)] for point in poly[0]]])
+            for i, height in enumerate(self._data['poly3rdcoord']):
+                self._data['poly3rdcoord'][i] = round(height, round_factor)
+        except:
+            try:
+                for poly in self._data['coordinates']:
+                    newcoord.append([round(poly[0], round_factor), round(poly[1], round_factor)])
+            except:
+                try:
+                    for poly in self._data['coordinates']:
+                        newcoord.append([[round(point[0], round_factor), round(point[1], round_factor)] for point in poly])
+                except:
+                    print('error in the file')
+        self._data['coordinates'] =newcoord
+
+
+
         # first validate geometry type
         if not self.type in ("Point","MultiPoint","LineString","MultiLineString","Polygon","MultiPolygon"):
             if fixerrors:
@@ -408,7 +439,7 @@ class Feature(object):
     def geometry(self, value):
         self._data["geometry"] = Geometry(value).__geo_interface__
 
-    def validate(self, fixerrors=True):
+    def validate(self,round_factor,fixerrors=True):
         """
         Validates that the feature is correctly formatted.
 
@@ -439,7 +470,7 @@ class Feature(object):
                 self._data["properties"] = dict()
             else:
                 raise Exception("A geojson feature dictionary must contain a properties key and it must be a dictionary type.")
-        self.geometry.validate(fixerrors)
+        self.geometry.validate(round_factor,fixerrors)
         return True
     
 
@@ -455,7 +486,7 @@ class GeojsonFile:
     - **common_attributes**: Collects and returns a list of attributes/properties/fields common to all features. Read only. 
     """
     
-    def __init__(self, filepath=None, data=None, skiperrors=False, fixerrors=True, **kwargs):
+    def __init__(self, filepath=None, data=None,round_factor=10, skiperrors=False, fixerrors=True, **kwargs):
         """
         Can load from data or from a file,
         which can then be read or edited.
@@ -474,14 +505,14 @@ class GeojsonFile:
         - **skiperrors** (optional): Throws away any features that fail to validate (defaults to False).
         - **fixerrors** (optional): Attempts to auto fix any minor errors without raising exceptions (defaults to True).
         """
-        
+
         if filepath:
             data = self._loadfilepath(filepath, **kwargs)
-            if validate(data, skiperrors=skiperrors, fixerrors=fixerrors):
+            if validate(data, round_factor,skiperrors=skiperrors, fixerrors=fixerrors):
                 self._data = data
                 self._prepdata()
         elif data:
-            if validate(data, skiperrors=skiperrors, fixerrors=fixerrors):
+            if validate(data, round_factor,skiperrors=skiperrors, fixerrors=fixerrors):
                 self._data = data
                 self._prepdata()
         else:
@@ -749,7 +780,7 @@ class GeojsonFile:
 
 # User functions
 
-def validate(data, skiperrors=False, fixerrors=True):
+def validate(data,round_factor, skiperrors=False, fixerrors=True):
     """Checks that the geojson data is a feature collection, that it
     contains a proper "features" attribute, and that all features are valid too.
     Returns True if all goes well.
@@ -776,17 +807,17 @@ def validate(data, skiperrors=False, fixerrors=True):
     if skiperrors:
         for featuredict in data["features"]:
             feat = Feature(featuredict)
-            try: feat.validate(fixerrors)
+            try: feat.validate(round_factor, fixerrors)
             except: data["features"].remove(featuredict)
 
     else:
         for featuredict in data["features"]:
             feat = Feature(featuredict)
-            feat.validate(fixerrors) 
+            feat.validate(round_factor, fixerrors)
 
     return True
 
-def load(filepath=None, data=None, **kwargs):
+def load(filepath=None, data=None, round_factor = 10, **kwargs):
     """
     Loads a geojson file or dictionary, validates it, and returns a
     GeojsonFile instance.
@@ -807,8 +838,7 @@ def load(filepath=None, data=None, **kwargs):
 
     - A GeojsonFile instance.
     """
-    return GeojsonFile(filepath, data, **kwargs)
-
+    return GeojsonFile(filepath, data, round_factor, **kwargs)
 def new():
     """
     Creates a new empty geojson file instance.

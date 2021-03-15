@@ -207,6 +207,7 @@ def createAirwallsCstr(idf):
     #for all construction, see if some other material than default exist
     cstr = idf.idfobjects['CONSTRUCTION']
     airmat = idf.getobject('MATERIAL','AirWallMaterial')
+    #airmat = idf.getobject('MATERIAL:INFRAREDTRANSPARENT', 'AirWallMaterial') #this was a try to take into account for transperant partition between core/perim nbut also between blocs.... is there any sence ??
     for id_cstr in cstr:
         if 'Partition' in id_cstr.Name:
                 id_cstr.Outside_Layer = airmat.Name

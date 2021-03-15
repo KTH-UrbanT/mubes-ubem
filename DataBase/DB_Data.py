@@ -4,7 +4,7 @@ SimuData = \
     'End_Day_of_Month' : 31,
     'End_Month' : 12,
     'SaveLogFiles' : False, #computing folder is not removed thus all energyplus outpus files are preserved
-    'FloorZoningLevel' : True,  #1 zone per floor, if False --> 1 zone per building bloc
+    'FloorZoningLevel' : False,  #1 zone per floor, if False --> 1 zone per building bloc
  }
 
 WeatherFile = \
@@ -113,12 +113,13 @@ BasisElement = \
  'DemandControlledVentilation' : True,
  'OccupBasedFlowRate': 7,  # l/s/person
  'OccupHeatRate' : 70, #W per person
- 'EnvLeak': 0.5,# l/s/m2 at 50Pa
+ 'EnvLeak': 1.1,# l/s/m2 at 50Pa
  'BasementAirLeak': 1, #in Air change rate [vol/hour]
  'wwr': 0.3,
  'ExternalInsulation' : False,
  'IntLoadType' : 'winter', #change either by 'Cste', 'winter', or 'summer' for reversed sigmoid or sigmoid this will generate hourly values file in the InputFiles folder
  'IntLoadMultiplier': 1, #this is a multiplier the modeler would like to play with for calibration
+ 'IntLoadCurveShape':3, #this defines the slop of the curves
  'OffOccRandom' : False,
  'AreaBasedFlowRate' : 0.35, #l/s/m2
  'setTempUpL' : 25,
@@ -126,6 +127,7 @@ BasisElement = \
  'ACH_freecool' :4,     #this the the vol/hr of extra ventilation when free cooling is on
  'intT_freecool' : 26,  #internal temperature threshold for free coolong (opening windows with fixed ACH)
  'dT_freeCool': 1,      #Tint-Text to authorize free cooling to be turned on
+ 'AirRecovEff' : 0.65   #efficiency oif heat recovery from ventilation
  }
 
 # definition of person/m2...complytely abritrary, but we still need some vaalues

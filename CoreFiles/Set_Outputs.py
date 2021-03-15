@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-def getOutputList(path):
+def getOutputList(path,idf):
     OutputsVar = {}
     OutputsVar['Var'] = []
     outputs = open(os.path.join(path,'Outputs.txt'), 'r')
@@ -16,12 +16,16 @@ def getOutputList(path):
         if '## ' in line[:3]:
             var = line[3:][::-1]
             var2add = var[var.index('[')+2:var.index(',')][::-1]
-            OutputsVar['Var'].append(var2add)
+            keep = True
+            if 'People' in var2add and len(idf.idfobjects["PEOPLE"])==0:
+                keep = False
+            if keep:
+                OutputsVar['Var'].append(var2add)
     return OutputsVar
 
 def AddOutputs(idf,path):
 
-    OutputsVar = getOutputList(path)
+    OutputsVar = getOutputList(path,idf)
     #we shall start by removing all predclared outputes from the template
     predef = idf.idfobjects["OUTPUT:VARIABLE"]
     for i in reversed(predef):

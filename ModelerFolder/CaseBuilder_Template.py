@@ -17,6 +17,7 @@ import CoreFiles.Load_and_occupancy as Load_and_occupancy
 import CoreFiles.LaunchSim as LaunchSim
 import CoreFiles.MUBES_pygeoj as MUBES_pygeoj
 from DataBase.DB_Building import BuildingList
+import DataBase.DB_Data as DB_Data
 import multiprocessing as mp
 
 
@@ -87,8 +88,8 @@ def LaunchProcess(bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns =
 #the cases are build in a for loop and then all cases are launched in a multiprocess mode, the maximum %of cpu is given as input
     MainPath = os.getcwd()
     epluspath = keyPath['epluspath']
-    Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'])
-    Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'])
+    Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'],round_factor = 4)
+    Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'],round_factor = 4)
 
     SimDir = os.path.join(os.getcwd(), 'RunningFolder')
     if not os.path.exists(SimDir):
@@ -113,7 +114,6 @@ def LaunchProcess(bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns =
         problem['num_vars'] = len(VarName2Change)
         #problem = read_param_file(MainPath+'\\liste_param.txt')
         Param = latin.sample(problem,nbruns)
-
     Res = {}
     #this will be the final list of studied cases : list of objects stored in a dict . idf key for idf object and building key for building database object
     #even though this approache might be not finally needed as I didnt manage to save full object in a pickle and reload it for launching.
@@ -124,12 +124,15 @@ def LaunchProcess(bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns =
     idf_ref, building_ref = appendBuildCase(StudiedCase, epluspath, nbcase, Buildingsfile, Shadingsfile, MainPath)
 
     Var2check = len(building_ref.BlocHeight) if building_ref.Multipolygon else building_ref.height
-    if len(building_ref.BlocHeight)>0 and min(building_ref.BlocHeight)<1:
-       Var2check = 0
-    if building_ref.EPHeatedArea <80:
+    if len(building_ref.BlocHeight) > 0 and min(building_ref.BlocHeight) < 1:
+        Var2check = 0
+    if building_ref.EPHeatedArea < 50:
+        Var2check = 0
+    if 0 in building_ref.BlocNbFloor:
         Var2check = 0
     if Var2check == 0:
-        print('This Building does not have any height, process abort for this one')
+        print(
+            'This Building/bloc has either no height, height below 1, surface below 50m2 or no floors, process abort for this one')
         os.chdir(MainPath)
         return MainPath, epluspath
 
@@ -173,7 +176,7 @@ def LaunchProcess(bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns =
             #here is an other example for changing the distince underwhich the surrounding building are considered for shading aspects
             #as 'MaxShadingDist' is an input for the Class building method getshade, the method shall be called again after modifying this value (see getshade methods)
             if 'MaxShadingDist' in var:
-                building.shades = building.getshade(Buildingsfile[nbcase], Shadingsfile, Buildingsfile)
+                building.shades = building.getshade(Buildingsfile[nbcase], Shadingsfile, Buildingsfile,DB_Data.GeomElement)
 
         ##############################################################33
         ##After having made the changes we wanted in the building object, we can continue the construction of the idf (input file for EnergyPLus)
@@ -233,7 +236,7 @@ if __name__ == '__main__' :
 #                                       folders (CaseName string + number of the building. False = all input files for all
 #                                       building will be generated first, all results will be saved in one single folder
 
-    CaseName = '25dv71zoneperfloorperim'
+    CaseName = '2DzoneperblocP'
     BuildNum = [i for i in range(28)]
     VarName2Change = []
     Bounds = []
@@ -244,7 +247,7 @@ if __name__ == '__main__' :
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
 ######################################################################################################################
-    keyPath = readPathfile('Pathways25Dv7.txt')
+    keyPath = readPathfile('Pathways.txt')
     for idx,nbBuild in enumerate(BuildNum):
         print('Building '+str(nbBuild)+' is starting')
         MainPath , epluspath  = LaunchProcess(idx,keyPath,nbBuild,VarName2Change,Bounds,NbRuns,CPUusage,SepThreads)

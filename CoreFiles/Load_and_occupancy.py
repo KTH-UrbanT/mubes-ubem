@@ -119,7 +119,7 @@ def ZoneCtrl(idf,zone,building,PeopleDensity,ThermostatName, Multiplier):
         Zone_Name=zone.Name,
         Template_Thermostat_Name=ThermostatName,
         Heat_Recovery_Type='Sensible' if building.VentSyst['BalX'] or building.VentSyst['ExhX'] else 'None',
-        Sensible_Heat_Recovery_Effectiveness= 0.7 if building.VentSyst['BalX'] or building.VentSyst['ExhX'] else 0,
+        Sensible_Heat_Recovery_Effectiveness= building.AirRecovEff if building.VentSyst['BalX'] or building.VentSyst['ExhX'] else 0,
         #Design_Specification_Outdoor_Air_Object_Name = AirNode,
         Outdoor_Air_Method='Sum' if PeopleDensity>0 and building.DemandControlledVentilation else 'Flow/Area',
         Outdoor_Air_Flow_Rate_per_Zone_Floor_Area=Multiplier*building.AreaBasedFlowRate/1000 + Multiplier*building.OccupBasedFlowRate/1000*PeopleDensity*(1-building.DemandControlledVentilation),

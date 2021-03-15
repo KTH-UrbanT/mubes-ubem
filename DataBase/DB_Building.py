@@ -1,5 +1,5 @@
 from shapely.geometry import Polygon, Point
-from geomeppy.geom.polygons import Polygon2D
+from geomeppy.geom.polygons import Polygon2D, Polygon3D
 from geomeppy import IDF
 from geomeppy.geom import core_perim
 import os
@@ -163,7 +163,7 @@ class Building:
         self.BlocNbFloor = []
         #we first need to check if it is Multipolygon
         if self.Multipolygon:
-            #then we append all the floor and roff fottprints into one with associate height
+            #then we append all the floor and roof fottprints into one with associate height
             for idx1,poly1 in enumerate(DB.geometry.coordinates[:-1]):
                 for idx2,poly2 in enumerate(DB.geometry.coordinates[idx1+1:]):
                     if poly1 == poly2:
@@ -176,14 +176,31 @@ class Building:
                             polycoor.append(tuple(new_coor))
                         if polycoor[0]==polycoor[-1]:
                             polycoor = polycoor[:-1]
+                        # test3D = Polygon3D((v[0], v[1], 0) for v in polycoor)
+                        # if test3D.area==0:
+                        #     print('je change')
+                        #     polycoor.reverse()
+                        # for i in range(len(polycoor)):
+                        #     newpoly = polycoor[i:]+polycoor[:i]
+                        #     test3D = Polygon3D((v[0], v[1], 0) for v in newpoly)
+                        #     if test3D.area!=0:
+                        #         break
+                        #     else:
+                        #         print('je change')
+                        # polycoor = newpoly
                         newpolycoor, node = core_perim.CheckFootprintNodes(polycoor,5)
                         node2remove.append(node)
+                        #polycoor.reverse()
                         coord.append(polycoor)
                         self.BlocHeight.append(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]))
-            #we compute a storey hieght as well to choosen the one that correspond to the highest part of the building afterward
-            self.StoreyHeigth = max(self.BlocHeight)/self.nbfloor
+            #we compute a storey height as well to choosen the one that correspond to the highest part of the building afterward
+            self.StoreyHeigth = 3
+            storeyRatio = self.StoreyHeigth/(max(self.BlocHeight)/self.nbfloor) if (max(self.BlocHeight)/self.nbfloor)>2 else 0
+            for height in range(len(self.BlocHeight)):
+                self.BlocHeight[height] *= storeyRatio
             for idx,Height in enumerate(self.BlocHeight):
-                self.BlocNbFloor.append(int(Height / self.StoreyHeigth))
+                self.BlocNbFloor.append(int(round(Height,1) / self.StoreyHeigth)) #the height is ed to the closest 10cm
+                self.BlocHeight[idx] = self.BlocNbFloor[-1]*self.StoreyHeigth
             #we need to clean the foot print from the node2 remove but not if there are part of another bloc
             FilteredNode2remove = []
             newbloccoor= []
@@ -322,6 +339,8 @@ class Building:
             ShadeWall = findWallId(wallId, Shadingsfile, ref, GE)
             if not 'height' in ShadeWall.keys():
                 ShadeWall['height'] = findBuildId(ShadeWall[GE['BuildingIdKey']], Buildingsfile,GE)
+
+
             meanPx = ShadeWall[GE['VertexKey']][0][0] + ShadeWall[GE['VertexKey']][1][0]
             meanPy = ShadeWall[GE['VertexKey']][0][1] + ShadeWall[GE['VertexKey']][1][1]
             coordx = []
@@ -335,6 +354,13 @@ class Building:
                 for i in self.footprint:
                     coordx.append(i[0])
                     coordy.append(i[1])
+            AgregFootprint= []
+            for i in range(len(coordx)):
+                AgregFootprint.append((coordx[i],coordy[i]))
+            #check if some shadingssurfaces are too closeto the building
+            if ShadeWall[GE['VertexKey']][0] in AgregFootprint and ShadeWall[GE['VertexKey']][1] in AgregFootprint:
+                print('Avoid one shade : '+ ShadeWall[GE['ShadingIdKey']])
+                break
             coordx = sum(coordx) / len(self.footprint)
             coordy = sum(coordy) / len(self.footprint)
             dist = (abs(meanPx - coordx) ** 2 + abs(meanPy - coordy) ** 2) ** 0.5
@@ -409,10 +435,10 @@ class Building:
                 IntLoad = eleval/self.EPHeatedArea/8760 #this value is thus in W/m2
             if 'winter' in type:
                 IntLoad = os.path.join(Input_path, self.name + '_winter.txt')
-                ProbGenerator.SigmoFile('winter', 3, eleval/self.EPHeatedArea * 100, IntLoad) #the *100 is because we have considered 100m2 for the previous file
+                ProbGenerator.SigmoFile('winter', self.IntLoadCurveShape, eleval/self.EPHeatedArea * 100, IntLoad) #the *100 is because we have considered 100m2 for the previous file
             if 'summer' in type:
                 IntLoad = os.path.join(Input_path, self.name + '_summer.txt')
-                ProbGenerator.SigmoFile('summer', 3, eleval / self.EPHeatedArea * 100,IntLoad)  # the *100 is because we have considered 100m2 for the previous file
+                ProbGenerator.SigmoFile('summer', self.IntLoadCurveShape, eleval / self.EPHeatedArea * 100,IntLoad)  # the *100 is because we have considered 100m2 for the previous file
         return IntLoad
 
 

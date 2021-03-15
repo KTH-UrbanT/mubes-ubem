@@ -50,6 +50,11 @@ def Location_and_weather(idf,building):
     ground_Temp.October_Ground_Temperature = 15
     ground_Temp.November_Ground_Temperature = 15
     ground_Temp.December_Ground_Temperature = 15
+
+    DesignDay= idf.idfobjects['SIZINGPERIOD:DESIGNDAY']
+    for Obj in DesignDay:
+        Obj.Barometric_Pressure = 100594
+
     return idf
 
 if __name__ == '__main__' :
