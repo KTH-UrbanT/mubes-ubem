@@ -1,3 +1,6 @@
+# @Author  : Xavier Faure
+# @Email   : xavierf@kth.se
+
 from eppy.results import readhtml
 import esoreader
 import os

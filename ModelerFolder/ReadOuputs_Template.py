@@ -1,3 +1,6 @@
+# @Author  : Xavier Faure
+# @Email   : xavierf@kth.se
+
 import pickle
 import matplotlib.pyplot as plt
 from matplotlib import gridspec

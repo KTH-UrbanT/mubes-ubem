@@ -1,3 +1,6 @@
+# @Author  : Xavier Faure
+# @Email   : xavierf@kth.se
+
 import CoreFiles.ProbGenerator as ProbGenerator
 import os
 import CoreFiles.Envelope_Param as Envelope_Param

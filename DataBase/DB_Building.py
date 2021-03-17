@@ -1,3 +1,6 @@
+# @Author  : Xavier Faure
+# @Email   : xavierf@kth.se
+
 from shapely.geometry import Polygon, Point
 from geomeppy.geom.polygons import Polygon2D, Polygon3D
 from geomeppy import IDF

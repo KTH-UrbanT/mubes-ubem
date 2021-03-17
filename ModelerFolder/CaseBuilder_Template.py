@@ -1,3 +1,6 @@
+# @Author  : Xavier Faure
+# @Email   : xavierf@kth.se
+
 import os
 import sys
 #add the required path
@@ -236,7 +239,7 @@ if __name__ == '__main__' :
 #                                       folders (CaseName string + number of the building. False = all input files for all
 #                                       building will be generated first, all results will be saved in one single folder
 
-    CaseName = '2DzoneperblocP'
+    CaseName = '2DzoneperfloorP'
     BuildNum = [i for i in range(28)]
     VarName2Change = []
     Bounds = []

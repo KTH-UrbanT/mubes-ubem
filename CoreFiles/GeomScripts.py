@@ -1,3 +1,5 @@
+# @Author  : Xavier Faure
+# @Email   : xavierf@kth.se
 
 from geomeppy import geom
 from shapely.geometry import Polygon

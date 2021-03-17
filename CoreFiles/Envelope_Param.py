@@ -1,3 +1,5 @@
+# @Author  : Xavier Faure
+# @Email   : xavierf@kth.se
 
 
 def createNewConstruction(idf,Name,Material):

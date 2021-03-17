@@ -1,3 +1,7 @@
+# @Author  : Xavier Faure
+# @Email   : xavierf@kth.se
+
+
 SimuData = \
  {  'Begin_Day_of_Month' : 1,
     'Begin_Month' : 1,

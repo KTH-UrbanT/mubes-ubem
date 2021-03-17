@@ -1,3 +1,7 @@
+# @Author  : Xavier Faure
+# @Email   : xavierf@kth.se
+
+
 #this program laucnhes all the simulation
 import os, sys, stat
 import time

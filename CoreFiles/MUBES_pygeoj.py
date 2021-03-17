@@ -1,3 +1,7 @@
+# @Author  : Xavier Faure
+# @Email   : xavierf@kth.se
+#Started from original pygeoj package
+
 """
 # PyGeoj
 
