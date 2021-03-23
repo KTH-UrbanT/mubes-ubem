@@ -26,7 +26,7 @@ def initiateprocess(MainPath):
             file2run.append(file)
     return file2run
 
-def runcase(file,filepath,epluspath):
+def runcase(file,filepath, epluspath, weatherpath):
     filepath = os.path.join(filepath, 'RunningFolder')
     ResSimpath = os.path.join(filepath,'Sim_Results')
     if not os.path.exists(ResSimpath):
@@ -44,24 +44,26 @@ def runcase(file,filepath,epluspath):
     os.chdir(RunDir)
     CaseName = 'Run'
 
-    IDF.setiddname(os.path.join(epluspath,'Energy+.idd'))
-    idf = IDF(Runfile)
-    idf.epw = os.path.join(os.path.join(epluspath ,'WeatherData'),idf.idfobjects['SITE:LOCATION'][0].Name+'.epw') #the weather path is taken from the epluspath
+    #IDF.setiddname(os.path.join(epluspath,'Energy+.idd'))
+    #idf = IDF(Runfile)
+    #idf.epw = os.path.join(os.path.join(epluspath ,'WeatherData'),idf.idfobjects['SITE:LOCATION'][0].Name+'.epw') #the weather path is taken from the epluspath
     # os.mkdir(caseDir)
     # os.chdir(caseDir)
-    idf.run(output_prefix=CaseName, verbose='q')
+    #idf.run(output_prefix=CaseName, verbose='q')
     #idf.run(readvars=True, output_prefix=CaseName, verbose='q')
 
-    # cmd = [epluspath, '--weather', idf.epw, '--output-directory', OutputDir, '--idd', epluspath + "Energy+.idd", '--expandobjects', '--output-prefix', 'Run'+str(nb), file]
-    # check_call(cmd, stdout=open(os.devnull, "w"))
-    savecase(CaseName, RunDir, building, ResSimpath,file,idf,filepath)
+    cmd = [epluspath+'energyplus.exe', '--weather',os.path.normcase(weatherpath),'--output-directory',RunDir, \
+           '--idd',epluspath + 'Energy+.idd','--expandobjects','--output-prefix',CaseName,Runfile]
+    check_call(cmd, stdout=open(os.devnull, "w"))
+    #savecase(CaseName, RunDir, building, ResSimpath,file,idf,filepath)
+    savecase(CaseName, RunDir, building, ResSimpath, file, filepath)
     print(file[:-4] + ' is finished')
 
-def savecase(CaseName,RunDir,building,ResSimpath,file,idf,filepath):
+def savecase(CaseName,RunDir,building,ResSimpath,file,filepath):
     ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir,CaseName), ZoneOutput=False)
     Res, Endinfo = Set_Outputs.Read_Outputhtml(os.path.join(RunDir,CaseName))
     Res['BuildDB'] = building
-    Res['NbZones'] = len(idf.idfobjects['ZONE'])
+    #Res['NbZones'] = len(idf.idfobjects['ZONE'])
     for key1 in ResEso:
         # if not 'Environ' in key1:
         Res[key1] = {}

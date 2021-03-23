@@ -8,11 +8,12 @@ SimuData = \
     'End_Day_of_Month' : 31,
     'End_Month' : 12,
     'SaveLogFiles' : False, #computing folder is not removed thus all energyplus outpus files are preserved
-    'FloorZoningLevel' : False,  #1 zone per floor, if False --> 1 zone per building bloc
+    'FloorZoningLevel' : True,  #1 zone per floor, if False --> 1 zone per building bloc
  }
 
+#ifthe file is from the energy plus weather climate foder, no need to the extension northe full path
 WeatherFile = \
- {'Loc' : "SWE_Stockholm.Arlanda.024600_IWEC"
+ {'Loc' : "C:\EnergyPlusV9-1-0\WeatherData/SWE_Stockholm.Arlanda.024600_IWEC.epw",#'C:/Users/xav77\Documents\FAURE\WeatherData/Year2018WithIRfromStandard.epw',#
   }
 
 #Thisdict gives all the materials characteristics.

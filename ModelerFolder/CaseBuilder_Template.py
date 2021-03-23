@@ -24,8 +24,8 @@ import DataBase.DB_Data as DB_Data
 import multiprocessing as mp
 
 
-def appendBuildCase(StudiedCase,epluspath,nbcase,Buildingsfile,Shadingsfile,MainPath):
-    StudiedCase.addBuilding('Building'+str(nbcase),Buildingsfile,Shadingsfile,nbcase,MainPath,epluspath)
+def appendBuildCase(StudiedCase,epluspath,nbcase,Buildingsfile,Shadingsfile,MainPath,LogFile):
+    StudiedCase.addBuilding('Building'+str(nbcase),Buildingsfile,Shadingsfile,nbcase,MainPath,epluspath,LogFile)
     idf = StudiedCase.building[-1]['BuildIDF']
     building = StudiedCase.building[-1]['BuildData']
     return idf, building
@@ -37,12 +37,12 @@ def setSimLevel(idf,building):
     Sim_param.Location_and_weather(idf,building)
     Sim_param.setSimparam(idf,building)
 
-def setBuildingLevel(idf,building):
+def setBuildingLevel(idf,building,LogFile):
     ######################################################################################
     #Building Level
     ######################################################################################
     #this is the function that requires the most time
-    GeomScripts.createBuilding(idf,building, perim = True)
+    GeomScripts.createBuilding(LogFile,idf,building, perim = False)
 
 
 def setEnvelopeLevel(idf,building):
@@ -86,7 +86,7 @@ def readPathfile(Pathways):
 
     return keyPath
 
-def LaunchProcess(bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns = 1,CPUusage = 1, SepThreads = True):
+def LaunchProcess(LogFile,bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns = 1,CPUusage = 1, SepThreads = True):
 #this main is written for validation of the global workflow. and as an example for other simulation
 #the cases are build in a for loop and then all cases are launched in a multiprocess mode, the maximum %of cpu is given as input
     MainPath = os.getcwd()
@@ -124,25 +124,31 @@ def LaunchProcess(bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns =
     #Nevertheless this organization still enable to order things !
     StudiedCase = BuildingList()
     #lets build the two main object we'll be playing with in the following'
-    idf_ref, building_ref = appendBuildCase(StudiedCase, epluspath, nbcase, Buildingsfile, Shadingsfile, MainPath)
-
+    idf_ref, building_ref = appendBuildCase(StudiedCase, epluspath, nbcase, Buildingsfile, Shadingsfile, MainPath,LogFile)
+    try:
+        LogFile.write('50A_UUID : ' + str(building_ref.BuildID['50A_UUID']) + '\n')
+        LogFile.write('FormularId : ' + str(building_ref.BuildID['FormularId']) + '\n')
+    except:
+        pass
     Var2check = len(building_ref.BlocHeight) if building_ref.Multipolygon else building_ref.height
     if len(building_ref.BlocHeight) > 0 and min(building_ref.BlocHeight) < 1:
         Var2check = 0
-    if building_ref.EPHeatedArea < 50:
-        Var2check = 0
+    # if building_ref.EPHeatedArea < 50:
+    #     Var2check = 0
     if 0 in building_ref.BlocNbFloor:
         Var2check = 0
     if Var2check == 0:
         print(
             'This Building/bloc has either no height, height below 1, surface below 50m2 or no floors, process abort for this one')
         os.chdir(MainPath)
-        return MainPath, epluspath
+        return MainPath, epluspath, building_ref.WeatherDataFile
 
     # change on the building __init__ class in the simulation level should be done here
     setSimLevel(idf_ref, building_ref)
     # change on the building __init__ class in the building level should be done here
-    setBuildingLevel(idf_ref, building_ref)
+    setBuildingLevel(idf_ref, building_ref,LogFile)
+
+
 
     #now lets build as many cases as there are value in the sampling done earlier
     for i,val in enumerate(Param):
@@ -150,9 +156,10 @@ def LaunchProcess(bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns =
         # (except if some wanted and thus the above function will have to be in the for loop process
         idf = copy.deepcopy(idf_ref)
         building = copy.deepcopy(building_ref)
+
         idf.idfname = 'Building_' + str(nbcase) +  'v'+str(i)+'_FormularId:'+str(building.BuildID['FormularId'])
         Case={}
-        Case['BuildIDF'] = idf
+        #Case['BuildIDF'] = idf
         Case['BuildData'] = building
 
         # # example of modification with half of the runs with external insulation and half of the runs with internal insulation
@@ -201,11 +208,16 @@ def LaunchProcess(bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns =
         with open('Building_' + str(nbcase) +  'v'+str(i)+ '.pickle', 'wb') as handle:
             pickle.dump(Case, handle, protocol=pickle.HIGHEST_PROTOCOL)
         print('Input IDF file ', i+1, '/', len(Param), ' is done')
+        try:
+            LogFile.write('Input IDF file ' + str(i+1)+ '/'  + str(len(Param))+ ' is done\n')
+            LogFile.write('##############################################################\n')
+        except:
+            pass
     #RunProcess(MainPath,epluspath,CPUusage)
 
     # lets get back to the Main Folder we were at the very beginning
     os.chdir(MainPath)
-    return MainPath, epluspath
+    return MainPath, epluspath, building_ref.WeatherDataFile
 
 def SaveCase(MainPath,SepThreads):
     SaveDir = os.path.join(os.path.dirname(MainPath), 'Results')
@@ -239,36 +251,55 @@ if __name__ == '__main__' :
 #                                       folders (CaseName string + number of the building. False = all input files for all
 #                                       building will be generated first, all results will be saved in one single folder
 
-    CaseName = '2DzoneperfloorP'
+    CaseName = 'MinnebergWeatherSMHI1'
     BuildNum = [i for i in range(28)]
     VarName2Change = []
     Bounds = []
     NbRuns = 1
     CPUusage = 0.8
     SepThreads = False
+    logFile =True
 
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
 ######################################################################################################################
-    keyPath = readPathfile('Pathways.txt')
+    keyPath = readPathfile('Minneberg25Dv9.txt')
+    if logFile:
+        if os.path.exists(os.path.join(os.getcwd(), CaseName + '_Logs.log')):
+            os.remove(os.path.join(os.getcwd(), CaseName + '_Logs.log'))
+        LogFile = open(os.path.join(os.getcwd(), CaseName + '_Logs.log'), 'w')
+    else:
+        LogFile = False
     for idx,nbBuild in enumerate(BuildNum):
         print('Building '+str(nbBuild)+' is starting')
-        MainPath , epluspath  = LaunchProcess(idx,keyPath,nbBuild,VarName2Change,Bounds,NbRuns,CPUusage,SepThreads)
+        try:
+            LogFile.write('Building '+str(nbBuild)+' is starting\n')
+        except:
+            pass
+        MainPath , epluspath, weatherpath  = LaunchProcess(LogFile,idx,keyPath,nbBuild,VarName2Change,Bounds,NbRuns,CPUusage,SepThreads)
         if SepThreads:
+            try:
+                LogFile.close()
+            except:
+                pass
             file2run = LaunchSim.initiateprocess(MainPath)
             nbcpu = max(mp.cpu_count()*CPUusage,1)
             pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
             for i in range(len(file2run)):
-                pool.apply_async(LaunchSim.runcase, args=(file2run[i], MainPath, epluspath))
+                pool.apply_async(LaunchSim.runcase, args=(file2run[i], MainPath, epluspath, weatherpath))
             pool.close()
             pool.join()
             SaveCase(MainPath,SepThreads)
     if not SepThreads:
+        try:
+            LogFile.close()
+        except:
+            pass
         file2run = LaunchSim.initiateprocess(MainPath)
         nbcpu = max(mp.cpu_count()*CPUusage,1)
         pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
         for i in range(len(file2run)):
-            pool.apply_async(LaunchSim.runcase, args=(file2run[i], MainPath, epluspath))
+            pool.apply_async(LaunchSim.runcase, args=(file2run[i], MainPath, epluspath, weatherpath))
         pool.close()
         pool.join()
         SaveCase(MainPath, SepThreads)

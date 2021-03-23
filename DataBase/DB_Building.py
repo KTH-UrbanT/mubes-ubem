@@ -2,7 +2,8 @@
 # @Email   : xavierf@kth.se
 
 from shapely.geometry import Polygon, Point
-from geomeppy.geom.polygons import Polygon2D, Polygon3D
+from geomeppy.geom.polygons import Polygon2D, Polygon3D,break_polygons
+from shapely.geometry import Polygon as SPoly
 from geomeppy import IDF
 from geomeppy.geom import core_perim
 import os
@@ -66,13 +67,13 @@ class BuildingList:
     def __init__(self):
         self.building = []
 
-    def addBuilding(self,name,Buildingsfile,Shadingsfile,nbcase,MainPath,epluspath):
+    def addBuilding(self,name,Buildingsfile,Shadingsfile,nbcase,MainPath,epluspath,LogFile):
         #idf object is created here
         IDF.setiddname(os.path.join(epluspath,"Energy+.idd"))
         idf = IDF(os.path.normcase(os.path.join(epluspath,"ExampleFiles/Minimal.idf")))
         idf.idfname = name
         #building object is created here
-        building = Building(name, Buildingsfile, Shadingsfile, nbcase, MainPath)
+        building = Building(name, Buildingsfile, Shadingsfile, nbcase, MainPath,LogFile)
         #both are append as dict in the globa studied case list
         self.building.append({
             'BuildData' : building,
@@ -82,7 +83,7 @@ class BuildingList:
 
 class Building:
 
-    def __init__(self,name,Buildingsfile,Shadingsfile,nbcase,MainPath):
+    def __init__(self,name,Buildingsfile,Shadingsfile,nbcase,MainPath,LogFile):
         DB = Buildingsfile[nbcase]
         DBL = DB_Data.DBLimits
         BE = DB_Data.BasisElement
@@ -95,7 +96,7 @@ class Building:
         self.RefCoord = self.getRefCoord(DB)
         self.nbfloor = self.getnbfloor(DB, DBL)
         self.nbBasefloor = self.getnbBasefloor(DB, DBL)
-        self.footprint = self.getfootprint(DB)
+        self.footprint = self.getfootprint(DB,LogFile)
         self.ATemp = self.getsurface(DB, DBL)
         self.year = self.getyear(DB, DBL)
         self.EPCMeters = self.getEPCMeters(DB,EPC)
@@ -107,7 +108,7 @@ class Building:
         self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB,DBL, BE)
         self.OccupType = self.getOccupType(DB)
         self.nbStairwell = self.getnbStairwell(DB, DBL)
-        self.EPHeatedArea = self.getEPHeatedArea()
+        self.EPHeatedArea = self.getEPHeatedArea(LogFile)
         self.Materials = DB_Data.BaseMaterial
         self.WeatherDataFile = DB_Data.WeatherFile['Loc']
         self.InternalMass = DB_Data.InternalMass
@@ -154,11 +155,11 @@ class Building:
             x = centroide[0][0]
             y = centroide[0][1]
             self.Multipolygon = False
-        ref = (x, y)
-        #ref = (670000, 6581600) #this is the ref taken for multi building 3D plot
+        ref = (round(x,2), round(y,2))
+        #ref = (676600, 6578000) #this is the ref taken for multi building 3D plot
         return ref
 
-    def getfootprint(self,DB):
+    def getfootprint(self,DB,LogFile):
         "get the footprint coordinate and the height of each building bloc"
         coord = []
         node2remove =[]
@@ -179,36 +180,59 @@ class Building:
                             polycoor.append(tuple(new_coor))
                         if polycoor[0]==polycoor[-1]:
                             polycoor = polycoor[:-1]
-                        # test3D = Polygon3D((v[0], v[1], 0) for v in polycoor)
-                        # if test3D.area==0:
-                        #     print('je change')
-                        #     polycoor.reverse()
-                        # for i in range(len(polycoor)):
-                        #     newpoly = polycoor[i:]+polycoor[:i]
-                        #     test3D = Polygon3D((v[0], v[1], 0) for v in newpoly)
-                        #     if test3D.area!=0:
-                        #         break
-                        #     else:
-                        #         print('je change')
-                        # polycoor = newpoly
                         newpolycoor, node = core_perim.CheckFootprintNodes(polycoor,5)
                         node2remove.append(node)
                         #polycoor.reverse()
                         coord.append(polycoor)
                         self.BlocHeight.append(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]))
+            #this following line are here to highlight holes in footprint and split it into two blocs...
+            #it may appear some errors for other building with several blocs and some with holes (these cases havn't been checked)
+            poly2merge = []
+            for idx, coor in enumerate(coord):
+                for i in range(len(coord)-idx-1):
+                    if SPoly(coor).contains(SPoly(coord[idx+i+1])):
+                        poly2merge.append([idx,idx+i+1])
+            for i,idx in enumerate(poly2merge):
+                new_surfaces = break_polygons(Polygon3D(coord[idx[0]]), Polygon3D(coord[idx[1]]))
+                xs,ys,zs = zip(*list(new_surfaces[0]))
+                coord[idx[0]] = [(xs[nbv],ys[nbv]) for nbv in range(len(xs))]
+                xs,ys,zs = zip(*list(new_surfaces[1]))
+                coord[idx[1]] = [(xs[nbv],ys[nbv]) for nbv in range(len(xs))]
+                self.BlocHeight[idx[1]] = self.BlocHeight[idx[0]]
+                try:
+                    LogFile.write('There is hole that will split in two blocs the main surface \n')
+                except:
+                    pass
+
             #we compute a storey height as well to choosen the one that correspond to the highest part of the building afterward
             self.StoreyHeigth = 3
-            storeyRatio = self.StoreyHeigth/(max(self.BlocHeight)/self.nbfloor) if (max(self.BlocHeight)/self.nbfloor)>2 else 0
+            storeyRatio = self.StoreyHeigth/(max(self.BlocHeight)/self.nbfloor) if (max(self.BlocHeight)/self.nbfloor)>0.5 else 1
+            try:
+                LogFile.write('The max bloc height is : '+str(round(max(self.BlocHeight),2))+' for '+str(self.nbfloor)+' floors declared in the EPC \n')
+                LogFile.write('A ratio of '+ str(storeyRatio)+' will be applied on each bloc height\n')
+            except:
+                pass
             for height in range(len(self.BlocHeight)):
                 self.BlocHeight[height] *= storeyRatio
             for idx,Height in enumerate(self.BlocHeight):
-                self.BlocNbFloor.append(int(round(Height,1) / self.StoreyHeigth)) #the height is ed to the closest 10cm
+                val = int(round(Height, 1) / self.StoreyHeigth)
+                self.BlocNbFloor.append(max(1,val))#the height is ed to the closest 10cm
                 self.BlocHeight[idx] = self.BlocNbFloor[-1]*self.StoreyHeigth
+                try:
+                    LogFile.write('Bloc height : '+str(self.BlocHeight[idx])+' with '+str( self.BlocNbFloor[-1])+' nb of floors\n')
+                    LogFile.write('This bloc has a footprint with : ' + str(len(coord[idx]))+' vertexes\n')
+                except:
+                    pass
+                if val==0:
+                    try:
+                        LogFile.write('/!\ This bloc as a height below 3m, it has been raized to 3m to enable construction /!\ \n')
+                    except:
+                        pass
             #we need to clean the foot print from the node2 remove but not if there are part of another bloc
-            FilteredNode2remove = []
             newbloccoor= []
             for idx,coor in enumerate(coord):
                 newcoor = []
+                FilteredNode2remove = []
                 single = False
                 for node in node2remove[idx]:
                     single = True
@@ -216,14 +240,13 @@ class Building:
                         if idx!=idx1:
                             if coor[0] in coor1:
                                 single =False
-                if single:
-                    FilteredNode2remove.append(node)
+                    if single:
+                        FilteredNode2remove.append(node)
                 for nodeIdx,node in enumerate(coor):
                     if not nodeIdx in FilteredNode2remove:
                         newcoor.append(node)
                 newbloccoor.append(newcoor)
             coord = newbloccoor
-
         else:
             #old fashion of making thing with the very first 2D file
             for j in DB.geometry.coordinates[0]:
@@ -235,7 +258,7 @@ class Building:
                 self.BlocNbFloor.append(self.nbfloor)
         return coord
 
-    def getEPHeatedArea(self):
+    def getEPHeatedArea(self,LogFile):
         "get the heated area based on the footprint and the number of floors"
         self.BlocFootprintArea=[]
         if self.Multipolygon:
@@ -243,6 +266,11 @@ class Building:
             for i,foot in enumerate(self.footprint):
                 EPHeatedArea += Polygon(foot).area*self.BlocNbFloor[i]
                 self.BlocFootprintArea.append(Polygon(foot).area)
+            try:
+                LogFile.write('Blocs footprint areas : '+ str(self.BlocFootprintArea)+'\n')
+                LogFile.write('The total heated area is : ' + str(EPHeatedArea)+' for a declared ATemp of : '+str(self.ATemp)+' --> discreapency of : '+str(round((self.ATemp-EPHeatedArea)/self.ATemp*100,2))+'\n')
+            except:
+                pass
         else:
             EPHeatedArea = Polygon(self.footprint).area * self.nbfloor
             self.BlocFootprintArea.append(Polygon(self.footprint).area)

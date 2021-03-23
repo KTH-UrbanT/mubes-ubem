@@ -30,13 +30,17 @@ def BuildBloc(idf,perim,bloc,bloc_coord,Height,nbstories,nbBasementstories,Basem
             below_ground_storey_height=BasementstoriesHeight if nbBasementstories > 0 else 0
         )
 
-def createBuilding(idf,building,perim):
+def createBuilding(LogFile,idf,building,perim):
     Full_coord = building.footprint
     #Adding two blocks, one with two storey (the nb of storey defines the nb of Zones)
     Nb_blocs = 1
     if building.Multipolygon:
         Nb_blocs = len(Full_coord)
     print('Number of blocs for this building : '+ str(Nb_blocs))
+    try:
+        LogFile.write('Number of blocs for this building : ' + str(Nb_blocs)+'\n')
+    except:
+        pass
     for bloc in range(Nb_blocs):
         bloc_coord =  Full_coord[bloc] if building.Multipolygon else Full_coord
         Height = building.BlocHeight[bloc] if building.Multipolygon else building.height
@@ -58,23 +62,33 @@ def createBuilding(idf,building,perim):
             except:
                 Perim_depth = Perim_depth/2
                 print('I reduce half the perim depth')
+                try:
+                    LogFile.write('I reduce half the perim depth\n')
+                except:
+                    pass
             if Perim_depth<0.5:
+                try:
+                    LogFile.write(
+                    'Sorry, but this building cannot have Perim/Core option..it failed with perim below 0.75m\n')
+                except:
+                    pass
                 return print('Sorry, but this building cannot have Perim/Core option..it failed with perim below 0.75m')
+
     #this function enable to create all the boundary conditions for all surfaces
-    tutu = idf.idfobjects["BUILDINGSURFACE:DETAILED"]
-    for tyty in tutu:
-        if 'ZoneBuild0 Storey 5 Ceiling' in tyty.Name:
-            print(tyty.Name)
-        if 'ZoneBuild0 Storey 6 Floor' in tyty.Name:
-            print(tyty.Name)
-
-
     idf.intersect_match()
 
     # this last function on the Geometry is here to split the non convexe surfaces
     # if not, some warning are appended because of shading computation. non convex surfaces can impact itself
     # it should thus be only the roof surfaces. Non convex internal zone are not concerned as Solar distribution is 'FullExterior'
-    split2convex(idf)
+    try:
+        split2convex(idf)
+    except:
+        try:
+            LogFile.write('The Split2convex function failed for this building....\n')
+        except:
+            pass
+        print('The Split2convex function failed for this building....')
+        pass
 
 def createRapidGeomElem(idf,building):
     #enveloppe can be creates now and allocated to to correct surfaces
