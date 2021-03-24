@@ -267,18 +267,16 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
         BlocPeopleDensity.append(PeopleDensity)
 
     #############################################################################################################
-    #let us go through all the zones but we need to sort them from the lowest ones to the highest one....to have different setting for the basement ones
+    #let us go through all the zones but we need to sort them from the lowest ones to the highest one....to have different settings for the basement ones
     zoneStoreylist =[]
     bloclist = []
     AllZone = idf.idfobjects["ZONE"]
     for idx, zone in enumerate(AllZone):
         bloclist.append(int(zone.Name[zone.Name.rfind('Build')+5:zone.Name.find('Storey')]))
-        zoneStoreylist.append(int(zone.Name[zone.Name.find('Storey')+6:])) #the name ends with Storey # so lest get the storey number this way
+        zoneStoreylist.append(int(zone.Name[zone.Name.find('Storey')+6:])) #the name ends with Storey # so lets get the storey number this way
     SortedZoneIdx = sorted(range(len(zoneStoreylist)), key=lambda k: zoneStoreylist[k])
     for idx in SortedZoneIdx:
         zone = AllZone[idx]
-        if 'Perimeter_Zone_7Build1 Storey 0' in zone.Name:
-            a=1
         bloc = bloclist[idx]
         # we need to compute the enveloppe area facing outside as well as the floor area (for HVAC)
         ExtWallArea = 0

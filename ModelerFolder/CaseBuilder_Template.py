@@ -19,6 +19,7 @@ import CoreFiles.Sim_param as Sim_param
 import CoreFiles.Load_and_occupancy as Load_and_occupancy
 import CoreFiles.LaunchSim as LaunchSim
 import CoreFiles.MUBES_pygeoj as MUBES_pygeoj
+import CoreFiles.BuildFMUs as BuildFMUs
 from DataBase.DB_Building import BuildingList
 import DataBase.DB_Data as DB_Data
 import multiprocessing as mp
@@ -86,7 +87,7 @@ def readPathfile(Pathways):
 
     return keyPath
 
-def LaunchProcess(LogFile,bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns = 1,CPUusage = 1, SepThreads = True):
+def LaunchProcess(LogFile,bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns = 1,CPUusage = 1, SepThreads = True, CreateFMU = False):
 #this main is written for validation of the global workflow. and as an example for other simulation
 #the cases are build in a for loop and then all cases are launched in a multiprocess mode, the maximum %of cpu is given as input
     MainPath = os.getcwd()
@@ -101,7 +102,17 @@ def LaunchProcess(LogFile,bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],
         for i in os.listdir(SimDir):
             if os.path.isdir(os.path.join(SimDir,i)):
                 for j in os.listdir(os.path.join(SimDir,i)):
-                    os.remove(os.path.join(os.path.join(SimDir,i),j))
+                    if os.path.isdir(os.path.join(os.path.join(SimDir,i),j)):
+                        for k in os.listdir(os.path.join(os.path.join(SimDir,i),j)):
+                            if os.path.isdir(os.path.join(os.path.join(os.path.join(SimDir,i),j),k)):
+                                for p in os.listdir(os.path.join(os.path.join(os.path.join(SimDir,i),j),k)):
+                                    os.remove(os.path.join(os.path.join(os.path.join(os.path.join(SimDir,i),j),k),p))
+                                os.rmdir(os.path.join(os.path.join(os.path.join(SimDir, i), j), k))
+                            else:
+                                os.remove(os.path.join(os.path.join(os.path.join(SimDir, i), j), k))
+                        os.rmdir(os.path.join(os.path.join(SimDir, i),j))
+                    else:
+                        os.remove(os.path.join(os.path.join(SimDir, i), j))
                 os.rmdir(os.path.join(SimDir,i))
             else:
                 os.remove(os.path.join(SimDir,i))
@@ -202,17 +213,47 @@ def LaunchProcess(LogFile,bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],
         setZoneLevel(idf, building,MainPath)
 
         setOutputLevel(idf,MainPath)
+        if CreateFMU:
+            print('Building FMU under process...Please wait around 30sec')
+            #get the heated zones first and set them into a zonelist
+            zonelist = Set_Outputs.getHeatedZones(idf)
+            BuildFMUs.CreateZoneList(idf, 'HeatedZones', zonelist)
+            EPVarName = 'Total Building Heat Pow'
+            BuildFMUs.setEMS4TotHeatPow(idf,zonelist,'Hourly')
+            #EPVarName = 'Weighted Average Heated Zone Air Temperature'
+            SetPoints = idf.idfobjects['HVACTEMPLATE:THERMOSTAT']
+            SetPoints[0].Heating_Setpoint_Schedule_Name = 'FMUsAct'
+            SetPoints[0].Constant_Heating_Setpoint = 1
+            VarExchange = \
+                { 'ModelOutputs' : [
+                        {'ZoneKeyIndex' :'EMS',
+                        'EP_varName' : EPVarName,
+                        'FMU_OutputName' : 'HeatingPower',
+                        }
+                                   ],
+                'ModelInputs' : [
+                        {'EPScheduleName' :'FMUsAct',
+                        'FMU_InputName' : 'TempSetPoint',
+                        'InitialValue' : 21,
+                        }
+                                   ],
+            }
+            BuildFMUs.DefineFMUsParameters(idf, building, VarExchange)
+            idf.saveas('Building_' + str(nbcase) + 'v' + str(i) + '.idf')
+            BuildFMUs.buildEplusFMU(epluspath, building_ref.WeatherDataFile, os.path.join(SimDir,'Building_' + str(nbcase) + 'v' + str(i) + '.idf'))
+            print('FMU created for this building')
+        else:
+            # saving files and objects
+            idf.saveas('Building_' + str(nbcase) +  'v'+str(i)+'.idf')
+            with open('Building_' + str(nbcase) +  'v'+str(i)+ '.pickle', 'wb') as handle:
+                pickle.dump(Case, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            print('Input IDF file ', i+1, '/', len(Param), ' is done')
+            try:
+                LogFile.write('Input IDF file ' + str(i+1)+ '/'  + str(len(Param))+ ' is done\n')
+                LogFile.write('##############################################################\n')
+            except:
+                pass
 
-        # saving files and objects
-        idf.saveas('Building_' + str(nbcase) +  'v'+str(i)+'.idf')
-        with open('Building_' + str(nbcase) +  'v'+str(i)+ '.pickle', 'wb') as handle:
-            pickle.dump(Case, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        print('Input IDF file ', i+1, '/', len(Param), ' is done')
-        try:
-            LogFile.write('Input IDF file ' + str(i+1)+ '/'  + str(len(Param))+ ' is done\n')
-            LogFile.write('##############################################################\n')
-        except:
-            pass
     #RunProcess(MainPath,epluspath,CPUusage)
 
     # lets get back to the Main Folder we were at the very beginning
@@ -251,14 +292,15 @@ if __name__ == '__main__' :
 #                                       folders (CaseName string + number of the building. False = all input files for all
 #                                       building will be generated first, all results will be saved in one single folder
 
-    CaseName = 'MinnebergWeatherSMHI1'
-    BuildNum = [i for i in range(28)]
+    CaseName = 'MinnebergwithEMS'
+    BuildNum = [0,1,2,3,4]#[i for i in range(28)]
     VarName2Change = []
     Bounds = []
     NbRuns = 1
     CPUusage = 0.8
     SepThreads = False
     logFile =True
+    CreateFMU = True
 
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
@@ -276,8 +318,8 @@ if __name__ == '__main__' :
             LogFile.write('Building '+str(nbBuild)+' is starting\n')
         except:
             pass
-        MainPath , epluspath, weatherpath  = LaunchProcess(LogFile,idx,keyPath,nbBuild,VarName2Change,Bounds,NbRuns,CPUusage,SepThreads)
-        if SepThreads:
+        MainPath , epluspath, weatherpath  = LaunchProcess(LogFile,idx,keyPath,nbBuild,VarName2Change,Bounds,NbRuns,CPUusage,SepThreads,CreateFMU)
+        if SepThreads and not CreateFMU:
             try:
                 LogFile.close()
             except:
@@ -290,7 +332,7 @@ if __name__ == '__main__' :
             pool.close()
             pool.join()
             SaveCase(MainPath,SepThreads)
-    if not SepThreads:
+    if not SepThreads and not CreateFMU:
         try:
             LogFile.close()
         except:
