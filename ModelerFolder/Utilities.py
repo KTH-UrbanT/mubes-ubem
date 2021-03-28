@@ -284,6 +284,8 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
     #now we aggregate the data into Res dict
     print('organizing data...')
     for i,key in enumerate(ResBld):
+        if key==14:
+            a=1
         Res['SimNum'].append(key)
         #lets first read the attribut of the building object (simulation inputs)
         BuildObj = ResBld[key]['BuildDB']
@@ -300,16 +302,16 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
         for x in BuildObj.EPCMeters['ElecLoad']:
             if BuildObj.EPCMeters['ElecLoad'][x]:
                 eleval += BuildObj.EPCMeters['ElecLoad'][x]
-        Res['EPC_elec'].append(eleval/BuildObj.ATemp)
+        Res['EPC_elec'].append(eleval/BuildObj.ATemp if BuildObj.ATemp!=0 else 0)
         heatval = 0
         for x in BuildObj.EPCMeters['Heating']:
             heatval += BuildObj.EPCMeters['Heating'][x]
-        Res['EPC_Heat'].append(heatval/BuildObj.ATemp)
+        Res['EPC_Heat'].append(heatval/BuildObj.ATemp if BuildObj.ATemp!=0 else 0)
         coolval = 0
         for x in BuildObj.EPCMeters['Cooling']:
             coolval += BuildObj.EPCMeters['Cooling'][x]
-        Res['EPC_Cool'].append(coolval/BuildObj.ATemp)
-        Res['EPC_Tot'].append((eleval+heatval+coolval)/BuildObj.ATemp)
+        Res['EPC_Cool'].append(coolval/BuildObj.ATemp if BuildObj.ATemp!=0 else 0)
+        Res['EPC_Tot'].append((eleval+heatval+coolval)/BuildObj.ATemp if BuildObj.ATemp!=0 else 0)
 
         for key1 in Res:
             if key1 in ['EP_elec','EP_cool','EP_heat']:

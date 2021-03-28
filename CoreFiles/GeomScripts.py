@@ -30,7 +30,7 @@ def BuildBloc(idf,perim,bloc,bloc_coord,Height,nbstories,nbBasementstories,Basem
             below_ground_storey_height=BasementstoriesHeight if nbBasementstories > 0 else 0
         )
 
-def createBuilding(LogFile,idf,building,perim):
+def createBuilding(LogFile,idf,building,perim,ForPlots =False):
     Full_coord = building.footprint
     #Adding two blocks, one with two storey (the nb of storey defines the nb of Zones)
     Nb_blocs = 1
@@ -81,10 +81,11 @@ def createBuilding(LogFile,idf,building,perim):
     # if not, some warning are appended because of shading computation. non convex surfaces can impact itself
     # it should thus be only the roof surfaces. Non convex internal zone are not concerned as Solar distribution is 'FullExterior'
     try:
-        split2convex(idf)
+        if not ForPlots:
+            split2convex(idf)
     except:
         try:
-            LogFile.write('The Split2convex function failed for this building....\n')
+            LogFile.write('[Error] The Split2convex function failed for this building....\n')
         except:
             pass
         print('The Split2convex function failed for this building....')

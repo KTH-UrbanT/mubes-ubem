@@ -59,9 +59,15 @@ def runcase(file,filepath, epluspath, weatherpath):
     savecase(CaseName, RunDir, building, ResSimpath, file, filepath)
     print(file[:-4] + ' is finished')
 
-def savecase(CaseName,RunDir,building,ResSimpath,file,filepath):
-    ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir,CaseName), ZoneOutput=False)
-    Res, Endinfo = Set_Outputs.Read_Outputhtml(os.path.join(RunDir,CaseName))
+def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,withFMU = False):
+    if withFMU:
+        ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir, CaseName + '.eso'), ZoneOutput=False)
+        Res = Set_Outputs.Read_Outputhtml(os.path.join(RunDir, CaseName + 'Table.htm'))
+        #Endinfo = Set_Outputs.Read_OutputError(CaseName + '.end')
+    else:
+        ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir,CaseName+'out.eso'), ZoneOutput=False)
+        Res  = Set_Outputs.Read_Outputhtml(os.path.join(RunDir,CaseName+'tbl.htm'))
+        #Endinfo = Set_Outputs.Read_OutputError(CaseName+'out.end')
     Res['BuildDB'] = building
     #Res['NbZones'] = len(idf.idfobjects['ZONE'])
     for key1 in ResEso:
@@ -71,8 +77,12 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,filepath):
             Res[key1]['Data_' + key2] = ResEso[key1][key2]['GlobData']
             Res[key1]['TimeStep_' + key2] = ResEso[key1][key2]['TimeStep']
             Res[key1]['Unit_' + key2] = ResEso[key1][key2]['Unit']
-    shutil.copyfile(os.path.join(RunDir,'Runout.err'), os.path.join(ResSimpath,file[:-4] + '.err'))
-    shutil.copyfile(os.path.join(RunDir,'Runtbl.htm'), os.path.join(ResSimpath,file[:-4] + '.html'))
+    if withFMU:
+        shutil.copyfile(os.path.join(RunDir,CaseName+'.err'), os.path.join(ResSimpath,file[:-4] + '.err'))
+        shutil.copyfile(os.path.join(RunDir,CaseName+'Table.htm'), os.path.join(ResSimpath,file[:-4] + '.html'))
+    else:
+        shutil.copyfile(os.path.join(RunDir, 'Runout.err'), os.path.join(ResSimpath, file[:-4] + '.err'))
+        shutil.copyfile(os.path.join(RunDir, 'Runtbl.htm'), os.path.join(ResSimpath, file[:-4] + '.html'))
     #shutil.copyfile(RunDir + '\\' + 'Runout.csv', ResSimpath + file[:-4] + '.csv')
     with open(os.path.join(ResSimpath, file[:-4]+'.pickle'), 'wb') as handle:
         pickle.dump(Res, handle, protocol=pickle.HIGHEST_PROTOCOL)

@@ -17,59 +17,31 @@ def CreateZoneList(idf,name,zonelist):
     for idx,zone in enumerate(zonelist):
         setattr(ZoneListObj, 'Zone_'+str(idx+1)+'_Name', zone)
 
-def setEMS4TotHeatPow(idf,zonelist,Freq):
-    #lets create the temperature sensors for each zones and catch their volume
-    for idx,zone in enumerate(zonelist):
-        idf.newidfobject(
-            'ENERGYMANAGEMENTSYSTEM:SENSOR',
-            Name = 'Pow'+str(idx),
-            OutputVariable_or_OutputMeter_Index_Key_Name = zone,
-            OutputVariable_or_OutputMeter_Name = 'Zone Mean Air Temperature',#Zone Ideal Loads Supply Air Total Heating Rate'
-            )
-
-    #lets create the prgm collingManager
-    idf.newidfobject(
-        'ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER',
-        Name='Total Building Heat Pow',
-        EnergyPlus_Model_Calling_Point='EndOfZoneTimestepBeforeZoneReporting' ,
-        Program_Name_1='TotZonePow'
-    )
-    #lets create the global Variable
-    idf.newidfobject(
-        'ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE',
-        Erl_Variable_1_Name='TotBuildPow' ,
-    )
-    #lets create the EMS Output Variable
-    idf.newidfobject(
-        'ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE',
-        Name='Total Heating Power',
-        EMS_Variable_Name='TotBuildPow' ,
-        Type_of_Data_in_Variable='Averaged',
-        Update_Frequency = 'ZoneTimeStep'
-    )
-    #lets create the program
-    listofTemp = ['Pow'+str(i) for i in range(len(zonelist))]
-    SumNumerator = ''
-    for idx,Temp in enumerate(listofTemp):
-        SumNumerator = SumNumerator+Temp+'+'
-    idf.newidfobject(
-        'ENERGYMANAGEMENTSYSTEM:PROGRAM',
-        Name='TotZonePow',
-        Program_Line_1='SET TotBuildPow = '+SumNumerator[:-1],
-    )
-    #lets create now the ouputs of this EMS
-    idf.newidfobject(
-        'OUTPUT:ENERGYMANAGEMENTSYSTEM',
-        Actuator_Availability_Dictionary_Reporting='Verbose',
-        EMS_Runtime_Language_Debug_Output_Level='Verbose',
-        Internal_Variable_Availability_Dictionary_Reporting='Verbose',
-    )
-    #lets create now the final outputs
-    idf.newidfobject(
-        'OUTPUT:VARIABLE',
-        Variable_Name='Total Building Heat Pow',
-        Reporting_Frequency=Freq,
-    )
+def setFMUsINOut(idf, building,TotPowerName):
+    # BuildFMUs.CreateZoneList(idf, 'HeatedZones', zonelist)
+    EPVarName = TotPowerName
+    #EPVarName = 'Weighted Average Heated Zone Air Temperature'
+    SetPoints = idf.idfobjects['HVACTEMPLATE:THERMOSTAT']
+    SetPoints[0].Heating_Setpoint_Schedule_Name = 'FMUsAct'
+    SetPoints[0].Constant_Heating_Setpoint = ''
+    # SetPoints[0].Cooling_Setpoint_Schedule_Name = 'CoolingPoint'
+    # SetPoints[0].Constant_Cooling_Setpoint = ''
+    # Load_and_occupancy.ScheduleCompact(idf, 'CoolingPoint', 50)
+    VarExchange = \
+         { 'ModelOutputs' : [
+                        {'ZoneKeyIndex' :'EMS',
+                        'EP_varName' : EPVarName,
+                        'FMU_OutputName' : 'HeatingPower',
+                        }
+                                   ],
+         'ModelInputs' : [
+                        {'EPScheduleName' :'FMUsAct',
+                        'FMU_InputName' : 'TempSetPoint',
+                        'InitialValue' : 21,
+                        }
+                                   ],
+            }
+    DefineFMUsParameters(idf, building, VarExchange)
 
 def DefineFMUsParameters(idf,building,VarExchange):
     #First lets define the external interface

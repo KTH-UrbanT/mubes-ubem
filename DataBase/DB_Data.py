@@ -106,7 +106,7 @@ GeomElement = \
   'ShadingIdKey' : 'vaggid',
   'BuildingIdKey' : 'byggnadsid',
   'VertexKey':'geometries',
-  'MaxShadingDist': 300,
+  'MaxShadingDist': 00,
   }
 #this dict gives information on occupancy times each day. If DCV = True, the airflow will follow the number of person
 # and the schedule. if not it will be based only on the extra airflow rate but without schedule (all the time)
@@ -167,7 +167,7 @@ VentSyst = \
 
 #this dict defines the acceptable limits for the element precised as well as the swedish key for the DataBase
 DBLimits = \
-{'surface_key': 'EgenAtemp',                   'surface_lim':      [0, 10000],
+{'surface_key': 'EgenAtemp',                   'surface_lim':      [0, 50000],
  'nbfloor_key': 'EgenAntalPlan',               'nbfloor_lim':      [0, 100],
  'nbBasefloor_key': 'EgenAntalKallarplan',     'nbBasefloor_lim':  [0, 4],
  'year_key': 'EgenNybyggAr',                   'year_lim':         [0, 2022],
@@ -190,7 +190,9 @@ EPCMeters = \
     'GSHPHeating_key' : 'EgiPumpMarkUPPV',          'GSHPHeatingCOP' : 3,
     'EASHPHeating_key' : 'EgiPumpFranluftUPPV',     'EASHPHeatingCOP' : 2,
     'AASHPHeating_key' : 'EgiPumpLuftLuftUPPV',     'AASHPHeatingCOP' : 2.5,
-    'AWSHPHeating_key' : 'EgiPumpLuftVattenUPPV',   'AWSHPHeatingCOP' : 3,
+    'DistrictHeating_key' : 'EgiFjarrvarmeUPPV',    'DistrictHeatingCOP' : 1,
+    'ElecAirHeating_key' : 'EgiElLuftUPPV',         'ElecAirHeatingCOP' : 1,
+    'AWSHPHeating_key' : 'EgiPumpLuftVattenUPPV',   'AWSHPHeatingCOP' : 3.1,
    },
   'DHW' :
    {'OilHeating_key' : 'EgiOljaVV',                 'OilHeatingCOP' : 0.85,
@@ -199,6 +201,8 @@ EPCMeters = \
     'PelletHeating_key' : 'EgiFlisVV',              'PelletHeatingCOP' : 0.75,
     'BioFuelHeating_key' : 'EgiOvrBiobransleVV',    'BioFuelHeatingCOP' : 0.75,
     'ElecHeating_key' : 'EgiElVV',                  'ElecHeatingCOP' : 1,
+    'DistrictHeating_key' : 'EgiFjarrvarmeVV',      'DistrictHeatingCOP' : 1,
+
    },
   'Cooling':
    {'DistCooling_key': 'EgiFjarrkyla',              'DistCoolingCOP' : 1,

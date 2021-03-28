@@ -93,17 +93,23 @@ class Building:
         self.getBEData(BE)
         self.getSimData(SD)
         self.name = name
+        self.BuildID = self.getBuildID(DB, GE,LogFile)
+        self.Multipolygon = self.getMultipolygon(DB)
         self.RefCoord = self.getRefCoord(DB)
         self.nbfloor = self.getnbfloor(DB, DBL)
         self.nbBasefloor = self.getnbBasefloor(DB, DBL)
-        self.footprint = self.getfootprint(DB,LogFile)
-        self.ATemp = self.getsurface(DB, DBL)
+        self.footprint,  self.BlocHeight, self.BlocNbFloor = self.getfootprint(DB,LogFile,self.RefCoord,self.nbfloor)
+        self.ATemp = self.getsurface(DB, DBL,LogFile)
+        self.SharedBld, self.VolumeCorRatio = self.IsSameFormularIdBuilding(Buildingsfile, nbcase, LogFile, DBL)
+        self.BlocHeight, self.BlocNbFloor, self.StoreyHeigth = self.EvenFloorCorrection(self.BlocHeight, self.nbfloor, self.BlocNbFloor, self.footprint, LogFile)
         self.year = self.getyear(DB, DBL)
-        self.EPCMeters = self.getEPCMeters(DB,EPC)
+        self.EPCMeters = self.getEPCMeters(DB,EPC,LogFile)
+        if len(self.SharedBld)>0:
+            self.CheckAndCorrEPCs(Buildingsfile,LogFile,nbcase,EPC)
         self.nbAppartments = self.getnbAppartments(DB, DBL)
         self.height = self.getheight(DB, DBL)
         self.MaxShadingDist = GE['MaxShadingDist']
-        self.shades = self.getshade(DB,Shadingsfile,Buildingsfile,GE)
+        self.shades = self.getshade(DB,Shadingsfile,Buildingsfile,GE,LogFile)
         self.VentSyst = self.getVentSyst(DB)
         self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB,DBL, BE)
         self.OccupType = self.getOccupType(DB)
@@ -113,7 +119,7 @@ class Building:
         self.WeatherDataFile = DB_Data.WeatherFile['Loc']
         self.InternalMass = DB_Data.InternalMass
         self.IntLoad = self.getIntLoad(MainPath)
-        self.BuildID = self.getBuildID(DB,GE)
+
 
         #if there are no cooling comsumption, lets considerer a set point at 50deg max
         for key in self.EPCMeters['Cooling']:
@@ -121,6 +127,82 @@ class Building:
                 self.setTempUpL = BE['setTempUpL']
             else:
                 self.setTempUpL = 50
+
+    def CheckAndCorrEPCs(self,Buildingsfile,LogFile,nbcase,EPC):
+        totHeat = []
+        tocheck = [nbcase]+self.SharedBld
+        for share in tocheck:
+            val = 0
+            Meas = self.getEPCMeters(Buildingsfile[share],EPC,[])
+            for key in Meas['Heating'].keys():
+                val += Meas['Heating'][key]
+            totHeat.append(val)
+        # correction on the ATemp if it is the same on all (should be)
+        HeatDiff = [totHeat[idx + 1] - A for idx, A in enumerate(totHeat[:-1])]
+        if all(v == 0 for v in HeatDiff):
+            newval = 0
+            for keyType in self.EPCMeters.keys():
+                for key in self.EPCMeters[keyType].keys():
+                    try:
+                        self.EPCMeters[keyType][key] *= self.VolumeCorRatio
+                    except:
+                        pass
+                    if 'Heating' == keyType:
+                        newval += self.EPCMeters['Heating'][key]
+            try:
+                LogFile.write('[EPCs correction] The EPCs total heat needs for the each shared buildings is :'+str(totHeat)+'\n')
+                LogFile.write('[EPCs correction] All EPCs metrix will be modified by the Volume ratio as for ATemp\n')
+                LogFile.write('[EPCs correction] For example, the Heat needs is corrected from : '+ str(totHeat[0])+ ' to : '+ str(newval)+'\n')
+            except:
+                pass
+
+    def IsSameFormularIdBuilding(self,Buildingsfile,nbcase,LogFile,DBL):
+        SharedBld = []
+        VolumeCorRatio = 1
+        Correction = False
+        for nb,Build in enumerate(Buildingsfile):
+            try:
+                if Build.properties['FormularId'] == self.BuildID['FormularId'] and nb != nbcase:
+                    SharedBld.append(nb)
+                    Correction = True
+            except:
+                pass
+        maxHeight=[max(self.BlocHeight)]
+        floors = [self.nbfloor]
+        ATemp = [self.ATemp]
+        Volume = [sum([Polygon(foot).area * self.BlocHeight[idx] for idx,foot in enumerate(self.footprint)])]
+        for nb in SharedBld:
+            ATemp.append(self.getsurface(Buildingsfile[nb], DBL,[]))
+            BldRefCoord = self.getRefCoord(Buildingsfile[nb])
+            floors.append(self.getnbfloor(Buildingsfile[nb],DBL))
+            Bldfootprint,  BldBlocHeight, BldBlocNbFloor = self.getfootprint(Buildingsfile[nb],[],BldRefCoord,floors[-1])
+            maxHeight.append(max(BldBlocHeight))
+            Volume.append(sum([Polygon(foot).area * BldBlocHeight[idx] for idx,foot in enumerate(Bldfootprint)]))
+        if Correction:
+            #some correction is needed on the nb of floor because a higher one, with the same FormularId is higher
+            newfloor = int(floors[maxHeight.index(max(maxHeight))] / (max(maxHeight) / maxHeight[0]))
+            try:
+                LogFile.write('[Shared EPC] Buildings are found with same FormularId: '+str(SharedBld)+'\n')
+                LogFile.write('[Nb Floor Cor] The nb of floors will be corrected by the height ratio of this building with the highests one with same FormularId\n')
+                LogFile.write('[Nb Floor Cor] nb of floors is thus corrected from : '+ str(self.nbfloor)+ ' to : '+ str(newfloor)+'\n')
+            except:
+                pass
+            self.nbfloor = newfloor
+            #correction on the ATemp if it is the same on all (should be)
+            Adiff = [ATemp[idx+1]-A for idx,A in enumerate(ATemp[:-1])]
+            if all(v == 0 for v in Adiff):
+                VolumeCorRatio = Volume[0] / sum(Volume)
+                newATemp = self.ATemp * VolumeCorRatio
+                try:
+                    LogFile.write(
+                        '[ATemp Cor] The ATemp will also be modified by the volume ratio of this building over the volume sum of all concerned building \n')
+                    LogFile.write(
+                        '[ATemp Cor] The ATemp is thus corrected from : '+ str(self.ATemp)+ ' to : '+ str(newATemp)+'\n')
+                except:
+                    pass
+                self.ATemp  = newATemp
+        return SharedBld, VolumeCorRatio
+
 
     def getBEData(self,BE):
         for key in BE.keys():
@@ -130,16 +212,27 @@ class Building:
         for key in SD.keys():
             setattr(self, key, SD[key])
 
-    def getBuildID(self,DB,GE):
+    def getBuildID(self,DB,GE,LogFile):
         BuildID={}
         for key in GE['BuildIDKey']:
             try:
                 BuildID[key] = DB.properties[key]
             except:
                 BuildID[key] = None
+        try:
+            LogFile.write('[Bld ID] 50A_UUID : ' + str(BuildID['50A_UUID']) + '\n')
+            LogFile.write('[Bld ID] FormularId : ' + str(BuildID['FormularId']) + '\n')
+        except:
+            pass
         return BuildID
 
-
+    def getMultipolygon(self,DB):
+        test = DB.geometry.coordinates[0][0][0]
+        if type(test) is list:
+            Multipolygon = True
+        else:
+            Multipolygon = False
+        return Multipolygon
 
     def getRefCoord(self,DB):
         "get the reference coodinates for visualisation afterward"
@@ -149,22 +242,19 @@ class Building:
             centroide = [list(Polygon(DB.geometry.coordinates[i][0]).centroid.coords) for i in range(len(DB.geometry.coordinates))]
             x = sum([centroide[i][0][0] for i in range(len(centroide))])/len(centroide)
             y = sum([centroide[i][0][1] for i in range(len(centroide))])/len(centroide)
-            self.Multipolygon = True
         else:
             centroide = list(Polygon(DB.geometry.coordinates[0]).centroid.coords)
             x = centroide[0][0]
             y = centroide[0][1]
-            self.Multipolygon = False
         ref = (round(x,2), round(y,2))
-        #ref = (676600, 6578000) #this is the ref taken for multi building 3D plot
         return ref
 
-    def getfootprint(self,DB,LogFile):
+    def getfootprint(self,DB,LogFile=[],RefCoord=[],nbfloor=0):
         "get the footprint coordinate and the height of each building bloc"
         coord = []
         node2remove =[]
-        self.BlocHeight = []
-        self.BlocNbFloor = []
+        BlocHeight = []
+        BlocNbFloor = []
         #we first need to check if it is Multipolygon
         if self.Multipolygon:
             #then we append all the floor and roof fottprints into one with associate height
@@ -174,9 +264,9 @@ class Building:
                         polycoor = []
                         for j in poly1[0]:
                             new = (j[0], j[1])
-                            new_coor = []
-                            for ii in range(len(self.RefCoord)):
-                                new_coor.append((new[ii] - self.RefCoord[ii]))
+                            new_coor = new#[]
+                            # for ii in range(len(RefCoord)):
+                            #     new_coor.append((new[ii] - RefCoord[ii]))
                             polycoor.append(tuple(new_coor))
                         if polycoor[0]==polycoor[-1]:
                             polycoor = polycoor[:-1]
@@ -184,7 +274,7 @@ class Building:
                         node2remove.append(node)
                         #polycoor.reverse()
                         coord.append(polycoor)
-                        self.BlocHeight.append(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]))
+                        BlocHeight.append(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]))
             #this following line are here to highlight holes in footprint and split it into two blocs...
             #it may appear some errors for other building with several blocs and some with holes (these cases havn't been checked)
             poly2merge = []
@@ -198,37 +288,12 @@ class Building:
                 coord[idx[0]] = [(xs[nbv],ys[nbv]) for nbv in range(len(xs))]
                 xs,ys,zs = zip(*list(new_surfaces[1]))
                 coord[idx[1]] = [(xs[nbv],ys[nbv]) for nbv in range(len(xs))]
-                self.BlocHeight[idx[1]] = self.BlocHeight[idx[0]]
+                BlocHeight[idx[1]] = BlocHeight[idx[0]]
                 try:
-                    LogFile.write('There is hole that will split in two blocs the main surface \n')
+                    LogFile.write('[Geom Cor] There is a hole that will split the main surface in two blocs \n')
                 except:
                     pass
-
-            #we compute a storey height as well to choosen the one that correspond to the highest part of the building afterward
-            self.StoreyHeigth = 3
-            storeyRatio = self.StoreyHeigth/(max(self.BlocHeight)/self.nbfloor) if (max(self.BlocHeight)/self.nbfloor)>0.5 else 1
-            try:
-                LogFile.write('The max bloc height is : '+str(round(max(self.BlocHeight),2))+' for '+str(self.nbfloor)+' floors declared in the EPC \n')
-                LogFile.write('A ratio of '+ str(storeyRatio)+' will be applied on each bloc height\n')
-            except:
-                pass
-            for height in range(len(self.BlocHeight)):
-                self.BlocHeight[height] *= storeyRatio
-            for idx,Height in enumerate(self.BlocHeight):
-                val = int(round(Height, 1) / self.StoreyHeigth)
-                self.BlocNbFloor.append(max(1,val))#the height is ed to the closest 10cm
-                self.BlocHeight[idx] = self.BlocNbFloor[-1]*self.StoreyHeigth
-                try:
-                    LogFile.write('Bloc height : '+str(self.BlocHeight[idx])+' with '+str( self.BlocNbFloor[-1])+' nb of floors\n')
-                    LogFile.write('This bloc has a footprint with : ' + str(len(coord[idx]))+' vertexes\n')
-                except:
-                    pass
-                if val==0:
-                    try:
-                        LogFile.write('/!\ This bloc as a height below 3m, it has been raized to 3m to enable construction /!\ \n')
-                    except:
-                        pass
-            #we need to clean the foot print from the node2 remove but not if there are part of another bloc
+            #we need to clean the foot print from the node2remove but not if there are part of another bloc
             newbloccoor= []
             for idx,coor in enumerate(coord):
                 newcoor = []
@@ -251,12 +316,43 @@ class Building:
             #old fashion of making thing with the very first 2D file
             for j in DB.geometry.coordinates[0]:
                 new = (j[0], j[1])
-                new_coor = []
-                for ii in range(len(self.RefCoord)):
-                    new_coor.append((new[ii] - self.RefCoord[ii]))
+                new_coor = new#[]
+                # for ii in range(len(self.RefCoord)):
+                #     new_coor.append((new[ii] - self.RefCoord[ii]))
                 coord.append(tuple(new_coor))
-                self.BlocNbFloor.append(self.nbfloor)
-        return coord
+                BlocNbFloor.append(nbfloor)
+        return coord, BlocHeight, BlocNbFloor
+
+    def EvenFloorCorrection(self,BlocHeight,nbfloor,BlocNbFloor,coord,LogFile):
+        # we compute a storey height as well to choosen the one that correspond to the highest part of the building afterward
+        StoreyHeigth = 3
+        storeyRatio = StoreyHeigth / (max(BlocHeight) / nbfloor) if (max(BlocHeight) / nbfloor) > 0.5 else 1
+        try:
+            LogFile.write('[Geom Info] The max bloc height is : ' + str(round(max(BlocHeight), 2)) + ' for ' + str(
+                nbfloor) + ' floors declared in the EPC \n')
+            LogFile.write('[Geom Cor] A ratio of ' + str(storeyRatio) + ' will be applied on each bloc height\n')
+        except:
+            pass
+        for height in range(len(BlocHeight)):
+            BlocHeight[height] *= storeyRatio
+        for idx, Height in enumerate(BlocHeight):
+            val = int(round(Height, 1) / StoreyHeigth)
+            BlocNbFloor.append(max(1, val))  # the height is ed to the closest 10cm
+            BlocHeight[idx] = BlocNbFloor[-1] * StoreyHeigth
+            try:
+                LogFile.write(
+                    '[Geom Info] Bloc height : ' + str(BlocHeight[idx]) + ' with ' + str(BlocNbFloor[-1]) + ' nb of floors\n')
+                LogFile.write('[Geom Info] This bloc has a footprint with : ' + str(len(coord[idx])) + ' vertexes\n')
+            except:
+                pass
+            if val == 0:
+                try:
+                    LogFile.write(
+                        '[WARNING] /!\ This bloc as a height below 3m, it has been raized to 3m to enable construction /!\ \n')
+                except:
+                    pass
+        return BlocHeight, BlocNbFloor, StoreyHeigth
+
 
     def getEPHeatedArea(self,LogFile):
         "get the heated area based on the footprint and the number of floors"
@@ -267,8 +363,8 @@ class Building:
                 EPHeatedArea += Polygon(foot).area*self.BlocNbFloor[i]
                 self.BlocFootprintArea.append(Polygon(foot).area)
             try:
-                LogFile.write('Blocs footprint areas : '+ str(self.BlocFootprintArea)+'\n')
-                LogFile.write('The total heated area is : ' + str(EPHeatedArea)+' for a declared ATemp of : '+str(self.ATemp)+' --> discreapency of : '+str(round((self.ATemp-EPHeatedArea)/self.ATemp*100,2))+'\n')
+                LogFile.write('[Geom Info] Blocs footprint areas : '+ str(self.BlocFootprintArea)+'\n')
+                LogFile.write('[Geom Info] The total heated area is : ' + str(EPHeatedArea)+' for a declared ATemp of : '+str(self.ATemp)+' --> discrepancy of : '+str(round((self.ATemp-EPHeatedArea)/self.ATemp*100,2))+'\n')
             except:
                 pass
         else:
@@ -276,12 +372,18 @@ class Building:
             self.BlocFootprintArea.append(Polygon(self.footprint).area)
         return EPHeatedArea
 
-    def getsurface(self,DB, DBL):
+    def getsurface(self,DB, DBL,LogFile):
         "Get the surface from the input file, ATemp"
         try:
             ATemp = int(DB.properties[DBL['surface_key'] ])
+            if self.BuildID['50A_UUID']=='e653799c-c19c-4ab8-a110-836b5ec1253c':
+                ATemp /= 100
+                try:
+                    LogFile.write('[WARNING] This buildings ATemp is divided by 100\n')
+                except:
+                    pass
         except:
-            ATemp = 100
+            ATemp = 0
         ATemp = checkLim(ATemp,DBL['surface_lim'][0],DBL['surface_lim'][1])
         return ATemp
 
@@ -322,16 +424,24 @@ class Building:
         year = checkLim(year,DBL['year_lim'][0],DBL['year_lim'][1])
         return year
 
-    def getEPCMeters(self,DB,EPC):
+    def getEPCMeters(self,DB,EPC,LogFile):
         "Get the EPC meters values"
         Meters = {}
+        if self.BuildID['50A_UUID'] == 'e653799c-c19c-4ab8-a110-836b5ec1253c':
+            cor = 100
+            try:
+                LogFile.write('[WARNING] This buildings EPCs is divided by 100\n')
+            except:
+                pass
+        else:
+            cor = 1
         for key1 in EPC:
             Meters[key1] = {}
             for key2 in EPC[key1]:
                 if '_key' in key2:
                     try:
                         Meters[key1][key2[:-4]] = DB.properties[EPC[key1][key2]]
-                        Meters[key1][key2[:-4]] = int(DB.properties[EPC[key1][key2]])*EPC[key1][key2[:-4]+'COP']
+                        Meters[key1][key2[:-4]] = int(DB.properties[EPC[key1][key2]])*EPC[key1][key2[:-4]+'COP']/cor
                     except:
                         pass
         return Meters
@@ -354,11 +464,11 @@ class Building:
         height = checkLim(height,DBL['height_lim'][0],DBL['height_lim'][1])
         return height
 
-    def getshade(self, DB,Shadingsfile,Buildingsfile,GE):
+    def getshade(self, DB,Shadingsfile,Buildingsfile,GE,LogFile):
         "Get all the shading surfaces to be build for surrounding building effect"
         shades = {}
         shadesID = DB.properties[GE['ShadingIdKey']]
-        ref = self.RefCoord
+        ref = (0,0) #self.RefCoord
         idlist = [-1]
         for m in re.finditer(';', shadesID):
             idlist.append(m.start())
@@ -370,10 +480,8 @@ class Building:
             ShadeWall = findWallId(wallId, Shadingsfile, ref, GE)
             if not 'height' in ShadeWall.keys():
                 ShadeWall['height'] = findBuildId(ShadeWall[GE['BuildingIdKey']], Buildingsfile,GE)
-
-
-            meanPx = ShadeWall[GE['VertexKey']][0][0] + ShadeWall[GE['VertexKey']][1][0]
-            meanPy = ShadeWall[GE['VertexKey']][0][1] + ShadeWall[GE['VertexKey']][1][1]
+            meanPx = (ShadeWall[GE['VertexKey']][0][0] + ShadeWall[GE['VertexKey']][1][0])/2
+            meanPy = (ShadeWall[GE['VertexKey']][0][1] + ShadeWall[GE['VertexKey']][1][1])/2
             coordx = []
             coordy = []
             if self.Multipolygon:
@@ -390,12 +498,16 @@ class Building:
                 AgregFootprint.append((coordx[i],coordy[i]))
             #check if some shadingssurfaces are too closeto the building
             if ShadeWall[GE['VertexKey']][0] in AgregFootprint and ShadeWall[GE['VertexKey']][1] in AgregFootprint:
-                print('Avoid one shade : '+ ShadeWall[GE['ShadingIdKey']])
+                try:
+                    LogFile.write(
+                        '[Shading Removed] This Shading wall is ON the building (same vertexes), shading Id : '+ ShadeWall[GE['ShadingIdKey']]+'\n')
+                except:
+                    pass
+                print('[Shading Info] This Shading wall is ON the building (same vertexes), shading Id : '+ ShadeWall[GE['ShadingIdKey']])
                 break
-            coordx = sum(coordx) / len(self.footprint)
-            coordy = sum(coordy) / len(self.footprint)
-            dist = (abs(meanPx - coordx) ** 2 + abs(meanPy - coordy) ** 2) ** 0.5
-
+            Meancoordx = sum(coordx) / len(coordx)
+            Meancoordy = sum(coordy) / len(coordx)
+            dist = (abs(meanPx - Meancoordx) ** 2 + abs(meanPy - Meancoordy) ** 2) ** 0.5
             # shading facade are taken into account only of closer than 200m
             if dist <= self.MaxShadingDist:
                 try:
@@ -406,6 +518,12 @@ class Building:
                 test = Polygon2D(ShadeWall[GE['VertexKey']]).edges_length
                 if test[0]<0.1:
                     keepit = False
+                    try:
+                        LogFile.write(
+                            '[Shading Removed] This Shading wall is shorter than 0.1m, shading Id : ' +
+                            ShadeWall[GE['ShadingIdKey']] + '\n')
+                    except:
+                        pass
                     print('Avoid one shade : '+ ShadeWall[GE['ShadingIdKey']])
                 if keepit:
                     shades[wallId] = {}
@@ -458,12 +576,12 @@ class Building:
         try :
             for x in self.EPCMeters['ElecLoad']:
                 if self.EPCMeters['ElecLoad'][x]:
-                    eleval += self.EPCMeters['ElecLoad'][x]*1000 #division by number of hours to convert Wh into W
+                    eleval += self.EPCMeters['ElecLoad'][x]*1000 #to convert kW in W
         except:
             pass
         if eleval>0:
             if 'Cste' in type:
-                IntLoad = eleval/self.EPHeatedArea/8760 #this value is thus in W/m2
+                IntLoad = eleval/self.EPHeatedArea/8760 #this value is thus in W/m2 #division by number of hours to convert Wh into W
             if 'winter' in type:
                 IntLoad = os.path.join(Input_path, self.name + '_winter.txt')
                 ProbGenerator.SigmoFile('winter', self.IntLoadCurveShape, eleval/self.EPHeatedArea * 100, IntLoad) #the *100 is because we have considered 100m2 for the previous file

@@ -26,7 +26,7 @@ def getOutputList(path,idf):
                 OutputsVar['Var'].append(var2add)
     return OutputsVar
 
-def AddOutputs(idf,path):
+def AddOutputs(idf,path,MeanTempName,TotPowerName):
 
     OutputsVar = getOutputList(path,idf)
     #we shall start by removing all predclared outputes from the template
@@ -45,7 +45,8 @@ def AddOutputs(idf,path):
             Reporting_Frequency=OutputsVar['Reportedfrequency'],
         )
     zonelist = getHeatedZones(idf)
-    #setEMS4MeanTemp(idf, zonelist, OutputsVar['Reportedfrequency'])
+    setEMS4MeanTemp(idf, zonelist, OutputsVar['Reportedfrequency'],MeanTempName)
+    setEMS4TotHeatPow(idf, zonelist, OutputsVar['Reportedfrequency'], TotPowerName)
     return idf
 
 def getHeatedZones(idf):
@@ -57,14 +58,14 @@ def getHeatedZones(idf):
             zoneName.append(zone.Name)
     return zoneName
 
-def setEMS4MeanTemp(idf,zonelist,Freq):
+def setEMS4MeanTemp(idf,zonelist,Freq,name):
     #lets create the temperature sensors for each zones and catch their volume
     for idx,zone in enumerate(zonelist):
         idf.newidfobject(
             'ENERGYMANAGEMENTSYSTEM:SENSOR',
             Name = 'T'+str(idx),
             OutputVariable_or_OutputMeter_Index_Key_Name = zone,
-            OutputVariable_or_OutputMeter_Name = 'Zone Mean Air Temperature'
+            OutputVariable_or_OutputMeter_Name = 'Zone Mean Air Temperature',
             )
         idf.newidfobject(
             'ENERGYMANAGEMENTSYSTEM:INTERNALVARIABLE',
@@ -87,7 +88,7 @@ def setEMS4MeanTemp(idf,zonelist,Freq):
     #lets create the EMS Output Variable
     idf.newidfobject(
         'ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE',
-        Name='Weighted Average Heated Zone Air Temperature',
+        Name=name,
         EMS_Variable_Name='AverageBuildingTemp' ,
         Type_of_Data_in_Variable='Averaged',
         Update_Frequency = 'ZoneTimeStep'
@@ -117,13 +118,69 @@ def setEMS4MeanTemp(idf,zonelist,Freq):
     #lets create now the final outputs
     idf.newidfobject(
         'OUTPUT:VARIABLE',
-        Variable_Name='Weighted Average Heated Zone Air Temperature',
+        Variable_Name=name,
+        Reporting_Frequency=Freq,
+    )
+
+def setEMS4TotHeatPow(idf,zonelist,Freq,name):
+    #lets create the temperature sensors for each zones and catch their volume
+    for idx,zone in enumerate(zonelist):
+        idf.newidfobject(
+            'ENERGYMANAGEMENTSYSTEM:SENSOR',
+            Name = 'Pow'+str(idx),
+            OutputVariable_or_OutputMeter_Index_Key_Name = zone+' IDEAL LOADS AIR SYSTEM',
+            OutputVariable_or_OutputMeter_Name = 'Zone Ideal Loads Supply Air Total Heating Rate'
+            )
+
+    #lets create the prgm collingManager
+    idf.newidfobject(
+        'ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER',
+        Name='Compute Total Building Heat Pow',
+        EnergyPlus_Model_Calling_Point='EndOfZoneTimestepBeforeZoneReporting' ,
+        Program_Name_1='TotZonePow'
+    )
+    #lets create the global Variable
+    idf.newidfobject(
+        'ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE',
+        Erl_Variable_1_Name='TotBuildPow' ,
+    )
+    #lets create the EMS Output Variable
+    idf.newidfobject(
+        'ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE',
+        Name=name,
+        EMS_Variable_Name='TotBuildPow' ,
+        Type_of_Data_in_Variable='Averaged',
+        Update_Frequency = 'ZoneTimeStep'
+    )
+    #lets create the program
+    listofPow = ['Pow'+str(i) for i in range(len(zonelist))]
+    SumNumerator = ''
+    for idx,Pow in enumerate(listofPow):
+        SumNumerator = SumNumerator+Pow+'+'
+    idf.newidfobject(
+        'ENERGYMANAGEMENTSYSTEM:PROGRAM',
+        Name='TotZonePow',
+        Program_Line_1='SET TotBuildPow = '+ SumNumerator[:-1],
+    )
+    #to uncomment if the EMS is not created before for the mean air tempeatrue
+    # #lets create now the ouputs of this EMS
+    # idf.newidfobject(
+    #     'OUTPUT:ENERGYMANAGEMENTSYSTEM',
+    #     Actuator_Availability_Dictionary_Reporting='Verbose',
+    #     EMS_Runtime_Language_Debug_Output_Level='Verbose',
+    #     Internal_Variable_Availability_Dictionary_Reporting='Verbose',
+    # )
+
+    #lets create now the final outputs
+    idf.newidfobject(
+        'OUTPUT:VARIABLE',
+        Variable_Name=name,
         Reporting_Frequency=Freq,
     )
 
 def Read_OutputsEso(CaseName,ZoneOutput):
     #visualization of the results
-    eso = esoreader.read_from_path(CaseName+'out.eso')
+    eso = esoreader.read_from_path(CaseName)
     ZoneAgregRes = {}
     BuildAgregRes = {}
     #We agregate results per storey
@@ -215,7 +272,7 @@ def Plot_Outputs(res,idf):
 
 def Read_Outputhtml(CaseName):
     #compairons of surfaces
-    fname = CaseName+'tbl.htm'
+    fname = CaseName
     filehandle = open(fname, 'r',encoding='latin-1').read() # get a file handle to the html file
     htables = readhtml.titletable(filehandle)
     Res = {}
@@ -224,9 +281,12 @@ def Read_Outputhtml(CaseName):
     # Res['EPlusNonHeatArea'] = htables[2][1][3][1]
     #Res['EnergyConsKey'] = htables[3][1][0]
     Res['EnergyConsVal'] = htables[3][1][-1]
-    fname = CaseName+'out.end'
+    return Res
+
+def Read_OutputError(CaseName):
+    fname = CaseName
     Endsinfo = open(fname, 'r', encoding='latin-1').read()
-    return Res, Endsinfo
+    Endsinfo
 
 if __name__ == '__main__' :
     print('Set_Outputs Main')

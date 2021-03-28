@@ -10,6 +10,7 @@ sys.path.append(path2addgeom)
 import pygeoj
 import pickle
 import copy
+import shutil
 from SALib.sample import latin
 #add scripts from the project as well
 sys.path.append("..")
@@ -60,9 +61,9 @@ def setZoneLevel(idf,building,MainPath):
     #control command related equipment, loads and leaks for each zones
     Load_and_occupancy.CreateZoneLoadAndCtrl(idf,building,MainPath)
 
-def setOutputLevel(idf,MainPath):
+def setOutputLevel(idf,MainPath,MeanTempName,TotPowerName):
     #ouputs definitions
-    Set_Outputs.AddOutputs(idf,MainPath)
+    Set_Outputs.AddOutputs(idf,MainPath,MeanTempName,TotPowerName)
 
 # def RunProcess(MainPath,epluspath,CPUusage):
 #     file2run = LaunchSim.initiateprocess(MainPath)
@@ -87,35 +88,32 @@ def readPathfile(Pathways):
 
     return keyPath
 
-def LaunchProcess(LogFile,bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns = 1,CPUusage = 1, SepThreads = True, CreateFMU = False):
+def ReadGeoJsonFile(keyPath):
+    Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'], round_factor=4)
+    Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'], round_factor=4)
+    return {'Build' :Buildingsfile, 'Shades': Shadingsfile}
+
+def LaunchProcess(DataBaseInput,LogFile,bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns = 1,CPUusage = 1, SepThreads = True, CreateFMU = False,FigCenter=(0,0)):
 #this main is written for validation of the global workflow. and as an example for other simulation
 #the cases are build in a for loop and then all cases are launched in a multiprocess mode, the maximum %of cpu is given as input
+    Buildingsfile = DataBaseInput['Build']
+    Shadingsfile = DataBaseInput['Shades']
+
+    print('Building ' + str(nbBuild) + ' is starting')
+    try:
+        LogFile.write('Building ' + str(nbBuild) + ' is starting\n')
+    except:
+        pass
     MainPath = os.getcwd()
     epluspath = keyPath['epluspath']
-    Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'],round_factor = 4)
-    Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'],round_factor = 4)
+
 
     SimDir = os.path.join(os.getcwd(), 'RunningFolder')
     if not os.path.exists(SimDir):
         os.mkdir(SimDir)
     elif SepThreads or bldidx==0:
-        for i in os.listdir(SimDir):
-            if os.path.isdir(os.path.join(SimDir,i)):
-                for j in os.listdir(os.path.join(SimDir,i)):
-                    if os.path.isdir(os.path.join(os.path.join(SimDir,i),j)):
-                        for k in os.listdir(os.path.join(os.path.join(SimDir,i),j)):
-                            if os.path.isdir(os.path.join(os.path.join(os.path.join(SimDir,i),j),k)):
-                                for p in os.listdir(os.path.join(os.path.join(os.path.join(SimDir,i),j),k)):
-                                    os.remove(os.path.join(os.path.join(os.path.join(os.path.join(SimDir,i),j),k),p))
-                                os.rmdir(os.path.join(os.path.join(os.path.join(SimDir, i), j), k))
-                            else:
-                                os.remove(os.path.join(os.path.join(os.path.join(SimDir, i), j), k))
-                        os.rmdir(os.path.join(os.path.join(SimDir, i),j))
-                    else:
-                        os.remove(os.path.join(os.path.join(SimDir, i), j))
-                os.rmdir(os.path.join(SimDir,i))
-            else:
-                os.remove(os.path.join(SimDir,i))
+        shutil.rmtree(SimDir)
+        os.mkdir(SimDir)
     os.chdir(SimDir)
 
     #Sampling process if someis define int eh function's arguments
@@ -136,23 +134,29 @@ def LaunchProcess(LogFile,bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],
     StudiedCase = BuildingList()
     #lets build the two main object we'll be playing with in the following'
     idf_ref, building_ref = appendBuildCase(StudiedCase, epluspath, nbcase, Buildingsfile, Shadingsfile, MainPath,LogFile)
-    try:
-        LogFile.write('50A_UUID : ' + str(building_ref.BuildID['50A_UUID']) + '\n')
-        LogFile.write('FormularId : ' + str(building_ref.BuildID['FormularId']) + '\n')
-    except:
-        pass
+    FigCenter.append(building_ref.RefCoord)
+    refx = sum([center[0] for center in FigCenter]) / len(FigCenter)
+    refy = sum([center[1] for center in FigCenter]) / len(FigCenter)
     Var2check = len(building_ref.BlocHeight) if building_ref.Multipolygon else building_ref.height
+    if building_ref.ATemp == 0:
+        Var2check = 0
     if len(building_ref.BlocHeight) > 0 and min(building_ref.BlocHeight) < 1:
         Var2check = 0
-    # if building_ref.EPHeatedArea < 50:
-    #     Var2check = 0
+    if building_ref.EPHeatedArea < 50:
+        Var2check = 0
     if 0 in building_ref.BlocNbFloor:
         Var2check = 0
     if Var2check == 0:
         print(
             'This Building/bloc has either no height, height below 1, surface below 50m2 or no floors, process abort for this one')
         os.chdir(MainPath)
-        return MainPath, epluspath, building_ref.WeatherDataFile
+        try:
+            LogFile.write(
+            '[ERROR] This Building/bloc has either no height, height below 1, surface below 50m2 or no floors, process abort for this one\n')
+            LogFile.write('##############################################################\n')
+        except:
+            pass
+        return MainPath, epluspath, building_ref.WeatherDataFile,(refx, refy)
 
     # change on the building __init__ class in the simulation level should be done here
     setSimLevel(idf_ref, building_ref)
@@ -207,58 +211,46 @@ def LaunchProcess(LogFile,bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],
 
         #just uncomment the line below if some 3D view of the building is wanted. The figure's window will have to be manually closed for the process to continue
         #print(building.BuildID['50A_UUID'])
-        #idf.view_model(test=True)
+        idfViewTest = True
+        FigCentroid = building_ref.RefCoord if idfViewTest else (refx, refy)
+        #idf_ref.view_model(test=idfViewTest, FigCenter=FigCentroid)
 
         #change on the building __init__ class in the zone level should be done here
         setZoneLevel(idf, building,MainPath)
 
-        setOutputLevel(idf,MainPath)
+        MeanTempName = 'Mean Heated Zones Air Temperature'
+        TotPowerName = 'Total Building Heating Power'
+        setOutputLevel(idf,MainPath,MeanTempName,TotPowerName)
+
         if CreateFMU:
             print('Building FMU under process...Please wait around 30sec')
             #get the heated zones first and set them into a zonelist
-            zonelist = Set_Outputs.getHeatedZones(idf)
-            BuildFMUs.CreateZoneList(idf, 'HeatedZones', zonelist)
-            EPVarName = 'Total Building Heat Pow'
-            BuildFMUs.setEMS4TotHeatPow(idf,zonelist,'Hourly')
-            #EPVarName = 'Weighted Average Heated Zone Air Temperature'
-            SetPoints = idf.idfobjects['HVACTEMPLATE:THERMOSTAT']
-            SetPoints[0].Heating_Setpoint_Schedule_Name = 'FMUsAct'
-            SetPoints[0].Constant_Heating_Setpoint = 1
-            VarExchange = \
-                { 'ModelOutputs' : [
-                        {'ZoneKeyIndex' :'EMS',
-                        'EP_varName' : EPVarName,
-                        'FMU_OutputName' : 'HeatingPower',
-                        }
-                                   ],
-                'ModelInputs' : [
-                        {'EPScheduleName' :'FMUsAct',
-                        'FMU_InputName' : 'TempSetPoint',
-                        'InitialValue' : 21,
-                        }
-                                   ],
-            }
-            BuildFMUs.DefineFMUsParameters(idf, building, VarExchange)
+            BuildFMUs.setFMUsINOut(idf, building,TotPowerName)
             idf.saveas('Building_' + str(nbcase) + 'v' + str(i) + '.idf')
             BuildFMUs.buildEplusFMU(epluspath, building_ref.WeatherDataFile, os.path.join(SimDir,'Building_' + str(nbcase) + 'v' + str(i) + '.idf'))
             print('FMU created for this building')
-        else:
-            # saving files and objects
-            idf.saveas('Building_' + str(nbcase) +  'v'+str(i)+'.idf')
-            with open('Building_' + str(nbcase) +  'v'+str(i)+ '.pickle', 'wb') as handle:
-                pickle.dump(Case, handle, protocol=pickle.HIGHEST_PROTOCOL)
-            print('Input IDF file ', i+1, '/', len(Param), ' is done')
             try:
-                LogFile.write('Input IDF file ' + str(i+1)+ '/'  + str(len(Param))+ ' is done\n')
+                LogFile.write('FMU created for this building\n')
                 LogFile.write('##############################################################\n')
             except:
                 pass
+        else:
+            # saving files and objects
+            idf.saveas('Building_' + str(nbcase) +  'v'+str(i)+'.idf')
+        with open('Building_' + str(nbcase) +  'v'+str(i)+ '.pickle', 'wb') as handle:
+            pickle.dump(Case, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        print('Input IDF file ', i+1, '/', len(Param), ' is done')
+        try:
+            LogFile.write('Input IDF file ' + str(i+1)+ '/'  + str(len(Param))+ ' is done\n')
+            LogFile.write('##############################################################\n')
+        except:
+            pass
 
     #RunProcess(MainPath,epluspath,CPUusage)
 
     # lets get back to the Main Folder we were at the very beginning
     os.chdir(MainPath)
-    return MainPath, epluspath, building_ref.WeatherDataFile
+    return MainPath, epluspath, building_ref.WeatherDataFile, (refx, refy)
 
 def SaveCase(MainPath,SepThreads):
     SaveDir = os.path.join(os.path.dirname(MainPath), 'Results')
@@ -267,9 +259,14 @@ def SaveCase(MainPath,SepThreads):
     if SepThreads:
         os.rename(os.path.join(MainPath, 'RunningFolder'),
                   os.path.join(SaveDir, CaseName + '_Build_' + str(nbBuild)))
+        print('Attention, pas validee encore')
+        os.rename(os.path.join(MainPath,CaseName+'_Logs.log'), os.path.join(os.path.join(SaveDir, CaseName + '_Build_' + str(nbBuild)),CaseName+'_Logs.log'))
     else:
         os.rename(os.path.join(os.getcwd(), 'RunningFolder'),
                   os.path.join(os.path.dirname(os.getcwd()), os.path.normcase('Results/' + CaseName)))
+        print('Attention, pas validee encore')
+        os.rename(os.path.join(MainPath, CaseName + '_Logs.log'),
+                  os.path.join(os.path.join(os.path.dirname(os.getcwd()), os.path.normcase('Results/' + CaseName)), CaseName + '_Logs.log'))
 
 if __name__ == '__main__' :
 
@@ -292,8 +289,8 @@ if __name__ == '__main__' :
 #                                       folders (CaseName string + number of the building. False = all input files for all
 #                                       building will be generated first, all results will be saved in one single folder
 
-    CaseName = 'MinnebergwithEMS'
-    BuildNum = [0,1,2,3,4]#[i for i in range(28)]
+    CaseName = 'fmus'
+    BuildNum = [0,1]#[i for i in range(100)]
     VarName2Change = []
     Bounds = []
     NbRuns = 1
@@ -305,7 +302,9 @@ if __name__ == '__main__' :
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
 ######################################################################################################################
-    keyPath = readPathfile('Minneberg25Dv9.txt')
+    keyPath = readPathfile('MinnebergLast.txt')
+    DataBaseInput = ReadGeoJsonFile(keyPath)
+    FigCenter = []
     if logFile:
         if os.path.exists(os.path.join(os.getcwd(), CaseName + '_Logs.log')):
             os.remove(os.path.join(os.getcwd(), CaseName + '_Logs.log'))
@@ -313,25 +312,26 @@ if __name__ == '__main__' :
     else:
         LogFile = False
     for idx,nbBuild in enumerate(BuildNum):
-        print('Building '+str(nbBuild)+' is starting')
-        try:
-            LogFile.write('Building '+str(nbBuild)+' is starting\n')
-        except:
-            pass
-        MainPath , epluspath, weatherpath  = LaunchProcess(LogFile,idx,keyPath,nbBuild,VarName2Change,Bounds,NbRuns,CPUusage,SepThreads,CreateFMU)
-        if SepThreads and not CreateFMU:
-            try:
-                LogFile.close()
-            except:
-                pass
-            file2run = LaunchSim.initiateprocess(MainPath)
-            nbcpu = max(mp.cpu_count()*CPUusage,1)
-            pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
-            for i in range(len(file2run)):
-                pool.apply_async(LaunchSim.runcase, args=(file2run[i], MainPath, epluspath, weatherpath))
-            pool.close()
-            pool.join()
-            SaveCase(MainPath,SepThreads)
+        if idx<len(DataBaseInput['Build']):
+            MainPath , epluspath, weatherpath,NewCentroid = LaunchProcess(DataBaseInput,LogFile,idx,keyPath,nbBuild,VarName2Change,
+                Bounds,NbRuns,CPUusage,SepThreads,CreateFMU,FigCenter)
+            if SepThreads and not CreateFMU:
+                try:
+                    LogFile.close()
+                except:
+                    pass
+                file2run = LaunchSim.initiateprocess(MainPath)
+                nbcpu = max(mp.cpu_count()*CPUusage,1)
+                pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
+                for i in range(len(file2run)):
+                    pool.apply_async(LaunchSim.runcase, args=(file2run[i], MainPath, epluspath, weatherpath))
+                pool.close()
+                pool.join()
+                SaveCase(MainPath,SepThreads)
+        else:
+            print('All buildings in the input file have been treated.')
+            print('###################################################')
+            break
     if not SepThreads and not CreateFMU:
         try:
             LogFile.close()
