@@ -114,7 +114,8 @@ def CreateThermostatFile(idf,name,namesetUp,namesetLo):
         )
     return idf
 
-def ZoneCtrl(idf,zone,building,PeopleDensity,ThermostatName, Multiplier):
+
+def ZoneCtrl(idf,zone,building,PeopleDensity,ThermostatName, Multiplier,Correctdeff):
     #to all zones adding an ideal load element driven by the above thermostat
     #DCV stands for Demand Controlled Ventilation, the airflow is in m#/s/m2 thus divded by 1000 from DB_Data
     idf.newidfobject(
@@ -122,7 +123,7 @@ def ZoneCtrl(idf,zone,building,PeopleDensity,ThermostatName, Multiplier):
         Zone_Name=zone.Name,
         Template_Thermostat_Name=ThermostatName,
         Heat_Recovery_Type='Sensible' if building.VentSyst['BalX'] or building.VentSyst['ExhX'] else 'None',
-        Sensible_Heat_Recovery_Effectiveness= building.AirRecovEff if building.VentSyst['BalX'] or building.VentSyst['ExhX'] else 0,
+        Sensible_Heat_Recovery_Effectiveness= Correctdeff*building.AirRecovEff if building.VentSyst['BalX'] or building.VentSyst['ExhX'] else 0,
         #Design_Specification_Outdoor_Air_Object_Name = AirNode,
         Outdoor_Air_Method='Sum' if PeopleDensity>0 and building.DemandControlledVentilation else 'Flow/Area',
         Outdoor_Air_Flow_Rate_per_Zone_Floor_Area=Multiplier*building.AreaBasedFlowRate/1000 + Multiplier*building.OccupBasedFlowRate/1000*PeopleDensity*(1-building.DemandControlledVentilation),
@@ -217,6 +218,24 @@ def ZoneFreeCooling(idf,zone,building,schedule):
         Delta_Temperature = building.dT_freeCool
     )
     return idf
+
+def getEfficiencyCor(OfficeTypeZone,ZoningMultiplier,building,PeopleDensity):
+    #several assumptions are considered here : if there is two ventilation systems, it means that one if with heatrecovery and not the other one
+    #it also mean that tha heat recoveray is applied to non residential type of areas.
+    #the efficiency of the full zone is thus corrected by the ratio of airflows dedicated to non residential over the total for this floors
+    #this correction factor will be applied to the efficiency of the heat recovery define with th HVAC system aand for wich value by default is given in the DB_Data file : AirRecovEff
+    nbVentSyst = [idx for idx,key in enumerate(building.VentSyst) if building.VentSyst[key]]
+    nbVentSystWithHR = [idx for idx, key in enumerate(building.VentSyst) if building.VentSyst[key]and key[-1] == 'X']
+    if len(nbVentSyst)>1 and len(nbVentSystWithHR)==1:
+        # we need to consider the over whole efficency if there is heat recoveray in the ventilation system and part of the floor it occupied by non residentials type.
+        # we are conservative has only the minimun occupation rate is considered for the airflows
+        OfficeAreaAirFlow = OfficeTypeZone * (
+                    ZoningMultiplier * building.AreaBasedFlowRate / 1000) + ZoningMultiplier * building.OccupBasedFlowRate / 1000 * PeopleDensity
+        TotalAreaAirFlow = ZoningMultiplier * building.AreaBasedFlowRate / 1000 + ZoningMultiplier * building.OccupBasedFlowRate / 1000 * PeopleDensity
+        Correctdeff = OfficeAreaAirFlow / TotalAreaAirFlow
+    else:
+        Correctdeff = 1
+    return Correctdeff
 
 
 def CreateZoneLoadAndCtrl(idf,building,MainPath):
@@ -321,7 +340,7 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
                     pathfile = os.path.join(MainPath,'InputFiles')
                     name = idf.idfname + '.txt' #building.name + 'nbUsers.txt'
                     #from now, random value are taken from 20 to 100% of the people density (the min value id DB_Data is not considered yet)
-                    ProbGenerator.BuildData(name,pathfile,round(FloorArea*min(BlocPeopleDensity[bloc])*100)/100,round(FloorArea*max(BlocPeopleDensity[bloc])*100)/100, building)
+                    ProbGenerator.BuildData(name,pathfile,round(FloorArea*min(BlocPeopleDensity[bloc]),2),round(FloorArea*max(BlocPeopleDensity[bloc]),2), building)
                     # lets create a schedule file for occupant and the associated file
                     create_ScheduleFile(idf, 'OccuSchedule'+str(idx), pathfile+name)   #we should be careful because of varaition with multiproc
                     create_ScheduleFile(idf, 'OffTsetUp' + str(idx), pathfile+'SetPointUp.txt')
@@ -329,15 +348,18 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
                     CreateThermostatFile(idf, 'OfficeZone'+ str(idx),'OffTsetUp' + str(idx),'OffTsetLo' + str(idx))
                 else:
                     ## here is the scedule that define the number of occupant with fixed number of occupants (same all the time but still linked to shedule).
-                    ScheduleCompactOccup(idf, 'OccuSchedule'+str(idx), building, SetPoint= round(FloorArea*max(BlocPeopleDensity[bloc])*100)/100)
-                    OfficeTypeZone = 0 #this just to give the correct thermostat type to the ZoneCtrl function below.
+                    ScheduleCompactOccup(idf, 'OccuSchedule'+str(idx), building, SetPoint= round(FloorArea*max(BlocPeopleDensity[bloc]),2))
             # computation of the zonning level multiplier
             ZoningMultiplier = 1 if building.FloorZoningLevel else building.BlocNbFloor[bloc]
             # Internal load profile could be taken from the number of appartement. see building.IntLoad in DB_Building
             ZoneLoad(idf, zone,'LoadSchedule' if isfile else 'AlwaysON' ,building, isfile, ZoningMultiplier)
             # HVAC equipment for each zone including ventilation systems (exhaust, balanced with or not heat recovery)
-            ThermostatType = 'ResidZone'  if OfficeTypeZone==0 else 'OfficeZone'+ str(idx)
-            ZoneCtrl(idf, zone, building, max(BlocPeopleDensity[bloc]),ThermostatType, ZoningMultiplier)
+            ThermostatType = 'OfficeZone'+ str(idx) if building.OffOccRandom and OfficeTypeZone>0 else 'ResidZone'#  if OfficeTypeZone==0 else
+            #we need to catch some correction on the efficiency, see the function for more details
+            CorrectdEff = getEfficiencyCor(OfficeTypeZone,ZoningMultiplier,building,min(BlocPeopleDensity[bloc]))
+            #now the HVAC system is created for this zone
+            ZoneCtrl(idf, zone, building, max(BlocPeopleDensity[bloc]),ThermostatType, ZoningMultiplier,CorrectdEff)
+            #lets add freecooling to consider that peaopl just open windows when there're too hot !
             ZoneFreeCooling(idf,zone,building,'AlwaysON')
 
 if __name__ == '__main__' :
