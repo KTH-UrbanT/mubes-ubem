@@ -100,7 +100,7 @@ class Building:
         self.BuildID = self.getBuildID(DB, GE,LogFile)
         self.Multipolygon = self.getMultipolygon(DB)
         self.RefCoord = self.getRefCoord(DB)
-        self.nbfloor = self.getnbfloor(DB, DBL)
+        self.nbfloor = self.getnbfloor(DB, DBL,LogFile)
         self.nbBasefloor = self.getnbBasefloor(DB, DBL)
         self.footprint,  self.BlocHeight, self.BlocNbFloor = self.getfootprint(DB,LogFile,self.RefCoord,self.nbfloor)
         self.ATemp = self.getsurface(DB, DBL,LogFile)
@@ -122,7 +122,7 @@ class Building:
         self.Materials = DB_Data.BaseMaterial
         self.WeatherDataFile = DB_Data.WeatherFile['Loc']
         self.InternalMass = DB_Data.InternalMass
-        self.IntLoad = self.getIntLoad(MainPath)
+        self.IntLoad = self.getIntLoad(MainPath,LogFile)
 
 
         #if there are no cooling comsumption, lets considerer a set point at 50deg max
@@ -178,16 +178,16 @@ class Building:
         for nb in SharedBld:
             ATemp.append(self.getsurface(Buildingsfile[nb], DBL,[]))
             BldRefCoord = self.getRefCoord(Buildingsfile[nb])
-            floors.append(self.getnbfloor(Buildingsfile[nb],DBL))
+            floors.append(self.getnbfloor(Buildingsfile[nb],DBL,LogFile))
             Bldfootprint,  BldBlocHeight, BldBlocNbFloor = self.getfootprint(Buildingsfile[nb],[],BldRefCoord,floors[-1])
             maxHeight.append(max(BldBlocHeight))
             Volume.append(sum([Polygon(foot).area * BldBlocHeight[idx] for idx,foot in enumerate(Bldfootprint)]))
         if Correction:
             #some correction is needed on the nb of floor because a higher one, with the same FormularId is higher
-            newfloor = int(floors[maxHeight.index(max(maxHeight))] / (max(maxHeight) / maxHeight[0]))
+            newfloor = max(int(floors[maxHeight.index(max(maxHeight))] / (max(maxHeight) / maxHeight[0])),1)
             msg = '[Shared EPC] Buildings are found with same FormularId: '+str(SharedBld)+'\n'
             GrlFct.Write2LogFile(msg, LogFile)
-            msg = '[Nb Floor Cor] The nb of floors will be corrected by the height ratio of this building with the highests one with same FormularId\n'
+            msg = '[Nb Floor Cor] The nb of floors will be corrected by the height ratio of this building with the highests one with same FormularId (but cannot be lower than 1)\n'
             GrlFct.Write2LogFile(msg, LogFile)
             msg = '[Nb Floor Cor] nb of floors is thus corrected from : '+ str(self.nbfloor)+ ' to : '+ str(newfloor)+'\n'
             GrlFct.Write2LogFile(msg, LogFile)
@@ -274,7 +274,7 @@ class Building:
                         node2remove.append(node)
                         #polycoor.reverse()
                         coord.append(polycoor)
-                        BlocHeight.append(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]))
+                        BlocHeight.append(round(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]),1))
             #this following line are here to highlight holes in footprint and split it into two blocs...
             #it may appear some errors for other building with several blocs and some with holes (these cases havn't been checked)
             poly2merge = []
@@ -282,15 +282,29 @@ class Building:
                 for i in range(len(coord)-idx-1):
                     if SPoly(coor).contains(SPoly(coord[idx+i+1])):
                         poly2merge.append([idx,idx+i+1])
-            for i,idx in enumerate(poly2merge):
-                new_surfaces = break_polygons(Polygon3D(coord[idx[0]]), Polygon3D(coord[idx[1]]))
-                xs,ys,zs = zip(*list(new_surfaces[0]))
-                coord[idx[0]] = [(xs[nbv],ys[nbv]) for nbv in range(len(xs))]
-                xs,ys,zs = zip(*list(new_surfaces[1]))
-                coord[idx[1]] = [(xs[nbv],ys[nbv]) for nbv in range(len(xs))]
-                BlocHeight[idx[1]] = BlocHeight[idx[0]]
-                msg ='[Geom Cor] There is a hole that will split the main surface in two blocs \n'
+            try:
+                for i,idx in enumerate(poly2merge):
+                    new_surfaces = break_polygons(Polygon3D(coord[idx[0]]), Polygon3D(coord[idx[1]]))
+                    xs,ys,zs = zip(*list(new_surfaces[0]))
+                    coord[idx[0]] = [(xs[nbv],ys[nbv]) for nbv in range(len(xs))]
+                    xs,ys,zs = zip(*list(new_surfaces[1]))
+                    coord[idx[1]] = [(xs[nbv],ys[nbv]) for nbv in range(len(xs))]
+                    BlocHeight[idx[1]] = BlocHeight[idx[0]]
+                    msg ='[Geom Cor] There is a hole that will split the main surface in two blocs \n'
+                    GrlFct.Write2LogFile(msg, LogFile)
+            except:
+                msg = '[Poly Error] Some error are present in the polygon parts. Some are identified as being inside others...\n'
+                print(msg[:-1])
                 GrlFct.Write2LogFile(msg, LogFile)
+                import matplotlib.pyplot as plt
+                fig = plt.figure(0)
+                for i in coord:
+                    xs,ys = zip(*i)
+                    plt.plot(xs,ys,'-.')
+                titre = 'FormularId : '+str(DB.properties['FormularId'])+'\n 50A_UUID : '+str(DB.properties['50A_UUID'])
+                # plt.title(titre)
+                # plt.savefig(self.name+ '.png')
+                # plt.close(fig)
 
             #we need to clean the foot print from the node2remove but not if there are part of another bloc
             newbloccoor= []
@@ -325,9 +339,15 @@ class Building:
     def EvenFloorCorrection(self,BlocHeight,nbfloor,BlocNbFloor,coord,LogFile):
         # we compute a storey height as well to choosen the one that correspond to the highest part of the building afterward
         StoreyHeigth = 3
-        storeyRatio = StoreyHeigth / (max(BlocHeight) / nbfloor) if (max(BlocHeight) / nbfloor) > 0.5 else 1
-        msg = '[Geom Info] The max bloc height is : ' + str(round(max(BlocHeight), 2)) + ' for ' + str(
+        if nbfloor !=0:
+            storeyRatio = StoreyHeigth / (max(BlocHeight) / nbfloor) if (max(BlocHeight) / nbfloor) > 0.5 else 1
+            msg = '[Geom Info] The max bloc height is : ' + str(round(max(BlocHeight), 2)) + ' for ' + str(
                 nbfloor) + ' floors declared in the EPC \n'
+        else:
+            nbfloor= round(max(BlocHeight)/StoreyHeigth)
+            storeyRatio = StoreyHeigth / (max(BlocHeight) / nbfloor) if (max(BlocHeight) / nbfloor) > 0.5 else 1
+            msg = '[Geom Info] The max bloc height is : ' + str(round(max(BlocHeight), 2)) + ' for ' + str(
+                nbfloor) + ' floors computed from max bloc height\n'
         GrlFct.Write2LogFile(msg, LogFile)
         msg = '[Geom Cor] A ratio of ' + str(storeyRatio) + ' will be applied on each bloc height\n'
         GrlFct.Write2LogFile(msg, LogFile)
@@ -349,7 +369,6 @@ class Building:
                 except:
                     pass
         return BlocHeight, BlocNbFloor, StoreyHeigth
-
 
     def getEPHeatedArea(self,LogFile):
         "get the heated area based on the footprint and the number of floors"
@@ -377,16 +396,21 @@ class Building:
                 msg = '[WARNING] This buildings ATemp is divided by 100\n'
                 GrlFct.Write2LogFile(msg, LogFile)
         except:
-            ATemp = 0
+            ATemp = 1
+            msg = '[Geom ERROR] Atemp not recognized as number, fixed to 1\n'
+            GrlFct.Write2LogFile(msg, LogFile)
         ATemp = checkLim(ATemp,DBL['surface_lim'][0],DBL['surface_lim'][1])
+        self.ATempOr= ATemp
         return ATemp
 
-    def getnbfloor(self,DB, DBL):
+    def getnbfloor(self,DB, DBL,LogFile):
         "Get the number of floor above ground"
         try:
             nbfloor = int(DB.properties[DBL['nbfloor_key']])
         except:
-            nbfloor = 1
+            nbfloor = 0
+            msg = '[EPCs Warning] The nb of floors is 0. It will be defined using the max bloc height and a storey height of 3m\n'
+            GrlFct.Write2LogFile(msg, LogFile)
         nbfloor = checkLim(nbfloor,DBL['nbfloor_lim'][0],DBL['nbfloor_lim'][1])
         return nbfloor
 
@@ -560,13 +584,14 @@ class Building:
         GrlFct.Write2LogFile(msg, LogFile)
         return OccupType
 
-    def getIntLoad(self, MainPath):
+    def getIntLoad(self, MainPath,LogFile):
         "get the internal load profil or value"
         #we should integrate the loads depending on the number of appartemnent in the building
         type = self.IntLoadType
-        Input_path = os.path.join(MainPath,'InputFiles')
-        #lets used StROBE package by defaults (average over 10 profile
-        IntLoad = os.path.join(Input_path, 'P_Mean_over_10.txt')
+        # Input_path = os.path.join(MainPath,'InputFiles')
+        # #lets used StROBE package by defaults (average over 10 profile
+        # IntLoad = os.path.join(Input_path, 'P_Mean_over_10.txt')
+        IntLoad = self.ElecYearlyLoad/self.EPHeatedArea/8760
         #now we compute power time series in order to match the measures form EPCs
         eleval = 0
         try :
@@ -576,14 +601,23 @@ class Building:
         except:
             pass
         if eleval>0:
-            if 'Cste' in type:
-                IntLoad = eleval/self.EPHeatedArea/8760 #this value is thus in W/m2 #division by number of hours to convert Wh into W
-            if 'winter' in type:
-                IntLoad = os.path.join(Input_path, self.name + '_winter.txt')
-                ProbGenerator.SigmoFile('winter', self.IntLoadCurveShape, eleval/self.EPHeatedArea * 100, IntLoad) #the *100 is because we have considered 100m2 for the previous file
-            if 'summer' in type:
-                IntLoad = os.path.join(Input_path, self.name + '_summer.txt')
-                ProbGenerator.SigmoFile('summer', self.IntLoadCurveShape, eleval / self.EPHeatedArea * 100,IntLoad)  # the *100 is because we have considered 100m2 for the previous file
+            try:
+                if 'Cste' in type:
+                    IntLoad = eleval/self.EPHeatedArea/8760 #this value is thus in W/m2 #division by number of hours to convert Wh into W
+                else:
+                    InputFileDir = os.path.join(os.getcwd(), 'InputFiles')
+                    if not os.path.exists(InputFileDir):
+                        os.mkdir(InputFileDir)
+                    if 'winter' in type:
+                        IntLoad = os.path.join(InputFileDir, self.name + '_winter.txt')
+                        ProbGenerator.SigmoFile('winter', self.IntLoadCurveShape, eleval/self.EPHeatedArea * 100, IntLoad) #the *100 is because we have considered 100m2 for the previous file
+                    if 'summer' in type:
+                        IntLoad = os.path.join(InputFileDir, self.name + '_summer.txt')
+                        ProbGenerator.SigmoFile('summer', self.IntLoadCurveShape, eleval / self.EPHeatedArea * 100,IntLoad)  # the *100 is because we have considered 100m2 for the previous file
+            except:
+                msg = '[Int Load Error] Unable to write the internal load file...\n'
+                print(msg[:-1])
+                GrlFct.Write2LogFile(msg, LogFile)
         return IntLoad
 
 

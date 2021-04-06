@@ -15,7 +15,7 @@ def launchFMUCoSim(work_dir):
   logging_on = False
   time_diff_resolution = 1e-9
   start_time = 0.
-  stop_time = 86400*10.
+  stop_time = 86400*365.
   visible = False
   interactive = False
   stop_time_defined = True
@@ -39,7 +39,7 @@ def launchFMUCoSim(work_dir):
   time = 0.
   step_size = 900.
   x = [0]*len(FMUElement)
-  val = [0]*len(FMUElement)
+  val = [21]*len(FMUElement)
   dt = [0]*len(FMUElement)
   OnFlag = [False]*len(FMUElement)
 
@@ -47,16 +47,12 @@ def launchFMUCoSim(work_dir):
   setPoint = 21
   while ( ( time + step_size ) - stop_time < time_diff_resolution ):
     # Make co-simulation step.
-    #print(sum(x))
-    if sum(x)>1e6:
-      setPoint = 18
-      RedOn = 0
-    elif sum(x)<1e5 and RedOn>3600*24:
-      setPoint += 1
-    setPoint = min(21,setPoint)
-    RedOn += step_size
+    if (time%(3600*2)) ==0:
+      setPoint = [21] * len(x)
+      setPoint[int((time/(2*3600))%len(x))] = 18
+
     for i,key in enumerate(FMUElement.keys()):
-      status = FMUElement[key].setRealValue(Inputkey, setPoint)
+      status = FMUElement[key].setRealValue(Inputkey, setPoint[i])
       assert status == fmipp.fmiOK
       new_step = True
       status =  FMUElement[key].doStep(time, step_size, new_step )
@@ -106,9 +102,9 @@ if __name__ == '__main__' :
     'C:/Users/xav77\Documents\FAURE\prgm_python/UrbanT\Eplus4Mubes\MUBES_UBEM')
 
   work_dir = os.path.normcase(
-    'C:/Users/xav77\Documents\FAURE\prgm_python/UrbanT\Eplus4Mubes\MUBES_UBEM\ModelerFolder\RunningFolder')
+    'C:/Users/xav77\Documents\FAURE\prgm_python/UrbanT\Eplus4Mubes\MUBES_UBEM\Results\MinnebergFMUwith25Wm')
   os.chdir(work_dir)
 
   launchFMUCoSim(work_dir)
-  CleanUpSimRes(work_dir)
-  SaveCase(work_dir,SavedDest)
+  #CleanUpSimRes(work_dir)
+  #SaveCase(work_dir,SavedDest)

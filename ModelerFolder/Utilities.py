@@ -11,6 +11,15 @@ def CountAbovethreshold(Data,threshold):
     #give the length of data above a threshold, for hourly Data, it is number of Hrs above the threshold
     return len([i for i in Data if i > threshold])
 
+def Average(Data,WindNbVal):
+    #make an average
+    NewData =[sum(Data[:WindNbVal])/WindNbVal]
+    for i in range(1,len(Data)):
+        if i%WindNbVal==0:
+            NewData.append(sum(Data[i:i+4])/WindNbVal)
+    return NewData
+
+
 def DailyVal(Data):
     #inputs needs to be hourly value avor a full year (8760 values)
     #give time series in a daily distribution (365 value of 24 hours
@@ -172,13 +181,19 @@ def createSimpleFig():
     return {'fig_name' : fig_name, 'ax0': ax0}
 
 #basic plots
-def plotBasicGraph(fig_name,ax0,varx,vary,varxname,varyname,title,sign):
+def plotBasicGraph(fig_name,ax0,varx,vary,varxname,varyname,title,sign,markersize = 5):
     plt.figure(fig_name)
-    for nb,var in enumerate(vary):
-        ax0.plot(varx,var,sign,label= varyname[nb], mfc='none')
-    ax0.set_xlabel(varxname)
-    ax0.set_ylabel(title)
-    ax0.legend()
+    if len(varyname)>0:
+        for nb,var in enumerate(vary):
+            ax0.plot(varx,var,sign,label= varyname[nb], mfc='none',markersize=markersize)
+        ax0.set_xlabel(varxname)
+        ax0.set_ylabel(title)
+        ax0.legend()
+    else:
+        for nb,var in enumerate(vary):
+            ax0.plot(varx,var,sign, mfc='none',markersize=markersize)
+        ax0.set_xlabel(varxname)
+        ax0.set_ylabel(title)
 
 #this plots variables realtively to their maximum value
 def plotRelative2Max(fig_name,ax0,varx,vary,varxname,varyname):

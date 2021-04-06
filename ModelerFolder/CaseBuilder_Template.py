@@ -112,6 +112,11 @@ def LaunchProcess(DataBaseInput,LogFile,bldidx,keyPath,nbcase,CorePerim = False,
             if 'MaxShadingDist' in var:
                 building.shades = building.getshade(Buildingsfile[nbcase], Shadingsfile, Buildingsfile,DB_Data.GeomElement)
 
+        #lets put all ventilation with heat recovery to True
+        # building.Materials['Window']['UFactor'] = 0.78
+        # building.VentSyst['BalX'] = True
+        # building.VentSyst['ExhX'] = True
+
         ##############################################################
         ##After having made the changes we wanted in the building object, we can continue the construction of the idf (input file for EnergyPLus)
         # change on the building __init__ class in the envelope level should be done here
@@ -120,7 +125,7 @@ def LaunchProcess(DataBaseInput,LogFile,bldidx,keyPath,nbcase,CorePerim = False,
         #print(building.BuildID['50A_UUID'])
         if PlotBuilding:
             FigCentroid = building_ref.RefCoord
-            idf_ref.view_model(test=False, FigCenter=FigCentroid)
+            idf.view_model(test=True, FigCenter=FigCentroid)
 
         #change on the building __init__ class in the zone level should be done here
         GrlFct.setZoneLevel(idf, building,MainPath)
@@ -168,8 +173,14 @@ if __name__ == '__main__' :
 #                                       folders (CaseName string + number of the building. False = all input files for all
 #                                       building will be generated first, all results will be saved in one single folder
 
-    CaseName = 'HammarbyTest1'
-    BuildNum = [i for i in range(100)]
+    with open('Hammarby2Simu4Calib.txt') as f:
+        FileLines = f.readlines()
+    Bld2Sim = []
+    for line in FileLines:
+        Bld2Sim.append(int(line))
+
+    CaseName = 'Ham4Calib'
+    BuildNum = Bld2Sim# [i for i in range(100)]
     VarName2Change = []
     Bounds = []
     NbRuns = 1

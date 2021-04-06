@@ -29,12 +29,12 @@ def setSimLevel(idf,building):
     Sim_param.Location_and_weather(idf,building)
     Sim_param.setSimparam(idf,building)
 
-def setBuildingLevel(idf,building,LogFile,CorePerim = False):
+def setBuildingLevel(idf,building,LogFile,CorePerim = False,ForPlots = False):
     ######################################################################################
     #Building Level
     ######################################################################################
     #this is the function that requires the most time
-    GeomScripts.createBuilding(LogFile,idf,building, perim = CorePerim)
+    GeomScripts.createBuilding(LogFile,idf,building, perim = CorePerim,ForPlots=ForPlots)
 
 
 def setEnvelopeLevel(idf,building):

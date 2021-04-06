@@ -106,7 +106,7 @@ GeomElement = \
   'ShadingIdKey' : 'vaggid',
   'BuildingIdKey' : 'byggnadsid',
   'VertexKey':'geometries',
-  'MaxShadingDist': 00,
+  'MaxShadingDist': 300,
   }
 #this dict gives information on occupancy times each day. If DCV = True, the airflow will follow the number of person
 # and the schedule. if not it will be based only on the extra airflow rate but without schedule (all the time)
@@ -122,6 +122,7 @@ BasisElement = \
  'BasementAirLeak': 1, #in Air change rate [vol/hour]
  'wwr': 0.3,
  'ExternalInsulation' : False,
+  'ElecYearlyLoad' :15, #this is the yearly electrical consumption for appliances and occupancy. It is replace by the values in EPCs if available
  'IntLoadType' : 'winter', #change either by 'Cste', 'winter', or 'summer' for reversed sigmoid or sigmoid this will generate hourly values file in the InputFiles folder
  'IntLoadMultiplier': 1, #this is a multiplier the modeler would like to play with for calibration
  'IntLoadCurveShape':3, #this defines the slop of the curves
@@ -132,7 +133,10 @@ BasisElement = \
  'ACH_freecool' :4,     #this the the vol/hr of extra ventilation when free cooling is on
  'intT_freecool' : 26,  #internal temperature threshold for free coolong (opening windows with fixed ACH)
  'dT_freeCool': 1,      #Tint-Text to authorize free cooling to be turned on
- 'AirRecovEff' : 0.65   #efficiency oif heat recovery from ventilation
+ 'AirRecovEff' : 0.65,   #efficiency oif heat recovery from ventilation
+ 'HVACLimitMode': 'NoLimit',#'LimitCapacity', #can be NoLimit or LimitFlowRate or LimitFlowRateAndCpacity
+ 'HVACPowLimit' : 25,    #in Watt/m2
+
  }
 
 # definition of person/m2...complytely abritrary, but we still need some vaalues
