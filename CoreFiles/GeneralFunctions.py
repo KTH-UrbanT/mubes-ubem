@@ -11,6 +11,7 @@ import CoreFiles.GeomScripts as GeomScripts
 import CoreFiles.Set_Outputs as Set_Outputs
 import CoreFiles.Sim_param as Sim_param
 import CoreFiles.Load_and_occupancy as Load_and_occupancy
+import CoreFiles.DomesticHotWater as DomesticHotWater
 import CoreFiles.MUBES_pygeoj as MUBES_pygeoj
 import CoreFiles.BuildFMUs as BuildFMUs
 from openpyxl import load_workbook
@@ -50,6 +51,11 @@ def setZoneLevel(idf,building,MainPath):
     ######################################################################################
     #control command related equipment, loads and leaks for each zones
     Load_and_occupancy.CreateZoneLoadAndCtrl(idf,building,MainPath)
+
+def setExtraEnergyLoad(idf,Element):
+    if Element:
+        DomesticHotWater.createWaterEqpt(idf,Element)
+
 
 def setOutputLevel(idf,MainPath,MeanTempName,TotPowerName):
     #ouputs definitions

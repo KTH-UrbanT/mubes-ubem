@@ -171,6 +171,22 @@ def createMultilFig(title,nbFig,linked=True):
     plt.title(title)
     return {'fig_name' : fig_name, 'ax': ax}
 
+def createMultilDblFig(title,nbFigx,nbFigy,linked=True):
+    fig_name = plt.figure()
+    gs = gridspec.GridSpec(nbFigx,nbFigy, left=0.1, bottom = 0.1)
+    ax = {}
+    totfig = 0
+    for i in range(nbFigx):
+        for j in range(nbFigy):
+            ax[totfig] = plt.subplot(gs[i, j])
+            ax[totfig].grid()
+            totfig+=1
+            if i>0 and j>0 and linked:
+                ax[i].sharex(ax[0])
+    #plt.tight_layout()
+    plt.title(title)
+    return {'fig_name' : fig_name, 'ax': ax}
+
 #this function enable to create a single graph areas
 def createSimpleFig():
     fig_name = plt.figure()

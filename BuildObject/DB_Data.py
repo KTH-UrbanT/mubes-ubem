@@ -13,7 +13,7 @@ SimuData = \
 
 #ifthe file is from the energy plus weather climate foder, no need to the extension northe full path
 WeatherFile = \
- {'Loc' : "C:\EnergyPlusV9-1-0\WeatherData/SWE_Stockholm.Arlanda.024600_IWEC.epw",#'C:/Users/xav77\Documents\FAURE\WeatherData/Year2018WithIRfromStandard.epw',#
+ {'Loc' : 'C:/Users/xav77\Documents\FAURE\WeatherData/Year2012WithIRfromStandard.epw',#"C:\EnergyPlusV9-1-0\WeatherData/SWE_Stockholm.Arlanda.024600_IWEC.epw",#
   }
 
 #Thisdict gives all the materials characteristics.
@@ -97,6 +97,12 @@ InternalMass = \
     },
   }
 
+ExtraEnergy = \
+    {'Name' : 'DHW',
+    'WatertapsFile':WatertapsFile,
+     'ColdWaterTempFile' :ColdWaterTempFile,
+     'HotWaterSetTemp': 55,
+     }
 
 #this dict is for the shading paradigm. There are two files that we need. the firt one is the main geojson that contains all buildings and their propreties
 #the other one contains for each shading surface id the vertex point and the building Id in order to catch the height of it.
@@ -106,7 +112,7 @@ GeomElement = \
   'ShadingIdKey' : 'vaggid',
   'BuildingIdKey' : 'byggnadsid',
   'VertexKey':'geometries',
-  'MaxShadingDist': 300,
+  'MaxShadingDist': 200,
   }
 #this dict gives information on occupancy times each day. If DCV = True, the airflow will follow the number of person
 # and the schedule. if not it will be based only on the extra airflow rate but without schedule (all the time)

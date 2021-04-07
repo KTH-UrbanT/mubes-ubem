@@ -130,6 +130,11 @@ def LaunchProcess(DataBaseInput,LogFile,bldidx,keyPath,nbcase,CorePerim = False,
         #change on the building __init__ class in the zone level should be done here
         GrlFct.setZoneLevel(idf, building,MainPath)
 
+        #add some extra energy loads like domestic Hot water
+        DHWInfos = {'Name':'DHW', 'WatertapsFile':WatertapsFile, 'ColdWaterTempFile' :ColdWaterTempFile,'HotWaterSetTemp': 55}
+        GrlFct.setExtraEnergyLoad(idf,building.DHWInfos)
+
+
         MeanTempName = 'Mean Heated Zones Air Temperature'
         TotPowerName = 'Total Building Heating Power'
         GrlFct.setOutputLevel(idf,MainPath,MeanTempName,TotPowerName)
