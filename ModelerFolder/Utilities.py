@@ -16,7 +16,7 @@ def Average(Data,WindNbVal):
     NewData =[sum(Data[:WindNbVal])/WindNbVal]
     for i in range(1,len(Data)):
         if i%WindNbVal==0:
-            NewData.append(sum(Data[i:i+4])/WindNbVal)
+            NewData.append(sum(Data[i:i+WindNbVal])/WindNbVal)
     return NewData
 
 
@@ -275,6 +275,9 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
                         idxF = idx2
                     StillSearching = False
                     break
+            if i == len(liste):
+                StillSearching = False
+                idxF = idx1
     else:
         idxF = ['_'+str(BuildNum[0])+'v','.']
     #now that we found this index, lets go along alll the files
@@ -292,7 +295,7 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
                 pass
 
     #lets get the mandatory variables
-    variables=['EP_elec','EP_heat','EP_cool','SimNum','EPC_elec','EPC_Heat','EPC_Cool','EPC_Tot',
+    variables=['EP_Elec','EP_Heat','EP_Cool','EP_DHW','SimNum','EPC_Elec','EPC_Heat','EPC_Cool','EPC_Tot',
                'ATemp','EP_Area','BuildID']
     # lest build the Res dictionnary
     for key in variables:
@@ -315,11 +318,14 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
     #now we aggregate the data into Res dict
     print('organizing data...')
     for i,key in enumerate(ResBld):
-        if key==14:
-            a=1
+        ResDone = True
         Res['SimNum'].append(key)
         #lets first read the attribut of the building object (simulation inputs)
-        BuildObj = ResBld[key]['BuildDB']
+        try:
+            BuildObj = ResBld[key]['BuildDB']
+        except:
+            BuildObj = ResBld[key]['BuildData']
+            ResDone = False
         try:
             Res['BuildID'].append(BuildObj.BuildID)
         except:
@@ -333,7 +339,7 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
         for x in BuildObj.EPCMeters['ElecLoad']:
             if BuildObj.EPCMeters['ElecLoad'][x]:
                 eleval += BuildObj.EPCMeters['ElecLoad'][x]
-        Res['EPC_elec'].append(eleval/BuildObj.ATemp if BuildObj.ATemp!=0 else 0)
+        Res['EPC_Elec'].append(eleval/BuildObj.ATemp if BuildObj.ATemp!=0 else 0)
         heatval = 0
         for x in BuildObj.EPCMeters['Heating']:
             heatval += BuildObj.EPCMeters['Heating'][x]
@@ -344,10 +350,26 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
         Res['EPC_Cool'].append(coolval/BuildObj.ATemp if BuildObj.ATemp!=0 else 0)
         Res['EPC_Tot'].append((eleval+heatval+coolval)/BuildObj.ATemp if BuildObj.ATemp!=0 else 0)
 
-        for key1 in Res:
-            if key1 in ['EP_elec','EP_cool','EP_heat']:
-                idx = 1 if 'EP_elec' in key1 else 4  if 'EP_cool' in key1 else 5 if 'EP_heat' in key1 else None
-                Res[key1].append(ResBld[key]['EnergyConsVal'][idx] / 3.6 / BuildObj.EPHeatedArea * 1000)
+#forthe old way of doing things and the new paradigm for global results
+        try:
+            for key1 in Res:
+                if key1 in ['EP_Elec','EP_Cool','EP_Heat']:
+                    idx = 1 if 'EP_elec' in key1 else 4  if 'EP_cool' in key1 else 5 if 'EP_heat' in key1 else None
+                    Res[key1].append(ResBld[key]['EnergyConsVal'][idx] / 3.6 / BuildObj.EPHeatedArea * 1000)
+        except:
+            if ResDone:
+                for key1 in Res:
+                    if key1 in ['EP_Elec']:
+                        Res[key1].append(ResBld[key]['GlobRes']['Interior Equipment']['Electricity [GJ]'] / 3.6 / BuildObj.EPHeatedArea * 1000)
+                    if key1 in ['EP_Cool']:
+                        Res[key1].append(ResBld[key]['GlobRes']['Cooling']['District Cooling [GJ]'] / 3.6 / BuildObj.EPHeatedArea * 1000)
+                    if key1 in ['EP_Heat']:
+                        Res[key1].append(ResBld[key]['GlobRes']['Heating']['District Heating [GJ]'] / 3.6 / BuildObj.EPHeatedArea * 1000)
+                    if key1 in ['EP_DHW']:
+                        Res[key1].append(ResBld[key]['GlobRes']['Water Systems']['District Heating [GJ]'] / 3.6 / BuildObj.EPHeatedArea * 1000)
+            else:
+                pass
+
 
         #Now lest get the extravariables
         for key1 in extravariables:
@@ -369,3 +391,48 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
             pass
 
     return Res
+
+
+def plotDHWdistrib(Distrib,name,DataQual = []):
+    fig = plt.figure(name)
+    gs = gridspec.GridSpec(24, 1)
+
+    XMAX1 = [0]*len(Distrib)
+    act = ['mean', 'max', 'min', 'std']
+    ope = 'mean'
+    for yr,Dist in enumerate(Distrib):
+        xmax1 = [0] * 24
+        for i in range(24):
+            distrib = [val for id,val in enumerate(Dist[:,i])]
+            xmax1[i] = gener_Plot(gs, distrib, i, 0, name)
+        XMAX1.append(max(xmax1))
+    for i in range(24):
+        ax0 = plt.subplot(gs[i, 0])
+        ax0.set_xlim([0, max(XMAX1)])
+        #plt.title(name)
+        #plt.show()
+
+def gener_Plot(gs,data,i,pos,titre):
+    ax0 = plt.subplot(gs[i, pos])
+    #ax0.hist(data, 50, alpha=0.75)
+    #ax0.set_xlim([0, pos*5+10])
+    pt = np.histogram(data, 50)
+    volFlow = [pt[1][i] + float(j) for i, j in enumerate(np.diff(pt[1]))]
+    #plt.plot(volFlow,pt[0])
+    plt.fill_between(volFlow,0,pt[0],alpha = 0.5)
+    if i==0:
+        plt.title(titre)
+    plt.yticks([0], [str(i)])
+    if pos>0:
+        plt.yticks([0], [''])
+    plt.grid()
+    if i<23:
+        plt.tick_params(
+            axis='x',  # changes apply to the x-axis
+            which='both',  # both major and minor ticks are affected
+            bottom=False,  # ticks along the bottom edge are off
+            top=False,  # ticks along the top edge are off
+            labelbottom=False)  # labels along the bottom edge are off
+    else:
+        plt.xlabel('L/min')#data = np.array(data)
+    return max(volFlow)

@@ -28,6 +28,13 @@ def setSimparam(idf,building):
     #time step
     timestepobj = idf.idfobjects['TIMESTEP'][0]
     timestepobj.Number_of_Timesteps_per_Hour = 4
+
+    # idf.newidfobject(
+    #     'RUNPERIODCONTROL:DAYLIGHTSAVINGTIME',
+    #     Start_Date = 'April 7',
+    #     End_Date = 'October 26',
+    # )
+
     return idf
 
 def Location_and_weather(idf,building):

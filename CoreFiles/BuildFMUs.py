@@ -21,24 +21,42 @@ def setFMUsINOut(idf, building,TotPowerName):
     # BuildFMUs.CreateZoneList(idf, 'HeatedZones', zonelist)
     EPVarName = TotPowerName
     #EPVarName = 'Weighted Average Heated Zone Air Temperature'
+
+    #############################
+    ##This is for Temperature set point, the thermostat schedulle or value is raplced by another schedule value that will be controlled by FMU's input
     SetPoints = idf.idfobjects['HVACTEMPLATE:THERMOSTAT']
-    SetPoints[0].Heating_Setpoint_Schedule_Name = 'FMUsAct'
+    SetPoints[0].Heating_Setpoint_Schedule_Name = 'FMUsActTempSetP'
     SetPoints[0].Constant_Heating_Setpoint = ''
-    # SetPoints[0].Cooling_Setpoint_Schedule_Name = 'CoolingPoint'
-    # SetPoints[0].Constant_Cooling_Setpoint = ''
-    # Load_and_occupancy.ScheduleCompact(idf, 'CoolingPoint', 50)
+    #############################
+    ##Same as above but for the masse flow rate of the domestic hoter water taps (in m3/s)
+    if idf.getobject('WATERUSE:EQUIPMENT',building.DHWInfos['Name']):
+        water_taps = idf.idfobjects['WATERUSE:EQUIPMENT']
+        water_taps[0].Peak_Flow_Rate=1
+        water_taps[0].Flow_Rate_Fraction_Schedule_Name='FMUsActWaterTaps'
     VarExchange = \
          { 'ModelOutputs' : [
                         {'ZoneKeyIndex' :'EMS',
-                        'EP_varName' : EPVarName,
-                        'FMU_OutputName' : 'HeatingPower',
-                        }
+                        'EP_varName' : EPVarName[0],
+                        'FMU_OutputName' : 'MeanBldTemp',
+                        },
+                         {'ZoneKeyIndex': 'EMS',
+                          'EP_varName': EPVarName[1],
+                          'FMU_OutputName': 'HeatingPower',
+                          },
+                         {'ZoneKeyIndex': 'EMS',
+                          'EP_varName': EPVarName[2],
+                          'FMU_OutputName': 'DHWHeat',
+                          }
                                    ],
          'ModelInputs' : [
-                        {'EPScheduleName' :'FMUsAct',
+                        {'EPScheduleName' :'FMUsActTempSetP',
                         'FMU_InputName' : 'TempSetPoint',
                         'InitialValue' : 21,
-                        }
+                        },
+                         {'EPScheduleName': 'FMUsActWaterTaps',
+                          'FMU_InputName': 'WaterTap_m3_s',
+                          'InitialValue': 0,
+                          }
                                    ],
             }
     DefineFMUsParameters(idf, building, VarExchange)
@@ -67,7 +85,7 @@ def DefineFMUsParameters(idf,building,VarExchange):
             )
 
 def buildEplusFMU(epluspath,weatherpath,Filepath):
-    Path2FMUs = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.getcwd()))),os.path.normcase('FMUsKit\EnergyPlusToFMU-v3.1.0\Scripts'))
+    Path2FMUs = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),os.path.normcase('FMUsKit\EnergyPlusToFMU-v3.1.0\Scripts'))
     EpluIddPath = os.path.join(os.path.normcase(epluspath),'Energy+.idd')
     EplusEpwPath = os.path.normcase(weatherpath)
     cmd = ['python',os.path.join(Path2FMUs,'EnergyPlusToFMU.py'),'-i',EpluIddPath,'-w',EplusEpwPath,'-d',Filepath]

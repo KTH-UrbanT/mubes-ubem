@@ -8,7 +8,7 @@ from shapely.geometry import Polygon as SPoly
 from geomeppy import IDF
 from geomeppy.geom import core_perim
 import os
-import DataBase.DB_Data as DB_Data
+import BuildObject.DB_Data as DB_Data
 import re
 import CoreFiles.ProbGenerator as ProbGenerator
 
@@ -94,14 +94,17 @@ class Building:
         GE = DB_Data.GeomElement
         EPC = DB_Data.EPCMeters
         SD = DB_Data.SimuData
+        ExEn = DB_Data.ExtraEnergy
         self.getBEData(BE)
         self.getSimData(SD)
+        self.DHWInfos= self.getExtraEnergy(ExEn,MainPath)
         self.name = name
         self.BuildID = self.getBuildID(DB, GE,LogFile)
         self.Multipolygon = self.getMultipolygon(DB)
         self.RefCoord = self.getRefCoord(DB)
         self.nbfloor = self.getnbfloor(DB, DBL,LogFile)
         self.nbBasefloor = self.getnbBasefloor(DB, DBL)
+        self.height = self.getheight(DB, DBL)
         self.footprint,  self.BlocHeight, self.BlocNbFloor = self.getfootprint(DB,LogFile,self.RefCoord,self.nbfloor)
         self.ATemp = self.getsurface(DB, DBL,LogFile)
         self.SharedBld, self.VolumeCorRatio = self.IsSameFormularIdBuilding(Buildingsfile, nbcase, LogFile, DBL)
@@ -111,7 +114,6 @@ class Building:
         if len(self.SharedBld)>0:
             self.CheckAndCorrEPCs(Buildingsfile,LogFile,nbcase,EPC)
         self.nbAppartments = self.getnbAppartments(DB, DBL)
-        self.height = self.getheight(DB, DBL)
         self.MaxShadingDist = GE['MaxShadingDist']
         self.shades = self.getshade(DB,Shadingsfile,Buildingsfile,GE,LogFile)
         self.VentSyst = self.getVentSyst(DB,LogFile)
@@ -130,7 +132,7 @@ class Building:
             if self.EPCMeters['Cooling'][key]>0:
                 self.setTempUpL = BE['setTempUpL']
             else:
-                self.setTempUpL = 50
+                self.setTempUpL = [50]*len(BE['setTempUpL'])
 
     def CheckAndCorrEPCs(self,Buildingsfile,LogFile,nbcase,EPC):
         totHeat = []
@@ -209,6 +211,19 @@ class Building:
         for key in BE.keys():
             setattr(self, key, BE[key])
 
+    def getExtraEnergy(self,ExEn,MaintPath):
+        output={}
+        for key in ExEn.keys():
+            try:
+                ifFile = os.path.join(os.path.dirname(MaintPath),os.path.normcase(ExEn[key]))
+                if os.path.isfile(ifFile):
+                    output[key] = ifFile
+                else:
+                    output[key] = ExEn[key]
+            except:
+                output[key] = ExEn[key]
+        return output
+
     def getSimData(self,SD):
         for key in SD.keys():
             setattr(self, key, SD[key])
@@ -275,7 +290,7 @@ class Building:
                         #polycoor.reverse()
                         coord.append(polycoor)
                         BlocHeight.append(round(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]),1))
-            #this following line are here to highlight holes in footprint and split it into two blocs...
+            #these following lines are here to highlight holes in footprint and split it into two blocs...
             #it may appear some errors for other building with several blocs and some with holes (these cases havn't been checked)
             poly2merge = []
             for idx, coor in enumerate(coord):
@@ -301,7 +316,7 @@ class Building:
                 for i in coord:
                     xs,ys = zip(*i)
                     plt.plot(xs,ys,'-.')
-                titre = 'FormularId : '+str(DB.properties['FormularId'])+'\n 50A_UUID : '+str(DB.properties['50A_UUID'])
+                #titre = 'FormularId : '+str(DB.properties['FormularId'])+'\n 50A_UUID : '+str(DB.properties['50A_UUID'])
                 # plt.title(titre)
                 # plt.savefig(self.name+ '.png')
                 # plt.close(fig)
@@ -333,7 +348,9 @@ class Building:
                 # for ii in range(len(self.RefCoord)):
                 #     new_coor.append((new[ii] - self.RefCoord[ii]))
                 coord.append(tuple(new_coor))
-                BlocNbFloor.append(nbfloor)
+            BlocNbFloor.append(nbfloor)
+            BlocHeight.append(self.height)
+            coord= [coord]
         return coord, BlocHeight, BlocNbFloor
 
     def EvenFloorCorrection(self,BlocHeight,nbfloor,BlocNbFloor,coord,LogFile):
@@ -345,7 +362,10 @@ class Building:
                 nbfloor) + ' floors declared in the EPC \n'
         else:
             nbfloor= round(max(BlocHeight)/StoreyHeigth)
-            storeyRatio = StoreyHeigth / (max(BlocHeight) / nbfloor) if (max(BlocHeight) / nbfloor) > 0.5 else 1
+            try:
+                storeyRatio = StoreyHeigth / (max(BlocHeight) / nbfloor) if (max(BlocHeight) / nbfloor) > 0.5 else 1
+            except:
+                storeyRatio = 0
             msg = '[Geom Info] The max bloc height is : ' + str(round(max(BlocHeight), 2)) + ' for ' + str(
                 nbfloor) + ' floors computed from max bloc height\n'
         GrlFct.Write2LogFile(msg, LogFile)
@@ -373,18 +393,18 @@ class Building:
     def getEPHeatedArea(self,LogFile):
         "get the heated area based on the footprint and the number of floors"
         self.BlocFootprintArea=[]
-        if self.Multipolygon:
-            EPHeatedArea = 0
-            for i,foot in enumerate(self.footprint):
-                EPHeatedArea += Polygon(foot).area*self.BlocNbFloor[i]
-                self.BlocFootprintArea.append(Polygon(foot).area)
-            msg = '[Geom Info] Blocs footprint areas : '+ str(self.BlocFootprintArea)+'\n'
-            GrlFct.Write2LogFile(msg, LogFile)
-            msg = '[Geom Info] The total heated area is : ' + str(EPHeatedArea)+' for a declared ATemp of : '+str(self.ATemp)+' --> discrepancy of : '+str(round((self.ATemp-EPHeatedArea)/self.ATemp*100,2))+'\n'
-            GrlFct.Write2LogFile(msg, LogFile)
-        else:
-            EPHeatedArea = Polygon(self.footprint).area * self.nbfloor
-            self.BlocFootprintArea.append(Polygon(self.footprint).area)
+#        if self.Multipolygon:
+        EPHeatedArea = 0
+        for i,foot in enumerate(self.footprint):
+            EPHeatedArea += Polygon(foot).area*self.BlocNbFloor[i]
+            self.BlocFootprintArea.append(Polygon(foot).area)
+        msg = '[Geom Info] Blocs footprint areas : '+ str(self.BlocFootprintArea)+'\n'
+        GrlFct.Write2LogFile(msg, LogFile)
+        msg = '[Geom Info] The total heated area is : ' + str(EPHeatedArea)+' for a declared ATemp of : '+str(self.ATemp)+' --> discrepancy of : '+str(round((self.ATemp-EPHeatedArea)/self.ATemp*100,2))+'\n'
+        GrlFct.Write2LogFile(msg, LogFile)
+        # else:
+        #     EPHeatedArea = Polygon(self.footprint).area * self.nbfloor
+        #     self.BlocFootprintArea.append(Polygon(self.footprint).area)
         return EPHeatedArea
 
     def getsurface(self,DB, DBL,LogFile):
@@ -500,13 +520,8 @@ class Building:
             meanPy = (ShadeWall[GE['VertexKey']][0][1] + ShadeWall[GE['VertexKey']][1][1])/2
             coordx = []
             coordy = []
-            if self.Multipolygon:
-                for j in self.footprint:
-                    for i in j:
-                        coordx.append(i[0])
-                        coordy.append(i[1])
-            else:
-                for i in self.footprint:
+            for j in self.footprint:
+                for i in j:
                     coordx.append(i[0])
                     coordy.append(i[1])
             AgregFootprint= []
@@ -591,7 +606,10 @@ class Building:
         # Input_path = os.path.join(MainPath,'InputFiles')
         # #lets used StROBE package by defaults (average over 10 profile
         # IntLoad = os.path.join(Input_path, 'P_Mean_over_10.txt')
-        IntLoad = self.ElecYearlyLoad/self.EPHeatedArea/8760
+        try:
+            IntLoad = self.ElecYearlyLoad/self.EPHeatedArea/8760
+        except:
+            IntLoad = 0
         #now we compute power time series in order to match the measures form EPCs
         eleval = 0
         try :

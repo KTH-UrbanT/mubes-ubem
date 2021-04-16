@@ -18,8 +18,7 @@ from geomeppy import IDF
 
 
 def initiateprocess(MainPath):
-    filepath = os.path.join(MainPath, 'RunningFolder')
-    listOfFiles = os.listdir(filepath)
+    listOfFiles = os.listdir(MainPath)
     file2run = []
     for file in listOfFiles:
         if '.idf' in file:
@@ -27,7 +26,6 @@ def initiateprocess(MainPath):
     return file2run
 
 def runcase(file,filepath, epluspath, weatherpath):
-    filepath = os.path.join(filepath, 'RunningFolder')
     ResSimpath = os.path.join(filepath,'Sim_Results')
     if not os.path.exists(ResSimpath):
         os.mkdir(ResSimpath)

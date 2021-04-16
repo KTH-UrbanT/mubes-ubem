@@ -7,13 +7,13 @@ SimuData = \
     'Begin_Month' : 1,
     'End_Day_of_Month' : 31,
     'End_Month' : 12,
-    'SaveLogFiles' : False, #computing folder is not removed thus all energyplus outpus files are preserved
-    'FloorZoningLevel' : True,  #1 zone per floor, if False --> 1 zone per building bloc
+    'SaveLogFiles' : False, #if True, computing folder is not removed thus all energyplus outpus files are preserved
+    #'FloorZoningLevel' : True,  #1 zone per floor, if False --> 1 zone per building bloc
  }
 
 #ifthe file is from the energy plus weather climate foder, no need to the extension northe full path
 WeatherFile = \
- {'Loc' : 'C:/Users/xav77\Documents\FAURE\WeatherData/Year2012WithIRfromStandard.epw',#"C:\EnergyPlusV9-1-0\WeatherData/SWE_Stockholm.Arlanda.024600_IWEC.epw",#
+ {'Loc' : 'C:\EnergyPlusV9-1-0\WeatherData/SWE_Stockholm.Arlanda.024600_IWEC.epw',#C:/Users/xav77\Documents\FAURE\WeatherData/Year2012WithIRfromStandard.epw',#
   }
 
 #Thisdict gives all the materials characteristics.
@@ -97,12 +97,15 @@ InternalMass = \
     },
   }
 
+#this dict give element for the Domestic Hot water. it gives the externail file for the water taps and the inlet cold water temp.
+#if empty it is no longer taken into account. if new file are given, thses should be present in the Externael file folder
 ExtraEnergy = \
     {'Name' : 'DHW',
-    'WatertapsFile':WatertapsFile,
-     'ColdWaterTempFile' :ColdWaterTempFile,
-     'HotWaterSetTemp': 55,
-     }
+    'WatertapsFile':'ExternalFiles\mDHW_Sum_over_40.txt', #this file is in l/mnin and will be converted into m3/s afertward. it needs to have hourly values
+    'ColdWaterTempFile' :'ExternalFiles\ColdWaterTemp.txt',
+    'HotWaterSetTemp': 55,
+    'WaterTapsMultiplier':1/40, #this is because the file given above is for 40 apartment. in the code in is afterward multiplied by the number of apartement in the building
+    }
 
 #this dict is for the shading paradigm. There are two files that we need. the firt one is the main geojson that contains all buildings and their propreties
 #the other one contains for each shading surface id the vertex point and the building Id in order to catch the height of it.
@@ -124,9 +127,9 @@ BasisElement = \
  'DemandControlledVentilation' : True,
  'OccupBasedFlowRate': 7,  # l/s/person
  'OccupHeatRate' : 70, #W per person
- 'EnvLeak': 1.1,# l/s/m2 at 50Pa
+ 'EnvLeak': 0.8,# l/s/m2 at 50Pa
  'BasementAirLeak': 1, #in Air change rate [vol/hour]
- 'wwr': 0.3,
+ 'wwr': 0.25,
  'ExternalInsulation' : False,
   'ElecYearlyLoad' :15, #this is the yearly electrical consumption for appliances and occupancy. It is replace by the values in EPCs if available
  'IntLoadType' : 'winter', #change either by 'Cste', 'winter', or 'summer' for reversed sigmoid or sigmoid this will generate hourly values file in the InputFiles folder
@@ -134,8 +137,10 @@ BasisElement = \
  'IntLoadCurveShape':3, #this defines the slop of the curves
  'OffOccRandom' : False,
  'AreaBasedFlowRate' : 0.35, #l/s/m2
- 'setTempUpL' : 25,
- 'setTempLoL' : 21,
+ 'setTempUpL' : [25,25],    #only one have to be defined for none temperature modulation
+ 'setTempLoL' : [21,21],    #only one have to be defined for none temperature modulation
+ 'ComfortTempOff' :'23:00', #hours at wich the first temperature set point is considered
+ 'ComfortTempOn': '06:00',  #hours at wich the second temperature set point is considered
  'ACH_freecool' :4,     #this the the vol/hr of extra ventilation when free cooling is on
  'intT_freecool' : 26,  #internal temperature threshold for free coolong (opening windows with fixed ACH)
  'dT_freeCool': 1,      #Tint-Text to authorize free cooling to be turned on

@@ -16,6 +16,7 @@ import CoreFiles.MUBES_pygeoj as MUBES_pygeoj
 import CoreFiles.BuildFMUs as BuildFMUs
 from openpyxl import load_workbook
 from SALib.sample import latin
+import shutil
 
 def appendBuildCase(StudiedCase,epluspath,nbcase,DataBaseInput,MainPath,LogFile):
     StudiedCase.addBuilding('Building'+str(nbcase),DataBaseInput,nbcase,MainPath,epluspath,LogFile)
@@ -30,12 +31,12 @@ def setSimLevel(idf,building):
     Sim_param.Location_and_weather(idf,building)
     Sim_param.setSimparam(idf,building)
 
-def setBuildingLevel(idf,building,LogFile,CorePerim = False,ForPlots = False):
+def setBuildingLevel(idf,building,LogFile,CorePerim = False,FloorZoning = False,ForPlots = False):
     ######################################################################################
     #Building Level
     ######################################################################################
     #this is the function that requires the most time
-    GeomScripts.createBuilding(LogFile,idf,building, perim = CorePerim,ForPlots=ForPlots)
+    GeomScripts.createBuilding(LogFile,idf,building, perim = CorePerim,FloorZoning = FloorZoning,ForPlots=ForPlots)
 
 
 def setEnvelopeLevel(idf,building):
@@ -45,21 +46,21 @@ def setEnvelopeLevel(idf,building):
     #the other geometric element are thus here
     GeomScripts.createRapidGeomElem(idf, building)
 
-def setZoneLevel(idf,building,MainPath):
+def setZoneLevel(idf,building,FloorZoning = False):
     ######################################################################################
     #Zone level
     ######################################################################################
     #control command related equipment, loads and leaks for each zones
-    Load_and_occupancy.CreateZoneLoadAndCtrl(idf,building,MainPath)
+    Load_and_occupancy.CreateZoneLoadAndCtrl(idf,building,FloorZoning)
 
-def setExtraEnergyLoad(idf,Element):
-    if Element:
-        DomesticHotWater.createWaterEqpt(idf,Element)
+def setExtraEnergyLoad(idf,building):
+    if building.DHWInfos:
+        DomesticHotWater.createWaterEqpt(idf,building)
 
 
-def setOutputLevel(idf,MainPath,MeanTempName,TotPowerName):
+def setOutputLevel(idf,building,MainPath,EMSOutputs):
     #ouputs definitions
-    Set_Outputs.AddOutputs(idf,MainPath,MeanTempName,TotPowerName)
+    Set_Outputs.AddOutputs(idf,building,MainPath,EMSOutputs)
 
 def readPathfile(Pathways):
     keyPath = {'epluspath': '', 'Buildingsfile': '', 'Shadingsfile': '','GeojsonProperties':''}
@@ -72,13 +73,18 @@ def readPathfile(Pathways):
     return keyPath
 
 def ReadGeoJsonFile(keyPath):
-    BuildObjectDict = ReadGeojsonKeyNames(keyPath['GeojsonProperties'])
-    Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'], round_factor=4)
-    Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'], round_factor=4)
-    return {'BuildObjDict':BuildObjectDict,'Build' :Buildingsfile, 'Shades': Shadingsfile}
+    try:
+        BuildObjectDict = ReadGeojsonKeyNames(keyPath['GeojsonProperties'])
+        Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'], round_factor=4)
+        Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'], round_factor=4)
+        return {'BuildObjDict':BuildObjectDict,'Build' :Buildingsfile, 'Shades': Shadingsfile}
+    except:
+        Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'], round_factor=4)
+        Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'], round_factor=4)
+        return {'Build': Buildingsfile, 'Shades': Shadingsfile}
 
 def SaveCase(MainPath,SepThreads,CaseName,nbBuild):
-    SaveDir = os.path.join(os.path.dirname(MainPath), 'Results')
+    SaveDir = os.path.join(os.path.dirname(os.path.dirname(MainPath)), 'SimResults')
     if not os.path.exists(SaveDir):
         os.mkdir(SaveDir)
     if SepThreads:
@@ -90,12 +96,49 @@ def SaveCase(MainPath,SepThreads,CaseName,nbBuild):
             pass
     else:
         os.rename(os.path.join(os.getcwd(), 'RunningFolder'),
-                  os.path.join(os.path.dirname(os.getcwd()), os.path.normcase('Results/' + CaseName)))
+                  os.path.join(SaveDir,CaseName))
         try:
             os.rename(os.path.join(MainPath, CaseName + '_Logs.log'),
-                  os.path.join(os.path.join(os.path.dirname(os.getcwd()), os.path.normcase('Results/' + CaseName)), CaseName + '_Logs.log'))
+                  os.path.join(os.path.join(SaveDir,CaseName), CaseName + '_Logs.log'))
         except:
             pass
+
+def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,LogFile):
+    SimDir = os.path.normcase(
+        os.path.join(os.path.dirname(os.path.dirname(CurrentPath)), os.path.join('SimResults', CaseName)))
+    LogFileName = CaseName + '_Logs.log'
+    if not os.path.exists(SimDir):
+        os.mkdir(SimDir)
+    elif idx == 0:
+        shutil.rmtree(SimDir)
+        os.mkdir(SimDir)
+    if SepThreads:
+        SimDir = os.path.normcase(
+            os.path.join(SimDir, 'Build_' + str(nbBuild)))
+        LogFileName = 'Build_' + str(nbBuild) + '_Logs.log'
+        if not os.path.exists(SimDir):
+            os.mkdir(SimDir)
+        elif idx == 0:
+            shutil.rmtree(SimDir)
+            os.mkdir(SimDir)
+    # creating the log file
+    if idx ==0 or SepThreads:
+        if os.path.exists(os.path.join(SimDir, LogFileName)) and idx==0:
+            os.remove(os.path.join(SimDir, LogFileName))
+        LogFile = open(os.path.join(SimDir, LogFileName), 'w')
+    return SimDir, LogFile
+
+    # if not SepThreads:
+    #     SimDir = os.path.normcase(
+    #             os.path.join(os.path.dirname(os.path.dirname(CurrentPath)), os.path.join('SimResults', CaseName)))
+    # else:
+    #     SimDir = os.path.normcase(
+    #         os.path.join(os.path.dirname(os.path.dirname(CurrentPath)), os.path.join('SimResults', CaseName + '_Build_' + str(nbBuild))))
+    # if not os.path.exists(SimDir):
+    #     os.mkdir(SimDir)
+    # elif SepThreads or idx == 0:
+    #     shutil.rmtree(SimDir)
+    #     os.mkdir(SimDir)
 
 def getParamSample(VarName2Change,Bounds,nbruns):
     # Sampling process if someis define int eh function's arguments

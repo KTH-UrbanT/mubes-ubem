@@ -96,23 +96,26 @@ def ZoneLoad(idf, zone, LoadSchedule, building, isfile, ZoningMultiplier):
 
 def CreateThermostat(idf,name,setUp, setLo):
     #adding a Thermostat setting
-    idf.newidfobject(
-        "HVACTEMPLATE:THERMOSTAT",
-        Name=name,
-        Constant_Heating_Setpoint=setLo,
-        Constant_Cooling_Setpoint=setUp,
-        )
+    Therm = idf.newidfobject("HVACTEMPLATE:THERMOSTAT", Name=name)
+    if type(setUp) == str:
+        Therm.Cooling_Setpoint_Schedule_Name=setUp
+    else:
+        Therm.Constant_Cooling_Setpoint =setUp
+    if type(setLo) == str:
+        Therm.Heating_Setpoint_Schedule_Name = setLo
+    else:
+        Therm.Constant_Heating_Setpoint = setLo
     return idf
 
-def CreateThermostatFile(idf,name,namesetUp,namesetLo):
-    #adding a Thermostat setting
-    idf.newidfobject(
-        "HVACTEMPLATE:THERMOSTAT",
-        Name=name,
-        Heating_Setpoint_Schedule_Name =namesetLo,
-        Cooling_Setpoint_Schedule_Name =namesetUp,
-        )
-    return idf
+# def CreateThermostatFile(idf,name,namesetUp,namesetLo):
+#     #adding a Thermostat setting
+#     idf.newidfobject(
+#         "HVACTEMPLATE:THERMOSTAT",
+#         Name=name,
+#         Heating_Setpoint_Schedule_Name =namesetLo,
+#         Cooling_Setpoint_Schedule_Name =namesetUp,
+#         )
+#     return idf
 
 
 def ZoneCtrl(idf,zone,building,PeopleDensity,ThermostatName, Multiplier,Correctdeff,FloorArea):
@@ -241,7 +244,7 @@ def getEfficiencyCor(OfficeTypeZone,ZoningMultiplier,building,PeopleDensity):
     return Correctdeff
 
 
-def CreateZoneLoadAndCtrl(idf,building,MainPath):
+def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
     # create the schedule type if not created before
     if not (idf.getobject('SCHEDULETYPELIMITS', 'Any Number')):
         Schedule_Type(idf)
@@ -261,8 +264,27 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
     # we need to define the occupancy activity level in order to avoid a warning and maybe later, compute the heat generated !
     # the set point is defined in DB_data
     ScheduleCompact(idf, 'OccupActivity', building.OccupHeatRate)
-    #Create a single thermostat set points for all the zone (might need some other if different set points desired)
-    CreateThermostat(idf,'ResidZone',building.setTempUpL, building.setTempLoL)
+    #for the thermostat ie each zone lets first define if there is a need for external file
+    if building.setTempLoL[1]-building.setTempLoL[0] == 0:
+        HeatSetPoint = building.setTempLoL[0]
+    else:
+        #thismeans that weneed to create a file for the set points
+        pathfile = os.path.join(os.getcwd(), 'InputFiles')
+        HeatSetPoint = idf.idfname + '_LoLTempSetPoints.txt'
+        create_ScheduleFile(idf, 'HeatSetPointFile', os.path.join(pathfile,HeatSetPoint))
+        ProbGenerator.BuildTempSetPoints(HeatSetPoint,pathfile,building.setTempLoL,[building.ComfortTempOn,building.ComfortTempOff])
+        HeatSetPoint = 'HeatSetPointFile'
+    if building.setTempUpL[1]-building.setTempUpL[0] == 0:
+        CoolSetPoint = building.setTempUpL[0]
+    else:
+        #thismeans that weneed to create a file for the set points
+        pathfile = os.path.join(os.getcwd(), 'InputFiles')
+        CoolSetPoint = idf.idfname + '_UpLTempSetPoints.txt'
+        create_ScheduleFile(idf, 'CoolSetPointFile', os.path.join(pathfile,CoolSetPoint))
+        ProbGenerator.BuildTempSetPoints(CoolSetPoint,pathfile,building.setTempUpL,[building.ComfortTempOn,building.ComfortTempOff])
+        CoolSetPoint = 'CoolSetPointFile'
+    # Create a single thermostat set points for all the zone (might need some other if different set points desired)
+    CreateThermostat(idf, 'ResidZone', CoolSetPoint, HeatSetPoint)
     # to all zones adding an ideal load element driven by the above thermostat
 
     #############################################################################################################
@@ -310,7 +332,7 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
         #we need to create envelope infiltration for each zone facing outside and specific ones for the basement
         if zoneStoreylist[idx]<0: #means that we are in the basement
             # Lets modify the floor area depending on the zoning level
-            FloorMultiplier = 1 if building.FloorZoningLevel else building.nbBasefloor
+            FloorMultiplier = 1 if FloorZoning else building.nbBasefloor
             FloorArea = FloorArea * FloorMultiplier
 
             CreateBasementLeakage(idf, zone, ACH=building.BasementAirLeak)
@@ -319,7 +341,7 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
                 CreateInternalMass(idf, zone, FloorArea, 'NonHeatedZoneIntMassObj', building.InternalMass['NonHeatedZoneIntMass'])
         else:
             # Lets modify the floor area depending on the zoning level
-            FloorMultiplier = 1 if building.FloorZoningLevel else building.BlocNbFloor[bloc]
+            FloorMultiplier = 1 if FloorZoning else building.BlocNbFloor[bloc]
             FloorArea = FloorArea * FloorMultiplier
             #creating the internalMass element if the dict is not empty
             if building.InternalMass['HeatedZoneIntMass']:
@@ -340,20 +362,31 @@ def CreateZoneLoadAndCtrl(idf,building,MainPath):
                 create_Occupant(idf, zone, 'OccuSchedule'+str(idx), 'OccupActivity', 1)
                 if building.OffOccRandom:   #if random occupancy is wished (in DB_data)
                     #lets create a beta distribution random file for the number of ccupant
-                    pathfile = os.path.join(MainPath,'InputFiles')
-                    name = idf.idfname + '.txt' #building.name + 'nbUsers.txt'
+                    pathfile = os.path.join(os.getcwd(),'InputFiles')
+                    name = idf.idfname + str(idx)+'_OfficeOccu.txt' #building.name + 'nbUsers.txt'
                     #from now, random value are taken from 20 to 100% of the people density (the min value id DB_Data is not considered yet)
-                    ProbGenerator.BuildData(name,pathfile,round(FloorArea*min(BlocPeopleDensity[bloc]),2),round(FloorArea*max(BlocPeopleDensity[bloc]),2), building)
-                    # lets create a schedule file for occupant and the associated file
-                    create_ScheduleFile(idf, 'OccuSchedule'+str(idx), pathfile+name)   #we should be careful because of varaition with multiproc
-                    create_ScheduleFile(idf, 'OffTsetUp' + str(idx), pathfile+'SetPointUp.txt')
-                    create_ScheduleFile(idf, 'OffTsetLo' + str(idx), pathfile+'SetPointLo.txt')
-                    CreateThermostatFile(idf, 'OfficeZone'+ str(idx),'OffTsetUp' + str(idx),'OffTsetLo' + str(idx))
+                    ProbGenerator.BuildOccupancyFile(name,pathfile,round(FloorArea*min(BlocPeopleDensity[bloc]),2),round(FloorArea*max(BlocPeopleDensity[bloc]),2), building)
+                    create_ScheduleFile(idf, 'OccuSchedule' + str(idx), os.path.join(pathfile, name))
+                    if building.setTempUpL[1] - building.setTempUpL[0] == 0:
+                        CoolSetPoint = building.setTempUpL[0]
+                    else:
+                        name = idf.idfname + str(idx) + '_OfficeSetPointUp.txt'  # building.name + 'nbUsers.txt'
+                        ProbGenerator.BuildTempSetPoints(name,pathfile,building.setTempUpL,[building.Office_Open,building.Office_Close])
+                        create_ScheduleFile(idf, 'OffTsetUp' + str(idx), os.path.join(pathfile, name))
+                        CoolSetPoint = 'OffTsetUp' + str(idx)
+                    if building.setTempLoL[1] - building.setTempLoL[0] == 0:
+                        HeatSetPoint = building.setTempUpL[0]
+                    else:
+                        name = idf.idfname + str(idx) + '_OfficeSetPointLo.txt'  # building.name + 'nbUsers.txt'
+                        ProbGenerator.BuildTempSetPoints(name, pathfile, building.setTempLoL,[building.Office_Open,building.Office_Close])
+                        create_ScheduleFile(idf, 'OffTsetLo' + str(idx), os.path.join(pathfile, name))
+                        HeatSetPoint = 'OffTsetLo' + str(idx)
+                    CreateThermostat(idf, 'OfficeZone'+ str(idx),CoolSetPoint,HeatSetPoint)
                 else:
                     ## here is the scedule that define the number of occupant with fixed number of occupants (same all the time but still linked to shedule).
                     ScheduleCompactOccup(idf, 'OccuSchedule'+str(idx), building, SetPoint= round(FloorArea*max(BlocPeopleDensity[bloc]),2))
             # computation of the zonning level multiplier
-            ZoningMultiplier = 1 if building.FloorZoningLevel else building.BlocNbFloor[bloc]
+            ZoningMultiplier = 1 if FloorZoning else building.BlocNbFloor[bloc]
             # Internal load profile could be taken from the number of appartement. see building.IntLoad in DB_Building
             ZoneLoad(idf, zone,'LoadSchedule' if isfile else 'AlwaysON' ,building, isfile, ZoningMultiplier)
             # HVAC equipment for each zone including ventilation systems (exhaust, balanced with or not heat recovery)

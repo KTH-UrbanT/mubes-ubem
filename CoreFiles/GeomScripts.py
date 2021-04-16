@@ -30,27 +30,27 @@ def BuildBloc(idf,perim,bloc,bloc_coord,Height,nbstories,nbBasementstories,Basem
             below_ground_storey_height=BasementstoriesHeight if nbBasementstories > 0 else 0
         )
 
-def createBuilding(LogFile,idf,building,perim,ForPlots =False):
+def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
     Full_coord = building.footprint
     #Adding two blocks, one with two storey (the nb of storey defines the nb of Zones)
-    Nb_blocs = 1
-    if building.Multipolygon:
-        Nb_blocs = len(Full_coord)
+    #Nb_blocs = 1
+    #if building.Multipolygon:
+    Nb_blocs = len(Full_coord)
     print('Number of blocs for this building : '+ str(Nb_blocs))
     try:
         LogFile.write('Number of blocs for this building : ' + str(Nb_blocs)+'\n')
     except:
         pass
     for bloc in range(Nb_blocs):
-        bloc_coord =  Full_coord[bloc] if building.Multipolygon else Full_coord
-        Height = building.BlocHeight[bloc] if building.Multipolygon else building.height
-        nbstories = building.BlocNbFloor[bloc] if building.Multipolygon else building.nbfloor
-        if building.Multipolygon:
-            Height = nbstories*building.StoreyHeigth        #correction of the height in order to have same storey hieght everyware
+        bloc_coord =  Full_coord[bloc]# if building.Multipolygon else Full_coord
+        Height = building.BlocHeight[bloc]# if building.Multipolygon else building.height
+        nbstories = building.BlocNbFloor[bloc]# if building.Multipolygon else building.nbfloor
+        #if building.Multipolygon:
+        Height = nbstories*building.StoreyHeigth        #correction of the height in order to have same storey hieght everyware
         #last check of the Zonning level if 1 per floor or 1 per building bloc
-        nbstories = nbstories if building.FloorZoningLevel else 1
-        nbBasementstories = building.nbBasefloor if building.FloorZoningLevel else min(building.nbBasefloor,1)
-        BasementstoriesHeight = 2.5 if building.FloorZoningLevel else 2.5*building.nbBasefloor
+        nbstories = nbstories if FloorZoning else 1
+        nbBasementstories = building.nbBasefloor if FloorZoning else min(building.nbBasefloor,1)
+        BasementstoriesHeight = 2.5 if FloorZoning else 2.5*building.nbBasefloor
         #function that build the bloc, it is externalize in order to introduce a Try except and reducing the perim depth
         #print(nbstories, Height)
         Perim_depth = 3

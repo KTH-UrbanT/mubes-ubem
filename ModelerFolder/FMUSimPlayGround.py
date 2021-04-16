@@ -31,8 +31,9 @@ def launchFMUCoSim(work_dir):
       FMUElement[model_name] = fmipp.FMUCoSimulationV1(uri_to_extracted_fmu, model_name, logging_on, time_diff_resolution)
       status = FMUElement[model_name].instantiate(model_name, start_time, visible, interactive)
       assert status == fmipp.fmiOK
-      status = FMUElement[model_name].setRealValue(Inputkey, 21)
-      assert status == fmipp.fmiOK
+      for i,input in enumerate(Inputkey):
+        status = FMUElement[model_name].setRealValue(Inputkey,21)
+        assert status == fmipp.fmiOK
       status = FMUElement[model_name].initialize(start_time, stop_time_defined, stop_time)
       assert status == fmipp.fmiOK
 
@@ -86,7 +87,7 @@ def CleanUpSimRes(work_dir):
       #shutil.rmtree(buildName)
 
 def SaveCase(work_dir,SavedDest):
-  SaveDir = os.path.join(SavedDest, 'Results')
+  SaveDir = os.path.join(SavedDest, 'SimResults')
   if not os.path.exists(SaveDir):
     os.mkdir(SaveDir)
   os.rename(work_dir,
@@ -98,11 +99,12 @@ if __name__ == '__main__' :
   MainPath = os.getcwd()
   SavedFolder = 'FMUsTest'
 
+
   SavedDest = os.path.normcase(
-    'C:/Users/xav77\Documents\FAURE\prgm_python/UrbanT\Eplus4Mubes\MUBES_UBEM')
+    'C:/Users/xav77\Documents\FAURE\prgm_python/UrbanT\Eplus4Mubes')
 
   work_dir = os.path.normcase(
-    'C:/Users/xav77\Documents\FAURE\prgm_python/UrbanT\Eplus4Mubes\MUBES_UBEM\Results\MinnebergFMUwith25Wm')
+    'C:/Users/xav77\Documents\FAURE\prgm_python/UrbanT\Eplus4Mubes\SimResults\HamFMUs')
   os.chdir(work_dir)
 
   launchFMUCoSim(work_dir)

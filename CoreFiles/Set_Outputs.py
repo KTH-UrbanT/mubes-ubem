@@ -26,7 +26,7 @@ def getOutputList(path,idf):
                 OutputsVar['Var'].append(var2add)
     return OutputsVar
 
-def AddOutputs(idf,path,MeanTempName,TotPowerName):
+def AddOutputs(idf,building,path,EMSOutputs):
 
     OutputsVar = getOutputList(path,idf)
     #we shall start by removing all predclared outputes from the template
@@ -45,8 +45,10 @@ def AddOutputs(idf,path,MeanTempName,TotPowerName):
             Reporting_Frequency=OutputsVar['Reportedfrequency'],
         )
     zonelist = getHeatedZones(idf)
-    setEMS4MeanTemp(idf, zonelist, OutputsVar['Reportedfrequency'],MeanTempName)
-    setEMS4TotHeatPow(idf, zonelist, OutputsVar['Reportedfrequency'], TotPowerName)
+    setEMS4MeanTemp(idf, zonelist, OutputsVar['Reportedfrequency'],EMSOutputs[0])
+    setEMS4TotHeatPow(idf, building,zonelist, OutputsVar['Reportedfrequency'], EMSOutputs[1])
+    if len(EMSOutputs)>2:
+        setEMS4TotDHWPow(idf, building, zonelist, OutputsVar['Reportedfrequency'], EMSOutputs[2])
     return idf
 
 def getHeatedZones(idf):
@@ -122,7 +124,7 @@ def setEMS4MeanTemp(idf,zonelist,Freq,name):
         Reporting_Frequency=Freq,
     )
 
-def setEMS4TotHeatPow(idf,zonelist,Freq,name):
+def setEMS4TotHeatPow(idf,building,zonelist,Freq,name):
     #lets create the temperature sensors for each zones and catch their volume
     for idx,zone in enumerate(zonelist):
         idf.newidfobject(
@@ -131,7 +133,6 @@ def setEMS4TotHeatPow(idf,zonelist,Freq,name):
             OutputVariable_or_OutputMeter_Index_Key_Name = zone+' IDEAL LOADS AIR SYSTEM',
             OutputVariable_or_OutputMeter_Name = 'Zone Ideal Loads Supply Air Total Heating Rate'
             )
-
     #lets create the prgm collingManager
     idf.newidfobject(
         'ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER',
@@ -161,6 +162,58 @@ def setEMS4TotHeatPow(idf,zonelist,Freq,name):
         'ENERGYMANAGEMENTSYSTEM:PROGRAM',
         Name='TotZonePow',
         Program_Line_1='SET TotBuildPow = '+ SumNumerator[:-1],
+    )
+    #to uncomment if the EMS is not created before for the mean air tempeatrue
+    # #lets create now the ouputs of this EMS
+    # idf.newidfobject(
+    #     'OUTPUT:ENERGYMANAGEMENTSYSTEM',
+    #     Actuator_Availability_Dictionary_Reporting='Verbose',
+    #     EMS_Runtime_Language_Debug_Output_Level='Verbose',
+    #     Internal_Variable_Availability_Dictionary_Reporting='Verbose',
+    # )
+
+    #lets create now the final outputs
+    idf.newidfobject(
+        'OUTPUT:VARIABLE',
+        Variable_Name=name,
+        Reporting_Frequency=Freq,
+    )
+
+def setEMS4TotDHWPow(idf,building,zonelist,Freq,name):
+    #lets create the temperature sensors for each zones and catch their volume
+    idf.newidfobject(
+        'ENERGYMANAGEMENTSYSTEM:SENSOR',
+        Name = 'DHWPow',
+        OutputVariable_or_OutputMeter_Index_Key_Name = 'DHW',
+        OutputVariable_or_OutputMeter_Name = 'Water Use Equipment Heating Rate'
+        )
+
+    #lets create the prgm collingManager
+    idf.newidfobject(
+        'ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER',
+        Name='Compute Total DHW Heat Pow',
+        EnergyPlus_Model_Calling_Point='EndOfZoneTimestepBeforeZoneReporting' ,
+        Program_Name_1='prgmDHWPow'
+    )
+    #lets create the global Variable
+    idf.newidfobject(
+        'ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE',
+        Erl_Variable_1_Name='TotDHWPow' ,
+    )
+    #lets create the EMS Output Variable
+    idf.newidfobject(
+        'ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE',
+        Name=name,
+        EMS_Variable_Name='TotDHWPow' ,
+        Type_of_Data_in_Variable='Averaged',
+        Update_Frequency = 'ZoneTimeStep'
+    )
+    #lets create the program
+    SumNumerator = 'DHWPow'
+    idf.newidfobject(
+        'ENERGYMANAGEMENTSYSTEM:PROGRAM',
+        Name='prgmDHWPow',
+        Program_Line_1='SET TotDHWPow = '+ SumNumerator,
     )
     #to uncomment if the EMS is not created before for the mean air tempeatrue
     # #lets create now the ouputs of this EMS
@@ -223,9 +276,9 @@ def Read_OutputsEso(CaseName,ZoneOutput):
         res[Firstkey][currentData[2]]['Unit'] = currentData[3]
     BuildAgregRes['HeatedArea']= {}
     BuildAgregRes['NonHeatedArea'] = {}
-    BuildAgregRes['OutdoorSite']= {}
+    BuildAgregRes['Other']= {}
     for nb, key in enumerate(res):
-        KeyArea = 'OutdoorSite'
+        KeyArea = 'Other'
         if 'STOREY' in key:
             numstor= int(key[6:])
             KeyArea= 'NonHeatedArea' if numstor<0 else 'HeatedArea'
@@ -276,12 +329,11 @@ def Read_Outputhtml(CaseName):
     filehandle = open(fname, 'r',encoding='latin-1').read() # get a file handle to the html file
     htables = readhtml.titletable(filehandle)
     Res = {}
-    # Res['EPlusTotArea'] = htables[2][1][1][1]
-    # Res['EPlusHeatArea'] = htables[2][1][2][1]
-    # Res['EPlusNonHeatArea'] = htables[2][1][3][1]
-    #Res['EnergyConsKey'] = htables[3][1][0]
-    Res['EnergyConsVal'] = htables[3][1][-1]
-    return Res
+    for key in range(len(htables[3][1][1:-2])):
+        Res[htables[3][1][key+1][0]] = {}
+        for val in range(len(htables[3][1][0][1:])):
+            Res[htables[3][1][key+1][0]][htables[3][1][0][val+1]] = htables[3][1][key+1][val+1]
+    return {'GlobRes':Res}
 
 def Read_OutputError(CaseName):
     fname = CaseName

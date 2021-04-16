@@ -41,27 +41,33 @@ def Write2file(val,name):
         for item in val:
             f.write("%s\n" % item)
 
-def BuildData(name,path,min,max,building):
+def BuildTempSetPoints(name,path,Values,Hours):
+    #we alsways start on midnight
+    SetPoint =[]
+    FirstDayofWeek = 0 #the first day is a Monday
+    for i in range(8760):
+        HrperDay = i%24                 #this will gives us values between 0 and 24hours
+        DayofWeek = int(i % (24 * 7) / 24) + FirstDayofWeek # this will give the day of the week (0 is for Mondays)
+        WE = False if DayofWeek < 6 else True  #this will gove a 1 when we are on weekends
+        if HrperDay<int(Hours[0][:Hours[0].find(':')]) or HrperDay>int(Hours[1][:Hours[1].find(':')]):# or WE:
+            SetPoint.append(float(Values[1]))
+        else:
+            SetPoint.append(float(Values[0]))
+    Write2file(SetPoint,os.path.join(path,name))
+
+def BuildOccupancyFile(name,path,min,max,building):
     #we alsways start on midnight
     nbocc = []
-    TsetUp =[]
-    TsetLo = []
     FirstDayofWeek = 0 #the foirst day is a Monday
     for i in range(8760):
         HrperDay = i%24                 #this will gives us values between 0 and 24hours
         DayofWeek = int(i % (24 * 7) / 24) + FirstDayofWeek # this will give the day of the week (0 is for Mondays)
         WE = False if DayofWeek < 6 else True  #this will gove a 1 when we are on weekends
-        if HrperDay<int(building.Officehours[0][:building.Officehours[0].find(':')]) or HrperDay>int(building.Officehours[1][:building.Officehours[1].find(':')]):# or WE:
+        if HrperDay<int(building.Office_Open[:building.Office_Open.find(':')]) or HrperDay>int(building.Office_Close[:building.Office_Close.find(':')]):# or WE:
             nbocc.append(0)
-            TsetUp.append(50)
-            TsetLo.append(21)
         else:
             nbocc.append(BetaDistVal(min,max))
-            TsetUp.append(50)
-            TsetLo.append(21)
-    Write2file(nbocc,path+name)
-    Write2file(TsetUp,path+'SetPointUp.txt')
-    Write2file(TsetLo,path+'SetPointLo.txt')
+    Write2file(nbocc,os.path.join(path,name))
 
 if __name__ == '__main__' :
     print('ProbGenerator Main')

@@ -17,7 +17,7 @@ from SALib.sample import latin
 sys.path.append("..")
 import CoreFiles.GeneralFunctions as GrlFct
 
-from DataBase.DB_Building import BuildingList
+from BuildObject.DB_Building import BuildingList
 
 
 
@@ -129,7 +129,7 @@ if __name__ == '__main__' :
         Bld2Sim.append(int(line))
 
     CaseName = 'Hammarby0401'
-    BuildNum =[41]#Bld2Sim #[int(i) for i in range(0,300)]
+    BuildNum =[int(i) for i in range(0,300)] #Bld2Sim #
     VarName2Change = []
     Bounds = []
     NbRuns = 1
@@ -141,7 +141,7 @@ if __name__ == '__main__' :
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
 ######################################################################################################################
-    keyPath = GrlFct.readPathfile('HammarbyLast.txt')
+    keyPath = GrlFct.readPathfile('Hammarby0401.txt')
     DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
     FigCenter = []
     CurrentPath = os.getcwd()
