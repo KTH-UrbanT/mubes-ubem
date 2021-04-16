@@ -206,17 +206,17 @@ if __name__ == '__main__' :
 #
 
     CaseName = 'ForTest'
-    BuildNum = []
+    BuildNum = [0]
     VarName2Change = []
     Bounds = []
     NbRuns = 1
     CPUusage = 0.8
     SepThreads = False
-    CreateFMU = False
+    CreateFMU = True
     CorePerim = False
     FloorZoning = True
     PlotBuilding = False
-    PathInputFile = 'Hammarby0401.txt'#'Pathways_Template.txt'
+    PathInputFile = 'Pathways_Template.txt'
 
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################

@@ -104,6 +104,8 @@ def SaveCase(MainPath,SepThreads,CaseName,nbBuild):
             pass
 
 def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,LogFile):
+    if not os.path.exists(os.path.join(os.path.dirname(os.path.dirname(CurrentPath)),'SimResults')):
+        os.mkdir(os.path.join(os.path.dirname(os.path.dirname(CurrentPath)),'SimResults'))
     SimDir = os.path.normcase(
         os.path.join(os.path.dirname(os.path.dirname(CurrentPath)), os.path.join('SimResults', CaseName)))
     LogFileName = CaseName + '_Logs.log'
