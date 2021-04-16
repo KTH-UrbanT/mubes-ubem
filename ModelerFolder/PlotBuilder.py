@@ -129,14 +129,14 @@ if __name__ == '__main__' :
         Bld2Sim.append(int(line))
 
     CaseName = 'Hammarby0401'
-    BuildNum =[int(i) for i in range(0,300)] #Bld2Sim #
+    BuildNum =[1]#[int(i) for i in range(0,300)] #Bld2Sim #
     VarName2Change = []
     Bounds = []
     NbRuns = 1
-    CPUusage = 0.8
-    SepThreads = False
-    logFile =True
-    CreateFMU = False
+    # CPUusage = 0.8
+    # SepThreads = False
+    # logFile =True
+    # CreateFMU = False
 
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################

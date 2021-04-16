@@ -216,7 +216,7 @@ if __name__ == '__main__' :
     CorePerim = False
     FloorZoning = True
     PlotBuilding = False
-    PathInputFile = 'Pathways_Template.txt'
+    PathInputFile = 'Hammarby0401.txt'#'Pathways_Template.txt'
 
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
