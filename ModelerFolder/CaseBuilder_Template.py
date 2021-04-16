@@ -204,17 +204,18 @@ if __name__ == '__main__' :
 #                                       be plotted for viisuaal check of geometrie and thermal zoning. It include the shadings
 # PathInputFile = 'String'              #Name of the PathFile containing the paths to the data and to energyplus application (see ReadMe)
 #
+
     CaseName = 'ForTest'
     BuildNum = []
     VarName2Change = []
     Bounds = []
-    NbRuns = 3
+    NbRuns = 1
     CPUusage = 0.8
     SepThreads = False
     CreateFMU = False
     CorePerim = False
     FloorZoning = True
-    PlotBuilding = True
+    PlotBuilding = False
     PathInputFile = 'Pathways_Template.txt'
 
 ######################################################################################################################
