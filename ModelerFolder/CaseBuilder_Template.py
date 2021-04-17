@@ -206,13 +206,13 @@ if __name__ == '__main__' :
 #
 
     CaseName = 'ForTest'
-    BuildNum = [0]
+    BuildNum = []
     VarName2Change = []
     Bounds = []
     NbRuns = 1
     CPUusage = 0.8
     SepThreads = False
-    CreateFMU = True
+    CreateFMU = False
     CorePerim = False
     FloorZoning = True
     PlotBuilding = False
