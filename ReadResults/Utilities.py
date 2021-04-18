@@ -269,7 +269,7 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
                 if '.pickle' in file:
                     num.append(int(file[file.index(idx1[0]) + 1:file.index(idx1[1])]))
                 if len(num)==2:
-                    if (num[1]-num[0])>0:
+                    if abs(num[1]-num[0])>0:
                         idxF = idx1
                     else:
                         idxF = idx2

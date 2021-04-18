@@ -189,8 +189,8 @@ if __name__ == '__main__' :
         # /!\ the data are taken from the building number 0, thus if for example not an office type, the will be no occupant. Choose another building if needed
         blfRef=0
         if id==0:
-            for key in Res[id]['HeatedArea'][0].keys():
-                if type(Res[id]['HeatedArea'][0][key])==list:
+            for key in Res[id]['HeatedArea'][blfRef].keys():
+                if type(Res[id]['HeatedArea'][blfRef][key])==list:
                     TimeSerieList.append(key)
 
     #The opening order does not follows the building simulation number while opening the data. Thus, this first graphs provides the correspondance between the other plots, building number and their simulation number

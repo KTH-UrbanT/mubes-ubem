@@ -58,9 +58,9 @@ def setExtraEnergyLoad(idf,building):
         DomesticHotWater.createWaterEqpt(idf,building)
 
 
-def setOutputLevel(idf,building,MainPath,EMSOutputs):
+def setOutputLevel(idf,building,MainPath,EMSOutputs,OutputsFile):
     #ouputs definitions
-    Set_Outputs.AddOutputs(idf,building,MainPath,EMSOutputs)
+    Set_Outputs.AddOutputs(idf,building,MainPath,EMSOutputs,OutputsFile)
 
 def readPathfile(Pathways):
     keyPath = {'epluspath': '', 'Buildingsfile': '', 'Shadingsfile': '','GeojsonProperties':''}

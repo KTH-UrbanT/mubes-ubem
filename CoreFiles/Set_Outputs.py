@@ -7,10 +7,10 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-def getOutputList(path,idf):
+def getOutputList(path,idf,OutputsFile):
     OutputsVar = {}
     OutputsVar['Var'] = []
-    outputs = open(os.path.join(path,'Outputs.txt'), 'r')
+    outputs = open(os.path.join(path,OutputsFile), 'r')
     Lines = outputs.readlines()
     for line in Lines:
         tofind = 'Reporting_Frequency ='
@@ -26,9 +26,9 @@ def getOutputList(path,idf):
                 OutputsVar['Var'].append(var2add)
     return OutputsVar
 
-def AddOutputs(idf,building,path,EMSOutputs):
+def AddOutputs(idf,building,path,EMSOutputs,OutputsFile):
 
-    OutputsVar = getOutputList(path,idf)
+    OutputsVar = getOutputList(path,idf,OutputsFile)
     #we shall start by removing all predclared outputes from the template
     predef = idf.idfobjects["OUTPUT:VARIABLE"]
     for i in reversed(predef):

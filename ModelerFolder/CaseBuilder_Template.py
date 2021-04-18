@@ -19,7 +19,7 @@ import BuildObject.DB_Data as DB_Data
 import multiprocessing as mp
 
 def LaunchProcess(SimDir,DataBaseInput,LogFile,bldidx,keyPath,nbcase,CorePerim = False,FloorZoning = False,VarName2Change = [],Bounds = [],
-                  nbruns = 1, SepThreads = True, CreateFMU = False,FigCenter=(0,0),PlotBuilding = False):
+                  nbruns = 1, SepThreads = True, CreateFMU = False,FigCenter=(0,0),PlotBuilding = False,OutputsFile = []):
 
     #Building and Shading objects fronm reading the geojson file as input for further functions
     Buildingsfile = DataBaseInput['Build']
@@ -150,7 +150,7 @@ def LaunchProcess(SimDir,DataBaseInput,LogFile,bldidx,keyPath,nbcase,CorePerim =
         if idf.getobject('WATERUSE:EQUIPMENT', building.DHWInfos['Name']):
             EMSOutputs.append('Total DHW Heating Power')
 
-        GrlFct.setOutputLevel(idf,building,MainPath,EMSOutputs)
+        GrlFct.setOutputLevel(idf,building,MainPath,EMSOutputs,OutputsFile)
 
         if CreateFMU:
             GrlFct.CreatFMU(idf,building,nbcase,epluspath,SimDir, i,EMSOutputs,LogFile)
@@ -203,6 +203,7 @@ if __name__ == '__main__' :
 ## PlotBuilding = False / True          #True = after each building (and before the zoning details (setZoneLevel) the building will
 #                                       be plotted for viisuaal check of geometrie and thermal zoning. It include the shadings
 # PathInputFile = 'String'              #Name of the PathFile containing the paths to the data and to energyplus application (see ReadMe)
+# OutputsFile = 'String'               #Name of the Outfile with the selected outputs wanted and the associated frequency (see file's template)
 #
 
     CaseName = 'ForTest'
@@ -217,6 +218,7 @@ if __name__ == '__main__' :
     FloorZoning = True
     PlotBuilding = False
     PathInputFile = 'Pathways_Template.txt'
+    OutputsFile = 'Outputs_Template.txt'
 
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
@@ -238,7 +240,7 @@ if __name__ == '__main__' :
             #getting through the mainfunction above :LaunchProcess() each building sees its idf done in a row within this function
             try:
                 epluspath,NewCentroid = LaunchProcess(SimDir,DataBaseInput,LogFile,idx,keyPath,nbBuild,CorePerim,FloorZoning,
-                        VarName2Change,Bounds,NbRuns,SepThreads,CreateFMU,FigCenter,PlotBuilding)
+                        VarName2Change,Bounds,NbRuns,SepThreads,CreateFMU,FigCenter,PlotBuilding,OutputsFile)
             except:
                 msg = '[ERROR] There was an error on this building, process aborted\n'
                 print(msg[:-1])
