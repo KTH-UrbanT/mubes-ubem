@@ -21,7 +21,7 @@ from ModelerFolder import Utilities
 # compatible with other simulations than the one they were created for.
 
 # some propose plot for timeseries with overplots of other specific cases while other function enable to plot not timedependent variables
-# the ain paradigm is to give the path or a list of path and data are gathered in one element
+# the main paradigm is to give the path or a list of path and data are gathered in one element
 
 
 def plotAreaVal(GlobRes,FigName,name):
@@ -214,7 +214,7 @@ if __name__ == '__main__' :
     for i,serie in enumerate(TimeSerieList):
         try:
             Timecomp[i] = Utilities.createDualFig('',ratio = 0.3)
-            plotTimeSeries(Res,Timecomp[i],Names4Plots,'HeatedArea',serie,SimNum =0)
+            plotTimeSeries(Res,Timecomp[i],Names4Plots,'HeatedArea',serie,SimNum =10)
         except:
             pass
 
