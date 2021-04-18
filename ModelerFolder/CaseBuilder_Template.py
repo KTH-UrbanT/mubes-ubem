@@ -206,7 +206,7 @@ if __name__ == '__main__' :
 #
 
     CaseName = 'ForTest'
-    BuildNum = []
+    BuildNum = [0]
     VarName2Change = []
     Bounds = []
     NbRuns = 1

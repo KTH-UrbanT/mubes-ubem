@@ -2,11 +2,10 @@ import os, sys
 import matplotlib.pyplot as plt
 path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 sys.path.append(path2addgeom)
-from geomeppy import IDF
 import numpy as np
-os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'ReadResults')
+sys.path.append(os.path.dirname(os.getcwd()))
 import Utilities
-from BuildObject.DB_Building import Building
+
 
 
 # the main idea of this file is to present some way for analyzing the data.
@@ -190,8 +189,6 @@ if __name__ == '__main__' :
         # /!\ the data are taken from the building number 0, thus if for example not an office type, the will be no occupant. Choose another building if needed
         blfRef=0
         if id==0:
-            print('len file:',len(Res[id]['ErrFiles']))
-            print(Res[id]['HeatedArea'][0].keys())
             for key in Res[id]['HeatedArea'][0].keys():
                 if type(Res[id]['HeatedArea'][0][key])==list:
                     TimeSerieList.append(key)
