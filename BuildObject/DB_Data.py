@@ -101,8 +101,8 @@ InternalMass = \
 #if empty it is no longer taken into account. if new file are given, thses should be present in the Externael file folder
 ExtraEnergy = \
     {'Name' : 'DHW',
-    'WatertapsFile':'ExternalFiles\mDHW_Sum_over_40.txt', #this file is in l/mnin and will be converted into m3/s afertward. it needs to have hourly values
-    'ColdWaterTempFile' :'ExternalFiles\ColdWaterTemp.txt',
+    'WatertapsFile':'ExternalFiles/mDHW_Sum_over_40.txt', #this file is in l/mnin and will be converted into m3/s afertward. it needs to have hourly values
+    'ColdWaterTempFile' :'ExternalFiles/ColdWaterTemp.txt',
     'HotWaterSetTemp': 55,
     'WaterTapsMultiplier':1/40, #this is because the file given above is for 40 apartment. in the code in is afterward multiplied by the number of apartement in the building
     }
