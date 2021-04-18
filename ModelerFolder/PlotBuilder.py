@@ -3,100 +3,72 @@
 
 import os
 import sys
-#add the required path
+
 path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 sys.path.append(path2addgeom)
-import numpy as np
-#add needed packages
-import pygeoj
-import pickle
-import copy
-import shutil
-from SALib.sample import latin
-#add scripts from the project as well
 sys.path.append("..")
 import CoreFiles.GeneralFunctions as GrlFct
-
 from BuildObject.DB_Building import BuildingList
+import BuildObject.DB_Data as DB_Data
 
 
-
-def LaunchProcess(DataBaseInput,LogFile,bldidx,keyPath,nbcase,VarName2Change = [],Bounds = [],nbruns = 1,CPUusage = 1, SepThreads = True, CreateFMU = False,FigCenter=(0,0)):
-#this main is written for validation of the global workflow. and as an example for other simulation
-#the cases are build in a for loop and then all cases are launched in a multiprocess mode, the maximum %of cpu is given as input
-    Buildingsfile = DataBaseInput['Build']
-    Shadingsfile = DataBaseInput['Shades']
-    print('####################################################')
-    print('Building ' + str(nbBuild) + ' is starting')
-    try:
-        LogFile.write('####################################################\n')
-        LogFile.write('Building ' + str(nbBuild) + ' is starting\n')
-    except:
-        pass
+def LaunchProcess(SimDir,DataBaseInput,LogFile,bldidx,keyPath,nbcase,CorePerim = False,FloorZoning = False,FigCenter=(0,0),PlotBuilding = False):
+    #process is launched for the considered building
+    msg = 'Building ' + str(nbBuild) + ' is starting\n'
+    print('#############################################')
+    print(msg[:-1])
+    GrlFct.Write2LogFile(msg,LogFile)
     MainPath = os.getcwd()
     epluspath = keyPath['epluspath']
-
-    SimDir = os.path.join(os.getcwd(), 'RunningFolder')
-    if not os.path.exists(SimDir):
-        os.mkdir(SimDir)
-    elif SepThreads or bldidx==0:
-        shutil.rmtree(SimDir)
-        os.mkdir(SimDir)
     os.chdir(SimDir)
-    #Nevertheless this organization still enable to order things !
     StudiedCase = BuildingList()
     #lets build the two main object we'll be playing with in the following'
     idf_ref, building_ref = GrlFct.appendBuildCase(StudiedCase, epluspath, nbcase, DataBaseInput, MainPath,LogFile)
-    idf_ref.idfname = 'Building_' + str(nbcase) +'\n FormularId : '+str(building_ref.BuildID['FormularId'])+'\n 50A_UUID : '+str(building_ref.BuildID['50A_UUID'])
+    idf_ref.idfname = 'Building_' + str(nbcase) + '\n FormularId : ' + str(
+        building_ref.BuildID['FormularId']) + '\n 50A_UUID : ' + str(building_ref.BuildID['50A_UUID'])
 
-
-    print('50A_UUID : '+ str(building_ref.BuildID['50A_UUID']))
-    print('FormularId : '+ str(building_ref.BuildID['FormularId']))
-
+    print('50A_UUID : ' + str(building_ref.BuildID['50A_UUID']))
+    print('FormularId : ' + str(building_ref.BuildID['FormularId']))
     FigCenter.append(building_ref.RefCoord)
     refx = sum([center[0] for center in FigCenter]) / len(FigCenter)
     refy = sum([center[1] for center in FigCenter]) / len(FigCenter)
-
+    #Rounds of check if we continue with this building or not
     Var2check = len(building_ref.BlocHeight) if building_ref.Multipolygon else building_ref.height
-    if building_ref.ATemp == 0:
-        Var2check = 0
+    #if the building have bloc with no Height or if the hiegh is below 1m (shouldn't be as corrected in the Building class now)
     if len(building_ref.BlocHeight) > 0 and min(building_ref.BlocHeight) < 1:
         Var2check = 0
+    #is heated area is below 50m2, we just drop the building
     if building_ref.EPHeatedArea < 50:
         Var2check = 0
+    #is no floor is present...(shouldn't be as corrected in the Building class now)
     if 0 in building_ref.BlocNbFloor:
         Var2check = 0
+
     if Var2check == 0:
-        print(
-            'This Building/bloc has either no height, height below 1, surface below 50m2 or no floors, process abort for this one')
+        msg =  '[Error] This Building/bloc has either no height, height below 1, surface below 50m2 or no floors, process abort for this one\n'
+        print(msg[:-1])
         os.chdir(MainPath)
-        try:
-            LogFile.write(
-            '[ERROR] This Building/bloc has either no height, height below 1, surface below 50m2 or no floors, process abort for this one\n')
-            LogFile.write('##############################################################\n')
-        except:
-            pass
-        return MainPath, epluspath, building_ref.WeatherDataFile, (refx, refy)
+        GrlFct.Write2LogFile(msg, LogFile)
+        GrlFct.Write2LogFile('##############################################################\n', LogFile)
+        return epluspath, building_ref.WeatherDataFile,(refx,refy)
 
-    # change on the building __init__ class in the simulation level should be done here
+    if not PlotBuilding:
+        building_ref.MaxShadingDist = 0
+        building_ref.shades = building_ref.getshade(DataBaseInput['Build'][nbcase], DataBaseInput['Shades'], DataBaseInput['Build'],DB_Data.GeomElement,LogFile)
+    # change on the building __init__ class in the simulation level should be done here as the function below defines the related objects
     GrlFct.setSimLevel(idf_ref, building_ref)
-    # change on the building __init__ class in the building level should be done here
-    GrlFct.setBuildingLevel(idf_ref, building_ref,LogFile,ForPlots = True)
+    # change on the building __init__ class in the building level should be done here as the function below defines the related objects
+    GrlFct.setBuildingLevel(idf_ref, building_ref,LogFile,CorePerim,FloorZoning,ForPlots = True)
 
-    # change on the building __init__ class in the envelope level should be done here
     GrlFct.setEnvelopeLevel(idf_ref, building_ref)
+    FigCentroid = building_ref.RefCoord if PlotBuilding else (refx, refy)
+    idf_ref.view_model(test=PlotBuilding, FigCenter=FigCentroid)
 
-    #just uncomment the line below if some 3D view of the building is wanted. The figure's window will have to be manually closed for the process to continue
-    #print(building.BuildID['50A_UUID'])
-    idfViewTest=False
-    FigCentroid = building_ref.RefCoord if idfViewTest else (refx, refy)
-    idf_ref.view_model(test=idfViewTest, FigCenter=FigCentroid)
-
-    #RunProcess(MainPath,epluspath,CPUusage)
+    GrlFct.Write2LogFile('##############################################################\n', LogFile)
 
     # lets get back to the Main Folder we were at the very beginning
     os.chdir(MainPath)
-    return MainPath, epluspath, building_ref.WeatherDataFile, (refx, refy)
+    return epluspath, building_ref.WeatherDataFile, (refx,refy)
 
 
 if __name__ == '__main__' :
@@ -104,69 +76,61 @@ if __name__ == '__main__' :
 ######################################################################################################################
 ########        MAIN INPUT PART     ##################################################################################
 ######################################################################################################################
-#The Modeler have to fill in the following parameter to define its choices
+#The Modeler have to fill in the following parameter to define his choices
 
-# CaseName = 'String'                   #name of the current study (the ouput folder will be renamed using this entry)
 # BuildNum = [1,2,3,4]                  #list of numbers : number of the buildings to be simulated (order respecting the
-#                                       geojsonfile)
-# VarName2Change = ['String','String']  #list of strings: Variable names (same as Class Building attribute, if different
-#                                       see LaunchProcess 'for' loopfor examples)
-# Bounds = [[x1,y1],[x2,y2]]            #list of 2 values list :bounds in which the above variable will be allowed to change
-# NbRuns = 1000                         #number of run to launch for each building (all VarName2Change will have automotaic
-#                                       allocated value (see sampling in LaunchProcess)
-# CPUusage = 0.7                        #factor of possible use of total CPU for multiprocessing. If only one core is available,
-#                                       this value should be 1
-# SepThreads = False / True             #True = multiprocessing will be run for each building and outputs will have specific
-#                                       folders (CaseName string + number of the building. False = all input files for all
+# PathInputFile = 'String'              #Name of the PathFile containing the paths to the data and to energyplus application (see ReadMe)
+# CorePerim = False / True             #True = create automatic core and perimeter zonning of each building. This options increases in a quite
+#                                       large amount both building process and simulation process.
+#                                       It can used with either one zone per floor or one zone per heated or none heated zone
 #                                       building will be generated first, all results will be saved in one single folder
+# FloorZoning = False / True            True = thermal zoning will be realized for each floor of the building, if false, there will be 1 zone
+#                                       for the heated volume and, if present, one zone for the basement (non heated volume
+## PlotBuilding = False / True          #True = after each building the building will be plotted for visual check of geometry and thermal zoning.
+#                                       It include the shadings, if False, all the building will be plotted wihtout the shadings
 
-
-
-    with open('Hammarby2Simu4Calib.txt') as f:
-        FileLines = f.readlines()
-    Bld2Sim = []
-    for line in FileLines:
-        Bld2Sim.append(int(line))
-
-    CaseName = 'Hammarby0401'
-    BuildNum =[1]#[int(i) for i in range(0,300)] #Bld2Sim #
-    VarName2Change = []
-    Bounds = []
-    NbRuns = 1
-    # CPUusage = 0.8
-    # SepThreads = False
-    # logFile =True
-    # CreateFMU = False
+    BuildNum = []
+    PathInputFile = 'Pathways_Template.txt'
+    CorePerim = False
+    FloorZoning = True
+    PlotBuilding = False
 
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
 ######################################################################################################################
-    keyPath = GrlFct.readPathfile('Hammarby0401.txt')
+    CaseName = 'ForTest'
+
+
+    #reading the pathfiles and the geojsonfile
+    keyPath = GrlFct.readPathfile(PathInputFile)
     DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
     FigCenter = []
+    LogFile=[]
     CurrentPath = os.getcwd()
-    if logFile:
-        if os.path.exists(os.path.join(CurrentPath, CaseName + '_Logs.log')):
-            os.remove(os.path.join(CurrentPath, CaseName + '_Logs.log'))
-        LogFile = open(os.path.join(CurrentPath, CaseName + '_Logs.log'), 'w')
-    else:
-        LogFile = False
-    for idx,nbBuild in enumerate(BuildNum):
+    BuildNum2Launch = [i for i in range(len(DataBaseInput['Build']))]
+    if BuildNum:
+        BuildNum2Launch = BuildNum
+    for idx,nbBuild in enumerate(BuildNum2Launch):
+        #First, lets create the folder for the building and simulation processes
+        SimDir = CurrentPath
+        LogFile = open(os.path.join(SimDir, 'PlotBuilder_Logs.log'), 'w')
+
         if idx<len(DataBaseInput['Build']):
+            #getting through the mainfunction above :LaunchProcess() each building sees its idf done in a row within this function
             try:
-                MainPath , epluspath, weatherpath, NewCentroid  = LaunchProcess(DataBaseInput,LogFile,idx,keyPath,nbBuild,VarName2Change,
-                    Bounds,NbRuns,CPUusage,SepThreads,CreateFMU,FigCenter)
+                epluspath, weatherpath,NewCentroid = LaunchProcess(SimDir,DataBaseInput,LogFile,idx,keyPath,nbBuild,CorePerim,FloorZoning,
+                        FigCenter,PlotBuilding)
             except:
                 msg = '[ERROR] There was an error on this building, process aborted\n'
                 print(msg[:-1])
                 GrlFct.Write2LogFile(msg, LogFile)
+                GrlFct.Write2LogFile('##############################################################\n', LogFile)
                 os.chdir(CurrentPath)
+            #if choicies is done, once the building is finished parallel computing is launched for this one
         else:
             print('All buildings in the input file have been treated.')
             print('###################################################')
             break
-
-    #lets supress the path we needed for geomeppy
     import matplotlib.pyplot as plt
     plt.show()
     sys.path.remove(path2addgeom)
