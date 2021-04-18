@@ -3,7 +3,7 @@
 
 
 #this program laucnhes all the simulation
-import os, sys, stat
+import os, sys, stat, platform
 import time
 import multiprocessing as mp
 import pickle
@@ -50,7 +50,11 @@ def runcase(file,filepath, epluspath, weatherpath):
     #idf.run(output_prefix=CaseName, verbose='q')
     #idf.run(readvars=True, output_prefix=CaseName, verbose='q')
 
-    cmd = [epluspath+'energyplus.exe', '--weather',os.path.normcase(weatherpath),'--output-directory',RunDir, \
+    if platform.system() == "Windows":
+        eplus_exe = os.path.join(epluspath, "energyplus.exe")
+    else:
+        eplus_exe = os.path.join(epluspath, "energyplus")
+    cmd = [eplus_exe, '--weather',os.path.normcase(weatherpath),'--output-directory',RunDir, \
            '--idd',epluspath + 'Energy+.idd','--expandobjects','--output-prefix',CaseName,Runfile]
     check_call(cmd, stdout=open(os.devnull, "w"))
     #savecase(CaseName, RunDir, building, ResSimpath,file,idf,filepath)
