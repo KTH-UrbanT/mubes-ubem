@@ -56,7 +56,7 @@ def runcase(file,filepath, epluspath):
         eplus_exe = os.path.join(epluspath, "energyplus")
     weatherpath = os.path.join(epluspath,building.WeatherDataFile)
     cmd = [eplus_exe, '--weather',os.path.normcase(weatherpath),'--output-directory',RunDir, \
-           '--idd',epluspath + 'Energy+.idd','--expandobjects','--output-prefix',CaseName,Runfile]
+           '--idd',os.path.join(epluspath,'Energy+.idd'),'--expandobjects','--output-prefix',CaseName,Runfile]
     check_call(cmd, stdout=open(os.devnull, "w"))
     #savecase(CaseName, RunDir, building, ResSimpath,file,idf,filepath)
     savecase(CaseName, RunDir, building, ResSimpath, file, filepath)

@@ -4,8 +4,9 @@ path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geome
 sys.path.append(path2addgeom)
 from geomeppy import IDF
 import numpy as np
-os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'ModelerFolder')
-from ModelerFolder import Utilities
+os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'ReadResults')
+import Utilities
+from BuildObject.DB_Building import Building
 
 
 # the main idea of this file is to present some way for analyzing the data.
@@ -179,7 +180,7 @@ if __name__ == '__main__' :
     extraVar=['height','StoreyHeigth','nbfloor','BlocHeight','BlocFootprintArea','BlocNbFloor','HeatedArea','NonHeatedArea','OutdoorSite']
     Names4Plots = [CaseName] #because we can have several path for several studies we want to overplot.
     mainpath = os.path.dirname(os.path.dirname(os.getcwd()))
-    path = [mainpath + os.path.normcase('\SimResults/'+CaseName+'/Sim_Results')]
+    path = [mainpath + os.path.normcase('/MUBES_SimResults/'+CaseName+'/Sim_Results')]
 
     Res = {}
     TimeSerieList=[]
@@ -187,10 +188,12 @@ if __name__ == '__main__' :
         Res[id] = Utilities.GetData(curPath,extraVar)
         #lets grab the time series name (the chossen ouputs from EP).
         # /!\ the data are taken from the building number 0, thus if for example not an office type, the will be no occupant. Choose another building if needed
-        blfRef =0
-        if id ==0:
-            for key in Res[id]['HeatedArea'][blfRef].keys():
-                if type(Res[id]['HeatedArea'][blfRef][key])==list:
+        blfRef=0
+        if id==0:
+            print('len file:',len(Res[id]['ErrFiles']))
+            print(Res[id]['HeatedArea'][0].keys())
+            for key in Res[id]['HeatedArea'][0].keys():
+                if type(Res[id]['HeatedArea'][0][key])==list:
                     TimeSerieList.append(key)
 
     #The opening order does not follows the building simulation number while opening the data. Thus, this first graphs provides the correspondance between the other plots, building number and their simulation number
@@ -213,8 +216,8 @@ if __name__ == '__main__' :
     Timecomp={}
     for i,serie in enumerate(TimeSerieList):
         try:
-            Timecomp[i] = Utilities.createDualFig('',ratio = 0.3)
-            plotTimeSeries(Res,Timecomp[i],Names4Plots,'HeatedArea',serie,SimNum =10)
+            Timecomp[i] = Utilities.createSimpleFig()
+            plotTimeSeries(Res,Timecomp[i],Names4Plots,'HeatedArea',serie,SimNum =0)
         except:
             pass
 
