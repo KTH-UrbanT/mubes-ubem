@@ -68,7 +68,7 @@ def LaunchProcess(SimDir,DataBaseInput,LogFile,bldidx,keyPath,nbcase,CorePerim =
         os.chdir(MainPath)
         GrlFct.Write2LogFile(msg, LogFile)
         GrlFct.Write2LogFile('##############################################################\n', LogFile)
-        return epluspath, building_ref.WeatherDataFile,building_ref.RefCoord
+        return epluspath,building_ref.RefCoord
 
     # change on the building __init__ class in the simulation level should be done here as the function below defines the related objects
     GrlFct.setSimLevel(idf_ref, building_ref)
@@ -168,7 +168,7 @@ def LaunchProcess(SimDir,DataBaseInput,LogFile,bldidx,keyPath,nbcase,CorePerim =
 
     # lets get back to the Main Folder we were at the very beginning
     os.chdir(MainPath)
-    return epluspath, building_ref.WeatherDataFile, building_ref.RefCoord
+    return epluspath, building_ref.RefCoord
 
 
 if __name__ == '__main__' :
@@ -237,7 +237,7 @@ if __name__ == '__main__' :
         if idx<len(DataBaseInput['Build']):
             #getting through the mainfunction above :LaunchProcess() each building sees its idf done in a row within this function
             try:
-                epluspath, weatherpath,NewCentroid = LaunchProcess(SimDir,DataBaseInput,LogFile,idx,keyPath,nbBuild,CorePerim,FloorZoning,
+                epluspath,NewCentroid = LaunchProcess(SimDir,DataBaseInput,LogFile,idx,keyPath,nbBuild,CorePerim,FloorZoning,
                         VarName2Change,Bounds,NbRuns,SepThreads,CreateFMU,FigCenter,PlotBuilding)
             except:
                 msg = '[ERROR] There was an error on this building, process aborted\n'
@@ -255,7 +255,7 @@ if __name__ == '__main__' :
                 nbcpu = max(mp.cpu_count()*CPUusage,1)
                 pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
                 for i in range(len(file2run)):
-                    pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath, weatherpath))
+                    pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath))
                 pool.close()
                 pool.join()
                 #GrlFct.SaveCase(SimDir,SepThreads,CaseName,nbBuild)
@@ -273,7 +273,7 @@ if __name__ == '__main__' :
         nbcpu = max(mp.cpu_count()*CPUusage,1)
         pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
         for i in range(len(file2run)):
-            pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath, weatherpath))
+            pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath))
         pool.close()
         pool.join()
         #GrlFct.SaveCase(SimDir, SepThreads,CaseName,nbBuild)

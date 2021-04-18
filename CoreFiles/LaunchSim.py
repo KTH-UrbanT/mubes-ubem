@@ -25,7 +25,7 @@ def initiateprocess(MainPath):
             file2run.append(file)
     return file2run
 
-def runcase(file,filepath, epluspath, weatherpath):
+def runcase(file,filepath, epluspath):
     ResSimpath = os.path.join(filepath,'Sim_Results')
     if not os.path.exists(ResSimpath):
         os.mkdir(ResSimpath)
@@ -54,6 +54,7 @@ def runcase(file,filepath, epluspath, weatherpath):
         eplus_exe = os.path.join(epluspath, "energyplus.exe")
     else:
         eplus_exe = os.path.join(epluspath, "energyplus")
+    weatherpath = os.path.join(epluspath,building.WeatherDataFile)
     cmd = [eplus_exe, '--weather',os.path.normcase(weatherpath),'--output-directory',RunDir, \
            '--idd',epluspath + 'Energy+.idd','--expandobjects','--output-prefix',CaseName,Runfile]
     check_call(cmd, stdout=open(os.devnull, "w"))

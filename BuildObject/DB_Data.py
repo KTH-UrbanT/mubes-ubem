@@ -11,9 +11,9 @@ SimuData = \
     #'FloorZoningLevel' : True,  #1 zone per floor, if False --> 1 zone per building bloc
  }
 
-#ifthe file is from the energy plus weather climate foder, no need to the extension northe full path
+#files are needed to be located in the eather folder of EnergyPlus asthe same path is used afterward to launch the simulation
 WeatherFile = \
- {'Loc' : 'C:\EnergyPlusV9-1-0\WeatherData/SWE_Stockholm.Arlanda.024600_IWEC.epw',#C:/Users/xav77\Documents\FAURE\WeatherData/Year2012WithIRfromStandard.epw',#
+ {'Loc' : 'WeatherData/SWE_Stockholm.Arlanda.024600_IWEC.epw',#WeatherData/Year2012WithIRfromStandard.epw',#
   }
 
 #Thisdict gives all the materials characteristics.
