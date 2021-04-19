@@ -46,11 +46,12 @@ __Utilities.py__ : contains several useful function for the post-treatement stag
 The systems and building caracteristics are taken from the available data in the goejson file and\or in the _DB_Data.py_ file in the __BuildObject__ folder that contains several dictionnaries needed as inputs. The modeler is highly invited to look along this file to understand all the different thermal elements that are needed for the simulation.  
 
 **Example of building geometry construction using MUBES_UBEM for Minneberg District, Stockholm, Sweden**  
-The corresponding goejson files are given in the ModelerFolder. This example can be launched after having changed to the path of in the Pathways_Template.txt file.  
+The corresponding goejson files are given in the ModelerFolder. This example can be launched after having changed the paths to local ones in the Pathways_Template.txt file.  
+  
 _python3_ _CaseBuilder.py_ enable to make all the simulations.  
 _python3_ _PlotBuilder.py_ will read all the building and make the figure below on your environment.  
-By changing the createFMU key in True, in CaseBuilder, it will automatically create FMUs for each building.
-*python3 FMUSimPlayGround.py* enable to launch a co-cimulation with the above simple temperature's setpoint modulation law for each building based on water taps.  
+By changing the *createFMU* key in *True*, in CaseBuilder, it will automatically create FMUs for each building.  
+*python3 FMUSimPlayGround.py* enable to launch a co-simulation with the above simple temperature's setpoint modulation law for each building based on water taps.  
 
 ![Minneberg](Minneberg.png)
 
