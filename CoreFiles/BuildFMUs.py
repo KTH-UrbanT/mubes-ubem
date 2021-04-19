@@ -85,7 +85,7 @@ def DefineFMUsParameters(idf,building,VarExchange):
             )
 
 def buildEplusFMU(epluspath,weatherpath,Filepath):
-    Path2FMUs = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),os.path.normcase('FMUsKit\EnergyPlusToFMU-v3.1.0\Scripts'))
+    Path2FMUs = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),os.path.normcase('FMUsKit/EnergyPlusToFMU-v3.1.0/Scripts'))
     EpluIddPath = os.path.join(os.path.normcase(epluspath),'Energy+.idd')
     EplusEpwPath = os.path.join(epluspath,os.path.normcase(weatherpath))
     cmd = ['python',os.path.join(Path2FMUs,'EnergyPlusToFMU.py'),'-i',EpluIddPath,'-w',EplusEpwPath,'-d',Filepath]
