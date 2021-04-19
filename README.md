@@ -14,14 +14,14 @@ The needed package are given in the requirements.txt file.
 GeomEppy needs to be taken (by cloning or forking, or other way) from https://github.com/xavfa/geomeppy and make sure it is pointing on the correct branch (MultiFloor_complexe_Building) as many changes have be done in order to comply with more complex building footprints.
 Besides, other changes might be also needed as MUBES_UBEM is just at the beginning of its development.
 geomeppy package needs to be installed at the same level as MUBES_UBEM.
-The FMUs creation option uses the [EnergyPlusToFMU-v3.1.0] (https://simulationresearch.lbl.gov/fmu/EnergyPlus/export/userGuide/download.html) toolkit developed by LNBL. This toolkit should be downloads and installed at the same level as MUBES_UBEM under a folder named __FMUsKit__ (see BuildFMUs.buildEplusFMU() in the CoreFile folder).  
+The FMUs creation option uses the [EnergyPlusToFMU-v3.1.0](https://simulationresearch.lbl.gov/fmu/EnergyPlus/export/userGuide/download.html) toolkit developed by LNBL. This toolkit should be downloads and installed at the same level as MUBES_UBEM under a folder named __FMUsKit__ (see BuildFMUs.buildEplusFMU() in the CoreFile folder).  
 /!\ On the environment in which the UBEM process has been developed (Windows 10), some time delay had to be introduced in the original code to enable to remove the intermediate file and make the FMU reach the end properly (https://github.com/lbl-srg/EnergyPlusToFMU/issues/54).  
   
 
 ## Folder organization
 The MUBES_UBEM main folder contains several subfolder:  
 __CoreFile__ folder: contains all the core python scripts for the severals levels of the building design process.  
-__ExternalFiles__ Folder : contains commun external files that one would use for all the buildings considered in the process. It currently contains the times series of input cold water temperature for the Domestic Hot Water needs as well as the water tps in l/min. The latter is an output of an other packages ([StROBe] (https://github.com/open-ideas/StROBe)) that enables to create stochastics ouputs for residential occupancy.    
+__ExternalFiles__ Folder : contains commun external files that one would use for all the buildings considered in the process. It currently contains the times series of input cold water temperature for the Domestic Hot Water needs as well as the water tps in l/min. The latter is an output of an other packages ([StROBe](https://github.com/open-ideas/StROBe)) that enables to create stochastics ouputs for residential occupancy.    
 __BuildObject__ Folder : contains the building class object as well as the default choices for missing inputs. The latter might (or should) be modified by the modeler depending for its studied cases.  
 __ModelerFolder__ : contains severals templates to build the process, select the required ouputs, and paths for the process to be launched.  
 __ReadResults__ : contains one template to read the results and some functions for post-processing in the Utilities.py file.  
