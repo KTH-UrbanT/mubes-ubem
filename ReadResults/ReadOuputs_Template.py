@@ -73,10 +73,6 @@ def plotDim(GlobRes,FigName,name):
         locref = [Res['BuildID'][i]['50A_UUID'] for i in range(len(Res['BuildID']))]
         index_y,varx = Utilities.getSortedIdx(reference,locref)
         footprint = Res['BlocFootprintArea']
-        nbfloor = [Res['nbfloor'][idx] for idx in index_y]
-        sh1 = Res['StoreyHeigth']
-        sh2 = [Res['height'][idx]/val for idx,val in enumerate(Res['nbfloor'])]
-        StoreyHeight = [sh1[idx] if sh1[idx]!=-1 else sh2[idx] for idx in index_y]
         try:
             max(Res['BlocHeight'][0])
             Bld_height = [Res['BlocHeight'][idx] for idx in index_y]
