@@ -14,6 +14,7 @@ The needed packages are given in the requirements.txt file.
 GeomEppy needs to be taken (by cloning or forking, or other way) from https://github.com/xavfa/geomeppy and make sure it is pointing to the correct branch (*MultiFloor_complexe_Building*) as many changes have be done in order to comply with more complex building footprints.  
 Besides, other changes might be also needed as MUBES_UBEM is just at the beginning of its development. Geomeppy package needs to be installed at the same level as MUBES_UBEM.  
 The FMUs creation option uses the [EnergyPlusToFMU-v3.1.0](https://simulationresearch.lbl.gov/fmu/EnergyPlus/export/userGuide/download.html) toolkit developed by LNBL. This toolkit should be download and installed at the same level as MUBES_UBEM under a folder named __FMUsKit__ (see BuildFMUs.buildEplusFMU() in the CoreFile folder).  
+The portability of FMUs (used with another computer than the one used to generate them) is valid (reason for having pickle5 package for python backward compatibilities) but currently only when no external files are used as error are encountered when relative paths are defined.
 /!\ On the environment in which the UBEM process has been developed (Windows 10), some time delay had to be introduced in the original code to enable to remove the intermediate files and make the FMU reach its end properly (https://github.com/lbl-srg/EnergyPlusToFMU/issues/54).  
   
 
@@ -35,11 +36,14 @@ This file deals with the construction of the .idf file for each building and eit
 
 Some few other files are present in this folder :  
 __PlotBuilder.py__ : enables to make 3D Matplotlib figures out of the idf files. It will plot all the buildings that are considered or each building appart depending on the available option.  
-__FMUSimPlayGround.py__ : it uses FMI++ package and as been successfully tested for controlling temperature's setpoints, or watertaps at each time steps of the simulation. For one how'd like to make co-simulation, a deep understanding is also need on the EP side as inputs and ouputs are to be defined. The CaseBuilder, using *CreateFMU = True*, proposes by default the temperature's setpoints and the water taps as inputs and the averaged indoor temperature, the total power for heet needs and for domestic hot water as outputs.  
-The example proposed is very simple (and not really relevant in terms of energy concerns): it reads an external file to feed the water taps at each time step, and depending on a threshold of water taps' flow, the temperature's set points are changed.
+__FMUSimPlayGroundEx1.py__ and __FMUSimPlayGroundEx2.py__: it uses FMI++ package and as been successfully tested for controlling temperature's setpoints, or watertaps at each time steps of the simulation. For one how'd like to make co-simulation, a deep understanding is also need on the EP side as inputs and ouputs are to be defined. The CaseBuilder, using *CreateFMU = True*, proposes by default the temperature's setpoints and the water taps as inputs and the averaged indoor temperature, the total power for heet needs and for domestic hot water as outputs.  
+The two example (Ex1 and Ex2) :  
+Ex1 : proposes a simple offset on the temperature setPoints. Every two hours a new building sees its stepoint decreases from 21degC to 18degC. It depends on the sizes of the district that is considered.  
+Ex2 : proposes a couple Temperature setpoints and water taps controls for each building. It reads an external file to feed the water taps at each time step, and depending on a threshold of water taps' flow, the temperature's set points are changed.  
+Ex1 is usable by default, Ex2 needs to have Domestic Hot Water in external file, so DB_Data.ExtraEnergy dictionnary in __BuildObject__  folder needs to be uncommented.  
   
 the __ReadResults__ folder contains also a template for post-processing the results :  
-__ReadOutputs_Template.py__ : this script proposes a basic post-processing stage including reading the data, ploting the areas of footprint and the related energy as well as some times series for specific building number.  
+__ReadOutputs_Template.py__ : this script proposes a basic post-processing stage including reading the data, ploting the areas of footprint and the related energy as well as some times series for specific building number. Its works for simulation wiht or without FMUs.  
 __Utilities.py__ : contains several useful functions for the post-processing stage. The _getData()_ is highly helpful. It gathers all the pickle files present in a directory into one dictionnary. It can deal with several CaseNames and overplots results for same Building's Ids.    
   
 The systems and building's caracteristics are taken from the available data in the goejson file and\or in the _DB_Data.py_ file in the __BuildObject__ folder that contains several dictionnaries needed as inputs. The modeler is highly invited to look along this file to understand all the different thermal elements that are needed for the simulation.  

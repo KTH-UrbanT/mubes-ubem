@@ -88,49 +88,61 @@ if __name__ == '__main__' :
 #                                       for the heated volume and, if present, one zone for the basement (non heated volume
 ## PlotBuilding = False / True          #True = after each building the building will be plotted for visual check of geometry and thermal zoning.
 #                                       It include the shadings, if False, all the building will be plotted wihtout the shadings
+# ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
     BuildNum = []
     PathInputFile = 'Pathways_Template.txt'
     CorePerim = False
     FloorZoning = True
     PlotBuilding = False
+    ZoneOfInterest = ''
 
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
 ######################################################################################################################
     CaseName = 'ForTest'
 
-
-    #reading the pathfiles and the geojsonfile
+    # reading the pathfiles and the geojsonfile
     keyPath = GrlFct.readPathfile(PathInputFile)
     DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
-    FigCenter = []
-    LogFile=[]
-    CurrentPath = os.getcwd()
     BuildNum2Launch = [i for i in range(len(DataBaseInput['Build']))]
     if BuildNum:
         BuildNum2Launch = BuildNum
-    for idx,nbBuild in enumerate(BuildNum2Launch):
-        #First, lets create the folder for the building and simulation processes
-        SimDir = CurrentPath
-        LogFile = open(os.path.join(SimDir, 'PlotBuilder_Logs.log'), 'w')
+    if os.path.isfile(os.path.join(os.getcwd(), ZoneOfInterest)):
+        NewBuildNum2Launch = []
+        Bld2Keep = GrlFct.ReadZoneOfInterest(os.path.join(os.getcwd(), ZoneOfInterest), keyWord='50A Uuid')
+        for bldNum, Bld in enumerate(DataBaseInput['Build']):
+            if Bld.properties['50A_UUID'] in Bld2Keep and bldNum in BuildNum2Launch:
+                NewBuildNum2Launch.append(bldNum)
+        BuildNum2Launch = NewBuildNum2Launch
+    if not BuildNum2Launch:
+        print('Sorry, but no building matches with the requirements....Please, check your ZoneOfInterest')
+    else:
+        FigCenter = []
+        LogFile=[]
+        CurrentPath = os.getcwd()
 
-        if idx<len(DataBaseInput['Build']):
-            #getting through the mainfunction above :LaunchProcess() each building sees its idf done in a row within this function
-            try:
-                epluspath, weatherpath,NewCentroid = LaunchProcess(SimDir,DataBaseInput,LogFile,idx,keyPath,nbBuild,CorePerim,FloorZoning,
-                        FigCenter,PlotBuilding)
-            except:
-                msg = '[ERROR] There was an error on this building, process aborted\n'
-                print(msg[:-1])
-                GrlFct.Write2LogFile(msg, LogFile)
-                GrlFct.Write2LogFile('##############################################################\n', LogFile)
-                os.chdir(CurrentPath)
-            #if choicies is done, once the building is finished parallel computing is launched for this one
-        else:
-            print('All buildings in the input file have been treated.')
-            print('###################################################')
-            break
-    import matplotlib.pyplot as plt
-    plt.show()
-    sys.path.remove(path2addgeom)
+        for idx,nbBuild in enumerate(BuildNum2Launch):
+            #First, lets create the folder for the building and simulation processes
+            SimDir = CurrentPath
+            LogFile = open(os.path.join(SimDir, 'PlotBuilder_Logs.log'), 'w')
+
+            if idx<len(DataBaseInput['Build']):
+                #getting through the mainfunction above :LaunchProcess() each building sees its idf done in a row within this function
+                try:
+                    epluspath, weatherpath,NewCentroid = LaunchProcess(SimDir,DataBaseInput,LogFile,idx,keyPath,nbBuild,CorePerim,FloorZoning,
+                            FigCenter,PlotBuilding)
+                except:
+                    msg = '[ERROR] There was an error on this building, process aborted\n'
+                    print(msg[:-1])
+                    GrlFct.Write2LogFile(msg, LogFile)
+                    GrlFct.Write2LogFile('##############################################################\n', LogFile)
+                    os.chdir(CurrentPath)
+                #if choicies is done, once the building is finished parallel computing is launched for this one
+            else:
+                print('All buildings in the input file have been treated.')
+                print('###################################################')
+                break
+        import matplotlib.pyplot as plt
+        plt.show()
+        sys.path.remove(path2addgeom)

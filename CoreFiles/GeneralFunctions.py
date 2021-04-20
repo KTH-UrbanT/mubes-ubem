@@ -203,6 +203,17 @@ def Write2LogFile(message,LogFile):
     except:
         pass
 
+def ReadZoneOfInterest(ZoneOfInterest,keyWord):
+    BldIds = []
+    with open(ZoneOfInterest, 'r') as handle:
+        FileLines = handle.readlines()
+    headers = FileLines[0].split("\t")
+    idx = headers.index(keyWord)
+    for i,line in enumerate(FileLines[1:]):
+        Vals = line.split("\t")
+        BldIds.append(Vals[idx])
+    return BldIds
+
 
 if __name__ == '__main__' :
     print('GeneralFunctions.py')

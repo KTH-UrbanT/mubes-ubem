@@ -25,8 +25,9 @@ def LaunchProcess(SimDir,DataBaseInput,LogFile,bldidx,keyPath,nbcase,CorePerim =
     Buildingsfile = DataBaseInput['Build']
     Shadingsfile = DataBaseInput['Shades']
 
+
     #process is launched for the considered building
-    msg = 'Building ' + str(nbBuild) + ' is starting\n'
+    msg = 'Building ' + str(nbcase) + ' is starting\n'
     print(msg[:-1])
     GrlFct.Write2LogFile(msg,LogFile)
 
@@ -204,7 +205,7 @@ if __name__ == '__main__' :
 #                                       be plotted for viisuaal check of geometrie and thermal zoning. It include the shadings
 # PathInputFile = 'String'              #Name of the PathFile containing the paths to the data and to energyplus application (see ReadMe)
 # OutputsFile = 'String'               #Name of the Outfile with the selected outputs wanted and the associated frequency (see file's template)
-#
+# ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
     CaseName = 'ForTest'
     BuildNum = []
@@ -219,67 +220,81 @@ if __name__ == '__main__' :
     PlotBuilding = False
     PathInputFile = 'Pathways_Template.txt'
     OutputsFile = 'Outputs_Template.txt'
+    ZoneOfInterest = ''
 
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
 ######################################################################################################################
-    #reading the pathfiles and the geojsonfile
+
+    # reading the pathfiles and the geojsonfile
     keyPath = GrlFct.readPathfile(PathInputFile)
     DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
-    FigCenter = []
-    LogFile=[]
-    CurrentPath = os.getcwd()
     BuildNum2Launch = [i for i in range(len(DataBaseInput['Build']))]
     if BuildNum:
         BuildNum2Launch = BuildNum
-    for idx,nbBuild in enumerate(BuildNum2Launch):
-        #First, lets create the folder for the building and simulation processes
-        SimDir,LogFile = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,LogFile)
+    if os.path.isfile(os.path.join(os.getcwd(), ZoneOfInterest)):
+        NewBuildNum2Launch = []
+        Bld2Keep = GrlFct.ReadZoneOfInterest(os.path.join(os.getcwd(), ZoneOfInterest), keyWord='50A Uuid')
+        for bldNum, Bld in enumerate(DataBaseInput['Build']):
+            if Bld.properties['50A_UUID'] in Bld2Keep and bldNum in BuildNum2Launch:
+                NewBuildNum2Launch.append(bldNum)
+        BuildNum2Launch = NewBuildNum2Launch
+    if not BuildNum2Launch:
+        print('Sorry, but no building matches with the requirements....Please, check your ZoneOfInterest')
+    else:
 
-        if idx<len(DataBaseInput['Build']):
-            #getting through the mainfunction above :LaunchProcess() each building sees its idf done in a row within this function
-            try:
-                epluspath,NewCentroid = LaunchProcess(SimDir,DataBaseInput,LogFile,idx,keyPath,nbBuild,CorePerim,FloorZoning,
-                        VarName2Change,Bounds,NbRuns,SepThreads,CreateFMU,FigCenter,PlotBuilding,OutputsFile)
-            except:
-                msg = '[ERROR] There was an error on this building, process aborted\n'
-                print(msg[:-1])
-                GrlFct.Write2LogFile(msg, LogFile)
-                GrlFct.Write2LogFile('##############################################################\n', LogFile)
-                os.chdir(CurrentPath)
-            #if choicies is done, once the building is finished parallel computing is launched for this one
-            if SepThreads and not CreateFMU:
+        FigCenter = []
+        LogFile=[]
+        CurrentPath = os.getcwd()
+
+        for idx,nbBuild in enumerate(BuildNum2Launch):
+            #First, lets create the folder for the building and simulation processes
+            SimDir,LogFile = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,LogFile)
+
+            if idx<len(DataBaseInput['Build']):
+                #getting through the mainfunction above :LaunchProcess() each building sees its idf done in a row within this function
                 try:
-                    LogFile.close()
+                    epluspath,NewCentroid = LaunchProcess(SimDir,DataBaseInput,LogFile,idx,keyPath,nbBuild,CorePerim,FloorZoning,
+                            VarName2Change,Bounds,NbRuns,SepThreads,CreateFMU,FigCenter,PlotBuilding,OutputsFile)
                 except:
-                    pass
-                file2run = LaunchSim.initiateprocess(SimDir)
-                nbcpu = max(mp.cpu_count()*CPUusage,1)
-                pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
-                for i in range(len(file2run)):
-                    pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath))
-                pool.close()
-                pool.join()
-                #GrlFct.SaveCase(SimDir,SepThreads,CaseName,nbBuild)
-        else:
-            print('All buildings in the input file have been treated.')
-            print('###################################################')
-            break
-    # if choicies is done, once the building is finished parallel computing is launched for all files
-    if not SepThreads and not CreateFMU:
-        try:
-            LogFile.close()
-        except:
-            pass
-        file2run = LaunchSim.initiateprocess(SimDir)
-        nbcpu = max(mp.cpu_count()*CPUusage,1)
-        pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
-        for i in range(len(file2run)):
-            pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath))
-        pool.close()
-        pool.join()
-        #GrlFct.SaveCase(SimDir, SepThreads,CaseName,nbBuild)
-    #lets supress the path we needed for geomeppy
-    # import matplotlib.pyplot as plt
-    # plt.show()
-    sys.path.remove(path2addgeom)
+                    msg = '[ERROR] There was an error on this building, process aborted\n'
+                    print(msg[:-1])
+                    GrlFct.Write2LogFile(msg, LogFile)
+                    GrlFct.Write2LogFile('##############################################################\n', LogFile)
+                    os.chdir(CurrentPath)
+                #if choicies is done, once the building is finished parallel computing is launched for this one
+                if SepThreads and not CreateFMU:
+                    try:
+                        LogFile.close()
+                    except:
+                        pass
+                    file2run = LaunchSim.initiateprocess(SimDir)
+                    nbcpu = max(mp.cpu_count()*CPUusage,1)
+                    pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
+                    for i in range(len(file2run)):
+                        pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath))
+                    pool.close()
+                    pool.join()
+                    #GrlFct.SaveCase(SimDir,SepThreads,CaseName,nbBuild)
+            else:
+                print('All buildings in the input file have been treated.')
+                print('###################################################')
+                break
+        # if choicies is done, once the building is finished parallel computing is launched for all files
+        if not SepThreads and not CreateFMU:
+            try:
+                LogFile.close()
+            except:
+                pass
+            file2run = LaunchSim.initiateprocess(SimDir)
+            nbcpu = max(mp.cpu_count()*CPUusage,1)
+            pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
+            for i in range(len(file2run)):
+                pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath))
+            pool.close()
+            pool.join()
+            #GrlFct.SaveCase(SimDir, SepThreads,CaseName,nbBuild)
+        #lets supress the path we needed for geomeppy
+        # import matplotlib.pyplot as plt
+        # plt.show()
+        sys.path.remove(path2addgeom)

@@ -22,8 +22,12 @@ def setFMUsINOut(idf, building,TotPowerName):
     EPVarName = TotPowerName
     #EPVarName = 'Weighted Average Heated Zone Air Temperature'
     FMUsOutputNames = ['MeanBldTemp','HeatingPower','DHWHeat']
-    FMusInputNames = ['TempSetPoint','WaterTap_m3_s']
-    ActiveFMusInputNames = ['FMUsActTempSetP']#,'FMUsActWaterTaps']
+    FMusInputNames = ['TempSetPoint']
+    ActiveFMusInputNames = ['FMUsActTempSetP']
+    if building.DHWInfos:
+        FMUsOutputNames.append('DHWHeat')
+        FMusInputNames.append('WaterTap_m3_s')
+        ActiveFMusInputNames.append('FMUsActWaterTaps')
     FMusInputInitialValues = [21,0]
     #############################
     ##This is for Temperature set point, the thermostat schedulle or value is raplced by another schedule value that will be controlled by FMU's input
