@@ -123,7 +123,7 @@ def CleanUpSimRes(work_dir):
 
 if __name__ == '__main__' :
   MainPath = os.getcwd()
-  SavedFolder = 'MUBES_SimResults/ForTestRelFMU'
+  SavedFolder = 'MUBES_SimResults/fortest'
 
   work_dir = os.path.normcase(
     os.path.join(os.path.dirname(os.path.dirname(MainPath)),SavedFolder))

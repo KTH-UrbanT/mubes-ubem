@@ -21,7 +21,10 @@ def setFMUsINOut(idf, building,TotPowerName):
     # BuildFMUs.CreateZoneList(idf, 'HeatedZones', zonelist)
     EPVarName = TotPowerName
     #EPVarName = 'Weighted Average Heated Zone Air Temperature'
-
+    FMUsOutputNames = ['MeanBldTemp','HeatingPower','DHWHeat']
+    FMusInputNames = ['TempSetPoint','WaterTap_m3_s']
+    ActiveFMusInputNames = ['FMUsActTempSetP']#,'FMUsActWaterTaps']
+    FMusInputInitialValues = [21,0]
     #############################
     ##This is for Temperature set point, the thermostat schedulle or value is raplced by another schedule value that will be controlled by FMU's input
     SetPoints = idf.idfobjects['HVACTEMPLATE:THERMOSTAT']
@@ -29,36 +32,24 @@ def setFMUsINOut(idf, building,TotPowerName):
     SetPoints[0].Constant_Heating_Setpoint = ''
     #############################
     ##Same as above but for the masse flow rate of the domestic hoter water taps (in m3/s)
-    if idf.getobject('WATERUSE:EQUIPMENT',building.DHWInfos['Name']):
+    if building.DHWInfos:
         water_taps = idf.idfobjects['WATERUSE:EQUIPMENT']
         water_taps[0].Peak_Flow_Rate=1
         water_taps[0].Flow_Rate_Fraction_Schedule_Name='FMUsActWaterTaps'
+    ModelOutputs = []
+    for idx,var in enumerate(EPVarName):
+        ModelOutputs.append({'ZoneKeyIndex' :'EMS',
+                        'EP_varName' : var,
+                        'FMU_OutputName' : FMUsOutputNames[idx],
+                        })
+    ModelInputs = []
+    for idx, var in enumerate(ActiveFMusInputNames):
+        ModelInputs.append({'EPScheduleName' :var,
+                        'FMU_InputName' : FMusInputNames[idx],
+                        'InitialValue' : FMusInputInitialValues[idx],
+                        })
     VarExchange = \
-         { 'ModelOutputs' : [
-                        {'ZoneKeyIndex' :'EMS',
-                        'EP_varName' : EPVarName[0],
-                        'FMU_OutputName' : 'MeanBldTemp',
-                        },
-                         {'ZoneKeyIndex': 'EMS',
-                          'EP_varName': EPVarName[1],
-                          'FMU_OutputName': 'HeatingPower',
-                          },
-                         {'ZoneKeyIndex': 'EMS',
-                          'EP_varName': EPVarName[2],
-                          'FMU_OutputName': 'DHWHeat',
-                          }
-                                   ],
-         'ModelInputs' : [
-                        {'EPScheduleName' :'FMUsActTempSetP',
-                        'FMU_InputName' : 'TempSetPoint',
-                        'InitialValue' : 21,
-                        },
-                         {'EPScheduleName': 'FMUsActWaterTaps',
-                          'FMU_InputName': 'WaterTap_m3_s',
-                          'InitialValue': 0,
-                          }
-                                   ],
-            }
+         { 'ModelOutputs' : ModelOutputs,'ModelInputs' : ModelInputs}
     DefineFMUsParameters(idf, building, VarExchange)
 
 def DefineFMUsParameters(idf,building,VarExchange):
