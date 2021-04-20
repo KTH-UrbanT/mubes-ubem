@@ -147,7 +147,7 @@ def LaunchProcess(SimDir,DataBaseInput,LogFile,bldidx,keyPath,nbcase,CorePerim =
         EMSOutputs = []
         EMSOutputs.append('Mean Heated Zones Air Temperature')
         EMSOutputs.append('Total Building Heating Power')
-        if idf.getobject('WATERUSE:EQUIPMENT', building.DHWInfos['Name']):
+        if building.DHWInfos:
             EMSOutputs.append('Total DHW Heating Power')
 
         GrlFct.setOutputLevel(idf,building,MainPath,EMSOutputs,OutputsFile)

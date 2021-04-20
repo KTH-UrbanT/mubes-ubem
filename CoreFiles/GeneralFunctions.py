@@ -18,8 +18,8 @@ from openpyxl import load_workbook
 from SALib.sample import latin
 import shutil
 
-def appendBuildCase(StudiedCase,epluspath,nbcase,DataBaseInput,MainPath,LogFile):
-    StudiedCase.addBuilding('Building'+str(nbcase),DataBaseInput,nbcase,MainPath,epluspath,LogFile)
+def appendBuildCase(StudiedCase,epluspath,nbcase,DataBaseInput,MainPath,LogFile,PlotOnly = False):
+    StudiedCase.addBuilding('Building'+str(nbcase),DataBaseInput,nbcase,MainPath,epluspath,LogFile,PlotOnly)
     idf = StudiedCase.building[-1]['BuildIDF']
     building = StudiedCase.building[-1]['BuildData']
     return idf, building

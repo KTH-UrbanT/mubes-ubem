@@ -8,6 +8,7 @@ from shapely.geometry import Polygon as SPoly
 from geomeppy import IDF
 from geomeppy.geom import core_perim
 import os
+import shutil
 import BuildObject.DB_Data as DB_Data
 import re
 import CoreFiles.ProbGenerator as ProbGenerator
@@ -69,13 +70,13 @@ class BuildingList:
     def __init__(self):
         self.building = []
 
-    def addBuilding(self,name,DataBaseInput,nbcase,MainPath,epluspath,LogFile):
+    def addBuilding(self,name,DataBaseInput,nbcase,MainPath,epluspath,LogFile,PlotOnly):
         #idf object is created here
         IDF.setiddname(os.path.join(epluspath,"Energy+.idd"))
         idf = IDF(os.path.normcase(os.path.join(epluspath,"ExampleFiles/Minimal.idf")))
         idf.idfname = name
         #building object is created here
-        building = Building(name, DataBaseInput, nbcase, MainPath,LogFile)
+        building = Building(name, DataBaseInput, nbcase, MainPath,LogFile,PlotOnly)
         #both are append as dict in the globa studied case list
         self.building.append({
             'BuildData' : building,
@@ -85,7 +86,7 @@ class BuildingList:
 
 class Building:
 
-    def __init__(self,name,DataBaseInput,nbcase,MainPath,LogFile):
+    def __init__(self,name,DataBaseInput,nbcase,MainPath,LogFile,PlotOnly):
         Buildingsfile = DataBaseInput['Build']
         Shadingsfile = DataBaseInput['Shades']
         DB = Buildingsfile[nbcase]
@@ -124,9 +125,8 @@ class Building:
         self.Materials = DB_Data.BaseMaterial
         self.WeatherDataFile = DB_Data.WeatherFile['Loc']
         self.InternalMass = DB_Data.InternalMass
-        self.IntLoad = self.getIntLoad(MainPath,LogFile)
-
-
+        if not PlotOnly:
+            self.IntLoad = self.getIntLoad(MainPath,LogFile)
         #if there are no cooling comsumption, lets considerer a set point at 50deg max
         for key in self.EPCMeters['Cooling']:
             if self.EPCMeters['Cooling'][key]>0:
@@ -217,7 +217,11 @@ class Building:
             try:
                 ifFile = os.path.join(os.path.dirname(MaintPath),os.path.normcase(ExEn[key]))
                 if os.path.isfile(ifFile):
-                    output[key] = ifFile
+                    AbsInputFileDir,InputFileDir = self.isInputDir()
+                    iflocFile = os.path.join(AbsInputFileDir,os.path.basename(ifFile))
+                    if not os.path.isfile(iflocFile):
+                        shutil.copy(ifFile,iflocFile)
+                    output[key] = os.path.join(InputFileDir,os.path.basename(ifFile))
                 else:
                     output[key] = ExEn[key]
             except:
@@ -599,6 +603,13 @@ class Building:
         GrlFct.Write2LogFile(msg, LogFile)
         return OccupType
 
+    def isInputDir(self):
+        InputFileDir = 'InputFiles'
+        AbsInputFileDir = os.path.join(os.getcwd(),InputFileDir)
+        if not os.path.exists(AbsInputFileDir):
+            os.mkdir(AbsInputFileDir)
+        return AbsInputFileDir,AbsInputFileDir #both values are identicial since the relative path was still creating issues with FMUs afterward...
+
     def getIntLoad(self, MainPath,LogFile):
         "get the internal load profil or value"
         #we should integrate the loads depending on the number of appartemnent in the building
@@ -623,9 +634,7 @@ class Building:
                 if 'Cste' in type:
                     IntLoad = eleval/self.EPHeatedArea/8760 #this value is thus in W/m2 #division by number of hours to convert Wh into W
                 else:
-                    InputFileDir = os.path.join(os.getcwd(), 'InputFiles')
-                    if not os.path.exists(InputFileDir):
-                        os.mkdir(InputFileDir)
+                    AbsInputFileDir,InputFileDir = self.isInputDir()
                     if 'winter' in type:
                         IntLoad = os.path.join(InputFileDir, self.name + '_winter.txt')
                         ProbGenerator.SigmoFile('winter', self.IntLoadCurveShape, eleval/self.EPHeatedArea * 100, IntLoad) #the *100 is because we have considered 100m2 for the previous file
