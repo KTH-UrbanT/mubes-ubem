@@ -7,7 +7,7 @@ path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geome
 sys.path.append(path2addgeom)
 sys.path.append(os.path.dirname(os.getcwd()))
 from CoreFiles import LaunchSim as LaunchSim
-import pickle
+import pickle5 as pickle
 import shutil
 import time as timedelay
 from ReadResults import Utilities
@@ -52,12 +52,11 @@ def launchFMUCoSim(work_dir):
     HeatPow[key] = [0]
     MeanTemp[key] = [0]
     SetPoints[key] = [21]
-
-  timeBuffer = [0]*len(FMUElement.keys())
-  extraVar = ['nbAppartments']
-  Res = Utilities.GetData(work_dir, extraVar)
-
+  day =0
   while ( ( time + step_size ) - stop_time < time_diff_resolution ):
+    if (time % (240 * 3600))==0:
+      day +=10
+      print(str(day)+' simulation Day done')
     if time%(2*3600)==0:
       bld += 1
       bld = bld%len(FMUElement.keys())
@@ -71,7 +70,6 @@ def launchFMUCoSim(work_dir):
       new_step = True
       status =  FMUElement[key].doStep(time, step_size, new_step )
       assert status == fmipp.fmiOK
-      timeBuffer[i] += step_size
     # Advance time.
     time += step_size
     for i,key in enumerate(FMUElement.keys()):
@@ -80,8 +78,7 @@ def launchFMUCoSim(work_dir):
       HeatPow[key].append(FMUElement[key].getRealValue(Outputkey[1]))
       assert FMUElement[key].getLastStatus() == fmipp.fmiOK
 
-
-def CleanUpSimRes(work_dir):
+def CleanUpSimRes(work_dir,keepLogFolder = False):
   #now lets clean up al lthe folder and files
   print('################################################')
   print('Starting the cleanup process')
@@ -97,6 +94,7 @@ def CleanUpSimRes(work_dir):
       with open(os.path.join(work_dir,buildName+'.pickle'), 'rb') as handle:
            loadB = pickle.load(handle)
       building = loadB['BuildData']
+      building.SaveLogFiles = keepLogFolder
       LaunchSim.savecase(buildName,os.path.join(work_dir,file),building,ResSimpath,buildNameidf,work_dir,withFMU = True)
       #unable to erase the fmu extracted folder as the dll is still open at this stage of the code....why ? still weird to me
       #shutil.rmtree(buildName)
@@ -111,4 +109,4 @@ if __name__ == '__main__' :
   os.chdir(work_dir)
 
   launchFMUCoSim(work_dir)
-  CleanUpSimRes(work_dir)
+  CleanUpSimRes(work_dir,keepLogFolder = True)

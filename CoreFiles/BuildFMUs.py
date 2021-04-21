@@ -5,9 +5,12 @@
 #is uses the EnergyPlusToFMU-v3.1.0.
 #be awar that paths are modified to VisualStudio version installed (here VS2019 community
 #the core file are intergated into a specific folder intregrated in the pathway file
-import os
+import os, sys
 from subprocess import check_call
 import CoreFiles.Set_Outputs as Set_Outputs
+path2addFMU = os.path.normcase(os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'FMUsKit\EnergyPlusToFMU-v3.1.0'))
+sys.path.append(path2addFMU)
+from Scripts import EnergyPlusToFMU
 
 def CreateZoneList(idf,name,zonelist):
     ZoneListObj= idf.newidfobject(
@@ -83,8 +86,14 @@ def buildEplusFMU(epluspath,weatherpath,Filepath):
     Path2FMUs = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),os.path.normcase('FMUsKit/EnergyPlusToFMU-v3.1.0/Scripts'))
     EpluIddPath = os.path.join(os.path.normcase(epluspath),'Energy+.idd')
     EplusEpwPath = os.path.join(epluspath,os.path.normcase(weatherpath))
-    cmd = ['python',os.path.join(Path2FMUs,'EnergyPlusToFMU.py'),'-i',EpluIddPath,'-w',EplusEpwPath,'-d',Filepath]
-    check_call(cmd, stdout=open(os.devnull, "w"))
+    external = False
+    if external:
+    #One way using check_call, the process is launche externaly to python (even though it is python scripts as well
+        cmd = ['python',os.path.join(Path2FMUs,'EnergyPlusToFMU.py'),'-i',EpluIddPath,'-w',EplusEpwPath,'-d',Filepath]
+        check_call(cmd, stdout=open(os.devnull, "w"))
+    else:
+        EnergyPlusToFMU.exportEnergyPlusAsFMU(showDiagnostics=False, litter=False, iddFileName =EpluIddPath , wthFileName =EplusEpwPath, fmiVersion = 1, idfFileName = Filepath)
+
 
 if __name__ == '__main__' :
      print('BuildFMUs.py')

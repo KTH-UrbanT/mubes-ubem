@@ -2,6 +2,8 @@ import os, sys
 import matplotlib.pyplot as plt
 path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 sys.path.append(path2addgeom)
+path2addFMU = os.path.normcase(os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'FMUsKit\EnergyPlusToFMU-v3.1.0'))
+sys.path.append(path2addFMU)
 import numpy as np
 sys.path.append(os.path.dirname(os.getcwd()))
 import Utilities
@@ -169,7 +171,7 @@ def plotIndex(GlobRes,FigName,name):
 
 if __name__ == '__main__' :
 
-    CaseName= 'ForTest' #Name of the case study to post-process
+    CaseName= 'fortest' #Name of the case study to post-process
 
     #Names (attributes) wanted to be taken in the pickle files for post-processing. The time series are agrregated into HeatedArea, NonHeatedArea and OutdoorSite
     extraVar=['height','StoreyHeigth','nbfloor','BlocHeight','BlocFootprintArea','BlocNbFloor','HeatedArea','NonHeatedArea','OutdoorSite']
