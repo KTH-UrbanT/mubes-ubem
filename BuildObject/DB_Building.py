@@ -618,7 +618,7 @@ class Building:
         # #lets used StROBE package by defaults (average over 10 profile
         # IntLoad = os.path.join(Input_path, 'P_Mean_over_10.txt')
         try:
-            IntLoad = self.ElecYearlyLoad/self.EPHeatedArea/8760
+            IntLoad = self.ElecYearlyLoad   #this value is in W\m2 prescies in DB_Data
         except:
             IntLoad = 0
         #now we compute power time series in order to match the measures form EPCs

@@ -14,7 +14,7 @@ def createWaterEqpt(idf,building):
     idf.newidfobject(
         'WATERUSE:EQUIPMENT',
         Name = building.DHWInfos['Name'],
-        Peak_Flow_Rate = 1e-4/6*building.nbAppartments*building.DHWInfos['WaterTapsMultiplier'],#the flow rate should be in m3/s and we are using schedul file in l/min, thus we need this transformation,
+        Peak_Flow_Rate = building.nbAppartments*building.DHWInfos['WaterTapsMultiplier'],#the flow rate should be in m3/s and we are using schedul file in l/min, thus we need this transformation,
         Flow_Rate_Fraction_Schedule_Name = 'WaterTaps',
         Hot_Water_Supply_Temperature_Schedule_Name = 'HotWaterTemp',
         Cold_Water_Supply_Temperature_Schedule_Name='ColdWaterTemp',

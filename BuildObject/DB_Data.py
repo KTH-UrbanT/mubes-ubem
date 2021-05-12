@@ -13,7 +13,7 @@ SimuData = \
 
 #files are needed to be located in the eather folder of EnergyPlus asthe same path is used afterward to launch the simulation
 WeatherFile = \
- {'Loc' : 'WeatherData/SWE_Stockholm.Arlanda.024600_IWEC.epw',#WeatherData/Year2012WithIRfromStandard.epw',#
+ {'Loc' : 'WeatherData/Year2012WithIRfromStandard.epw',#'WeatherData/SWE_Stockholm.Arlanda.024600_IWEC.epw',#
   }
 
 #Thisdict gives all the materials characteristics.
@@ -99,14 +99,15 @@ InternalMass = \
 
 #this dict give element for the Domestic Hot water. it gives the externail file for the water taps and the inlet cold water temp.
 #if empty it is no longer taken into account. if new file are given, thses should be present in the Externael file folder
+# ExtraEnergy = \
+        #{}          #if no DomesticHot Water is to be consdered, it still needs an empty dict
 ExtraEnergy = \
-        {}          #if no DomesticHot Water is to be consdered, it still needs an empty dict
-        # {'Name' : 'DHW',
-        #     'WatertapsFile':'ExternalFiles/mDHW_Sum_over_40.txt', #this file is in l/mnin and will be converted into m3/s afertward. it needs to have hourly values
-        #     'ColdWaterTempFile' :'ExternalFiles/ColdWaterTemp.txt',
-        #     'HotWaterSetTemp': 55,
-        #     'WaterTapsMultiplier':1/40, #this is because the file given above is for 40 apartment. in the code in is afterward multiplied by the number of apartement in the building
-        #     }
+    {'Name' : 'DHW',
+            'WatertapsFile':'ExternalFiles/mDHW_Sum_over_40.txt', #this file is in l/mnin and will be converted into m3/s afertward. it needs to have hourly values
+            'ColdWaterTempFile' :'ExternalFiles/ColdWaterTemp.txt',
+            'HotWaterSetTemp': 55,
+            'WaterTapsMultiplier':1e-4/6/40, #this is because the file given above is for 40 apartment and is in l/min where we need m3/s. in the code in is afterward multiplied by the number of apartement in the building
+            }
 
 #this dict is for the shading paradigm. There are two files that we need. the firt one is the main geojson that contains all buildings and their propreties
 #the other one contains for each shading surface id the vertex point and the building Id in order to catch the height of it.
@@ -132,12 +133,13 @@ BasisElement = \
  'BasementAirLeak': 1,          #in Air change rate [vol/hour]
  'wwr': 0.25,
  'ExternalInsulation' : False,
- 'ElecYearlyLoad' :15,          #this is the yearly electrical consumption for appliances and occupancy. It is replace by the values in EPCs if available
- 'IntLoadType' : 'Cste',        #change either by 'Cste', 'winter', or 'summer' for reversed sigmoid or sigmoid this will generate hourly values file in the InputFiles folder
+ 'ElecYearlyLoad' :15,          #this is the W\m2 value that will be applied constantly for appliances and occupancy consumptipon impact. It is replace by the values in EPCs if available
+ 'IntLoadType' : 'winter',        #change either by 'Cste', 'winter', or 'summer' for reversed sigmoid or sigmoid this will generate hourly values file in the InputFiles folder
  'IntLoadMultiplier': 1,        #this is a multiplier the modeler would like to play with for calibration
  'IntLoadCurveShape':3,         #this defines the slop of the curves
  'OffOccRandom' : False,
  'AreaBasedFlowRate' : 0.35,    #l/s/m2
+ 'AreaBasedFlowRateDefault' : 0.35, #l/s/m2 This will not be changed by EPCs and is needed if EPCs report only the balcned ventilation flow with HR for building that have 2 system and one wihtout recovery.
  'setTempUpL' : [25,25],        #only one have to be defined for none temperature modulation
  'setTempLoL' : [21,21],        #only one have to be defined for none temperature modulation
  'ComfortTempOff' :'23:00',     #hours at wich the first temperature set point is considered

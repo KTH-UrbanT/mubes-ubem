@@ -1,7 +1,7 @@
 #this file is just a tank of utilities for ploting stuff mainly.
 #It creates the figures and the plots
 import os
-import pickle
+import pickle5 as pickle
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import numpy as np
@@ -204,7 +204,7 @@ def plotBasicGraph(fig_name,ax0,varx,vary,varxname,varyname,title,sign,markersiz
             ax0.plot(varx,var,sign,label= varyname[nb], mfc='none',markersize=markersize)
         ax0.set_xlabel(varxname)
         ax0.set_ylabel(title)
-        ax0.legend()
+        #ax0.legend()
     else:
         for nb,var in enumerate(vary):
             ax0.plot(varx,var,sign, mfc='none',markersize=markersize)
@@ -249,6 +249,11 @@ def plot2Subplots(fig_name,ax0,ax1,varx,vary,varxname,varyname):
         ax[i].set_xlabel(varxname)
         ax[i].set_ylabel(varyname)
         ax[i].grid()
+
+def plotHist(fig_name,ax0,vary,varyname):
+    plt.figure(fig_name)
+    ax0.hist(vary,normed=True,label = varyname)
+    ax0.legend()
 
 def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
     os.chdir(path)
