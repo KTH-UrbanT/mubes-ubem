@@ -23,7 +23,7 @@ def LaunchProcess(SimDir,DataBaseInput,LogFile,bldidx,keyPath,nbcase,CorePerim =
     os.chdir(SimDir)
     StudiedCase = BuildingList()
     #lets build the two main object we'll be playing with in the following'
-    idf_ref, building_ref = GrlFct.appendBuildCase(StudiedCase, epluspath, nbcase, DataBaseInput, MainPath,LogFile)
+    idf_ref, building_ref = GrlFct.appendBuildCase(StudiedCase, epluspath, nbcase, DataBaseInput, MainPath,LogFile, PlotOnly = True)
     idf_ref.idfname = 'Building_' + str(nbcase) + '\n FormularId : ' + str(
         building_ref.BuildID['FormularId']) + '\n 50A_UUID : ' + str(building_ref.BuildID['50A_UUID'])
 
