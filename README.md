@@ -1,20 +1,20 @@
 # MUBES_UBEM
 MUBES_UBEM propose a workflow that creates automatic building energy models for EnergyPlus software.
 Several thermal zoning options are proposed from single heated and non heated zones up to core and perimeter zones for each building floor.
-It can launch simulations using parallel computing or can automatically creates FMUs of each building in order to make co-simulation afterward (the co-simulation process, using FMI++, is validated in Windows but not currently in Linux even though FMUs are created in Linux).  
+It can launch simulations using parallel computing or can automatically creates FMUs of each building in order to make co-simulation afterward (the co-simulation process, using FMI++, is validated on Windows but not currently on Linux even though FMUs can be created on Linux).  
 The main input file is in a geojson format. It contains the footprint including height (3D vertexes) of each building surface as well as some propreties taken from several databases (EPCs, and others).  
 
 ## Environments
 It is a python script based UBEM simulation tool using EnergyPlus (EP) as the core engine.
-It has been developed in Python 3.7 with EP 9.1 and has been successfully tested with EP 9.4. and pyhton 3.8 on Ubuntu 20.04 (tested on Oracle Virtual Machine).
+It has been developed in Python 3.7 with EP 9.1 and has been successfully tested with EP 9.4 and python 3.9. and pyhton 3.8 on Ubuntu 20.04 (tested on Oracle Virtual Machine).
 It is based on 2 main packages: [EPPY](https://github.com/santoshphilip/eppy) and [GeomEppy](https://github.com/jamiebull1/geomeppy).
 
 ## Installation process
 The needed packages are given in the requirements.txt file.  
-GeomEppy needs to be taken (by cloning or forking, or other way) from https://github.com/xavfa/geomeppy and make sure it is pointing to the correct branch (*MultiFloor_complexe_Building*) as many changes have be done in order to comply with more complex building footprints.GeomEppy package needs to be installed at the same level as MUBES_UBEM.  
+GeomEppy needs to be taken (by cloning or forking, or other way) from https://github.com/xavfa/geomeppy and make sure it is pointing to the correct branch (*MultiFloor_complexe_Building*) as many changes have be done in order to comply with more complex building footprints. GeomEppy package needs to be installed at the same level as MUBES_UBEM.  
 Besides, other changes might be also needed as MUBES_UBEM is just at the beginning of its development.   
 The FMUs creation option uses the [EnergyPlusToFMU-v3.1.0](https://simulationresearch.lbl.gov/fmu/EnergyPlus/export/userGuide/download.html) toolkit developed by LNBL. This toolkit should be download and installed at the same level as MUBES_UBEM under a folder named __FMUsKit__ (see BuildFMUs.buildEplusFMU() in the CoreFile folder).  
-The portability of FMUs (used with another computer than the one used to generate them) is valid (reason for having pickle5 package for python backward compatibilities) but currently only when no external files are used as error are encountered when relative paths are defined.  
+The portability of FMUs (used with another computer than the one used to generate them) is valid (taking care of using pickle5 instead of pickle if FMUs are created with python 3.8 and above and used in python 3.7 afterward) but currently only when no external files are used as error are encountered when relative paths are defined.  
 /!\ On the environment in which the UBEM process has been developed (Windows 10), some time delay had to be introduced in the original FMU toolkit code to enable to remove the intermediate files and make the FMU reach its end properly (https://github.com/lbl-srg/EnergyPlusToFMU/issues/54).  
   
 
@@ -27,11 +27,11 @@ __ModelerFolder__ : contains severals templates to build the process, select the
 __ReadResults__ : contains one template to read the results and some functions for post-processing in the Utilities.py file.  
 
 ## Run simulation case
-The __ModelerFolder__ is the playground of the Modeler. Within this folder, several templates are proposed. These are to be copy\paste in order to enable new releases/updates from the templates without altering your local changes.  
+The __ModelerFolder__ is the playground of the Modeler. Within this folder, several templates are proposed. These are to be copy/paste in order to enable new releases/updates from the templates without altering your local changes.  
 The templates are :  
 __Pathways_Template.txt__ : This file gives the paths to your local path of energyplus and to the needed geojson intput files (one file for the buildings and one file for the shading walls of the surrounding environement of each building). Its name is given as parameter in the builder file (see below). **This file is to be modified with local paths** .      
 __Outputs_Template.txt__ : This file proposes a list of available outputs from EP. It has been build from a .rdd file from EP. The required outputs should be indicated in this file. It also indicates at which frequency the modeler wants his ouputs.  
-__CaseBuilder_Template.py__ : this is the main builder file. This template gives an example for a full process to be launched. Read carefuly the comments below the *if __name__ == '__main__' :* as important choices are to be done here by the modeler before launching a simulation.  
+__CaseBuilder_Template.py__ : this is the main builder file. This template gives an example for a full process to be launched. Read carefuly the comments below the *if __name__ == '__main__' :* as important choices are to be done here by the modeler before launching a simulation.
 This scripts if the main one. It deals with the construction of the .idf file for each building and either launches the parallel computing option for all or creates the FMUs of all buildings. It will automatically create a folder (at the same level of main MUBES_UBEM folder and if not already created) that will be called __MUBES_SimResults__ and that will have subfolders for each case that is launched. The subfolder will be named as the CaseName in the CaseBuilder scripts (see comments below the *if __name__ == '__main__' :*).  
 
 Some few other files are present in this folder :  

@@ -13,7 +13,7 @@ SimuData = \
 
 #files are needed to be located in the eather folder of EnergyPlus asthe same path is used afterward to launch the simulation
 WeatherFile = \
- {'Loc' : 'WeatherData/Year2012WithIRfromStandard.epw',#'WeatherData/SWE_Stockholm.Arlanda.024600_IWEC.epw',#
+ {'Loc' : 'WeatherData/USA_CA_San.Francisco.Intl.AP.724940_TMY3.epw', #'WeatherData/SWE_Stockholm.Arlanda.024600_IWEC.epw',#
   }
 
 #Thisdict gives all the materials characteristics.
@@ -106,7 +106,7 @@ ExtraEnergy = \
             'WatertapsFile':'ExternalFiles/mDHW_Sum_over_40.txt', #this file is in l/mnin and will be converted into m3/s afertward. it needs to have hourly values
             'ColdWaterTempFile' :'ExternalFiles/ColdWaterTemp.txt',
             'HotWaterSetTemp': 55,
-            'WaterTapsMultiplier':1e-4/6/40, #this is because the file given above is for 40 apartment and is in l/min where we need m3/s. in the code in is afterward multiplied by the number of apartement in the building
+            'WaterTapsMultiplier':1e-4/6/40, #this is because the file given above is for 40 apartment and is in l/min where we need m3/s. in the code it is afterward multiplied by the number of apartement in the building
             }
 
 #this dict is for the shading paradigm. There are two files that we need. the firt one is the main geojson that contains all buildings and their propreties
@@ -149,7 +149,7 @@ BasisElement = \
  'dT_freeCool': 1,              #Tint-Text to authorize free cooling to be turned on
  'AirRecovEff' : 0.65,          #efficiency oif heat recovery from ventilation
  'HVACLimitMode': 'NoLimit',    #'LimitCapacity', #can be NoLimit or LimitFlowRate or LimitFlowRateAndCpacity
- 'HVACPowLimit' : 25,           #in Watt/m2
+ 'HVACPowLimit' : 25,           #in Watt/m2 considered if the above attribute is not 'NoLimit'
 
  }
 

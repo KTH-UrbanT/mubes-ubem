@@ -98,7 +98,6 @@ class Building:
         ExEn = DB_Data.ExtraEnergy
         self.getBEData(BE)
         self.getSimData(SD)
-        self.DHWInfos= self.getExtraEnergy(ExEn,MainPath)
         self.name = name
         self.BuildID = self.getBuildID(DB, GE,LogFile)
         self.Multipolygon = self.getMultipolygon(DB)
@@ -127,6 +126,7 @@ class Building:
         self.InternalMass = DB_Data.InternalMass
         if not PlotOnly:
             self.IntLoad = self.getIntLoad(MainPath,LogFile)
+            self.DHWInfos = self.getExtraEnergy(ExEn, MainPath)
         #if there are no cooling comsumption, lets considerer a set point at 50deg max
         for key in self.EPCMeters['Cooling']:
             if self.EPCMeters['Cooling'][key]>0:

@@ -208,13 +208,13 @@ if __name__ == '__main__' :
 # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
     CaseName = 'ForTest'
-    BuildNum = []
+    BuildNum = [0,1,2,3]
     VarName2Change = []
     Bounds = []
     NbRuns = 1
     CPUusage = 0.8
     SepThreads = False
-    CreateFMU = False
+    CreateFMU = True
     CorePerim = False
     FloorZoning = True
     PlotBuilding = False
@@ -249,7 +249,7 @@ if __name__ == '__main__' :
 
         for idx,nbBuild in enumerate(BuildNum2Launch):
             #First, lets create the folder for the building and simulation processes
-            SimDir,LogFile = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,LogFile)
+            SimDir,LogFile = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,LogFile,Refresh = True)
 
             if idx<len(DataBaseInput['Build']):
                 #getting through the mainfunction above :LaunchProcess() each building sees its idf done in a row within this function

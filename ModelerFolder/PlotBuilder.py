@@ -121,12 +121,9 @@ if __name__ == '__main__' :
         FigCenter = []
         LogFile=[]
         CurrentPath = os.getcwd()
-
+        SimDir = CurrentPath
+        LogFile = open(os.path.join(SimDir, 'PlotBuilder_Logs.log'), 'w')
         for idx,nbBuild in enumerate(BuildNum2Launch):
-            #First, lets create the folder for the building and simulation processes
-            SimDir = CurrentPath
-            LogFile = open(os.path.join(SimDir, 'PlotBuilder_Logs.log'), 'w')
-
             if idx<len(DataBaseInput['Build']):
                 #getting through the mainfunction above :LaunchProcess() each building sees its idf done in a row within this function
                 try:
