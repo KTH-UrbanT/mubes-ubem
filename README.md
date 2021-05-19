@@ -6,7 +6,7 @@ The main input file is in a geojson format. It contains the footprint including 
 
 ## Environments
 It is a python script based UBEM simulation tool using EnergyPlus (EP) as the core engine.
-It has been developed in Python 3.7 with EP 9.1 and has been successfully tested with EP 9.4 and python 3.9. and pyhton 3.8 on Ubuntu 20.04 (tested on Oracle Virtual Machine).
+It has been developed in Python 3.7 with EP 9.1 and has been successfully tested with EP 9.4 and python 3.9. and python 3.8 on Ubuntu 20.04 (tested on Oracle Virtual Machine).
 It is based on 2 main packages: [EPPY](https://github.com/santoshphilip/eppy) and [GeomEppy](https://github.com/jamiebull1/geomeppy).
 
 ## Installation process
