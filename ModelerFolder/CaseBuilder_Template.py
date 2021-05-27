@@ -249,7 +249,7 @@ if __name__ == '__main__' :
 
         for idx,nbBuild in enumerate(BuildNum2Launch):
             #First, lets create the folder for the building and simulation processes
-            SimDir,LogFile = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,LogFile)
+            SimDir,LogFile = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,LogFile,Refresh=True)
 
             if idx<len(DataBaseInput['Build']):
                 #getting through the mainfunction above :LaunchProcess() each building sees its idf done in a row within this function

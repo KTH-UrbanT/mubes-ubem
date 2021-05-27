@@ -327,7 +327,8 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
         bloc = bloclist[idx]
         # we need to compute the enveloppe area facing outside as well as the floor area (for HVAC)
         ExtWallArea = 0
-        for s in zone.zonesurfaces:
+        sur2lookat = (s for s in zone.zonesurfaces if s.key not in ['INTERNALMASS'])
+        for s in sur2lookat:
             if s.Outside_Boundary_Condition in 'outdoors':
                 ExtWallArea += s.area
             if s.Surface_Type in 'floor':

@@ -135,7 +135,8 @@ def createEnvelope(idf,building):
     for idx, zone in enumerate(idf.idfobjects["ZONE"]):
         storey = int(zone.Name[zone.Name.find(
             'Storey') + 6:])  # the name ends with Storey # so lest get the storey number this way
-        for s in zone.zonesurfaces:
+        sur2lookat = (s for s in zone.zonesurfaces if s.key not in ['INTERNALMASS'])
+        for s in sur2lookat:
             if s.Surface_Type in 'ceiling' and storey == -1:  # which mean that we are on the basements juste below ground
                 s.Construction_Name = 'Project Heated1rstFloor Rev'        #this will enable to reverse the construction for the cieling compared to the floor of the adjacent zone
             if s.Surface_Type in 'floor' and storey == 0:  # which mean that we are on the first floors just above basementthis states that wether or not there is basement zone, the floor slab isdefined by this layer

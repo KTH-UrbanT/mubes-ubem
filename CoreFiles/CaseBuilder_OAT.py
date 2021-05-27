@@ -41,33 +41,47 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
     #All buildings are organized and append in a list (list of building object. But the process finally is not used as it have been thought to.
     #each building is laucnhed afterward using the idf file and not the object directly (see LaunchSim.runcase() function
     #Nevertheless this organization still enable to order things !
-    StudiedCase = BuildingList()
-    #lets build the two main object we'll be playing with in the following'
-    idf, building = GrlFct.appendBuildCase(StudiedCase, epluspath, nbcase, DataBaseInput, MainPath,LogFile)
+    if FirstRun:
+        StudiedCase = BuildingList()
+        #lets build the two main object we'll be playing with in the following'
+        idf, building = GrlFct.appendBuildCase(StudiedCase, epluspath, nbcase, DataBaseInput, MainPath,LogFile)
 
-    #Rounds of check if we continue with this building or not
-    Var2check = len(building.BlocHeight) if building.Multipolygon else building.height
-    #if the building have bloc with no Height or if the hiegh is below 1m (shouldn't be as corrected in the Building class now)
-    if len(building.BlocHeight) > 0 and min(building.BlocHeight) < 1:
-        Var2check = 0
-    #is heated area is below 50m2, we just drop the building
-    if building.EPHeatedArea < 50:
-        Var2check = 0
-    #is no floor is present...(shouldn't be as corrected in the Building class now)
-    if 0 in building.BlocNbFloor:
-        Var2check = 0
-    if Var2check == 0:
-        msg =  '[Error] This Building/bloc has either no height, height below 1, surface below 50m2 or no floors, process abort for this one\n'
-        print(msg[:-1])
-        os.chdir(MainPath)
-        if FirstRun:
-            GrlFct.Write2LogFile(msg, LogFile)
-            GrlFct.Write2LogFile('##############################################################\n', LogFile)
+        #Rounds of check if we continue with this building or not
+        Var2check = len(building.BlocHeight) if building.Multipolygon else building.height
+        #if the building have bloc with no Height or if the hiegh is below 1m (shouldn't be as corrected in the Building class now)
+        if len(building.BlocHeight) > 0 and min(building.BlocHeight) < 1:
+            Var2check = 0
+        #is heated area is below 50m2, we just drop the building
+        if building.EPHeatedArea < 50:
+            Var2check = 0
+        #is no floor is present...(shouldn't be as corrected in the Building class now)
+        if 0 in building.BlocNbFloor:
+            Var2check = 0
+        if Var2check == 0:
+            msg =  '[Error] This Building/bloc has either no height, height below 1, surface below 50m2 or no floors, process abort for this one\n'
+            print(msg[:-1])
+            os.chdir(MainPath)
+            if FirstRun:
+                GrlFct.Write2LogFile(msg, LogFile)
+                GrlFct.Write2LogFile('##############################################################\n', LogFile)
 
-        # change on the building __init__ class in the simulation level should be done here as the function below defines the related objects
-    GrlFct.setSimLevel(idf, building)
-        # change on the building __init__ class in the building level should be done here as the function below defines the related objects
-    GrlFct.setBuildingLevel(idf, building,LogFile,CorePerim,FloorZoning)
+            # change on the building __init__ class in the simulation level should be done here as the function below defines the related objects
+        GrlFct.setSimLevel(idf, building)
+            # change on the building __init__ class in the building level should be done here as the function below defines the related objects
+        GrlFct.setBuildingLevel(idf, building,LogFile,CorePerim,FloorZoning)
+
+        if TotNbRun>1:
+            Case = {}
+            Case['BuildData'] = building
+            idf.saveas('Building_' + str(nbcase) + '_template.idf')
+            with open('Building_' + str(nbcase) + '_template.pickle', 'wb') as handle:
+                pickle.dump(Case, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    else:
+        IDF.setiddname(os.path.join(epluspath, "Energy+.idd"))
+        idf = IDF(os.path.normcase(os.path.join(SimDir, 'Building_' + str(nbcase) +  '_template.idf')))
+        with open(os.path.join(SimDir,'Building_' + str(nbcase) +  '_template.pickle'), 'rb') as handle:
+                LoadBld = pickle.load(handle)
+        building = LoadBld['BuildData']
     Case = {}
     #Case['BuildIDF'] = idf
     Case['BuildData'] = building

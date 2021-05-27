@@ -103,7 +103,7 @@ def SaveCase(MainPath,SepThreads,CaseName,nbBuild):
         except:
             pass
 
-def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,LogFile,Refrech = False):
+def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,LogFile,Refresh = False):
     if not os.path.exists(os.path.join(os.path.dirname(os.path.dirname(CurrentPath)),'MUBES_SimResults')):
         os.mkdir(os.path.join(os.path.dirname(os.path.dirname(CurrentPath)),'MUBES_SimResults'))
     SimDir = os.path.normcase(
@@ -111,7 +111,7 @@ def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,LogFile,Refrech = F
     LogFileName = CaseName + '_Logs.log'
     if not os.path.exists(SimDir):
         os.mkdir(SimDir)
-    elif idx == 0 and Refrech:
+    elif idx == 0 and Refresh:
         shutil.rmtree(SimDir)
         os.mkdir(SimDir)
     if SepThreads:

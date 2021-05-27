@@ -21,7 +21,7 @@ def initiateprocess(MainPath):
     listOfFiles = os.listdir(MainPath)
     file2run = []
     for file in listOfFiles:
-        if '.idf' in file:
+        if '.idf' in file and 'template' not in file:
             file2run.append(file)
     return file2run
 

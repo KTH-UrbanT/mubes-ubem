@@ -110,11 +110,11 @@ if __name__ == '__main__' :
     for line in FileLines:
         Bld2Sim.append(int(line))
 
-    CaseName = 'ham4caliblargesampling'
-    BuildNum = [1,14,17,2,3,37,38,44,11]#Bld2Sim
+    CaseName = 'CalibHamm_Bld31'
+    BuildNum = [31]#Bld2Sim
     VarName2Change = ['AirRecovEff','IntLoadCurveShape','wwr','EnvLeak','setTempLoL','AreaBasedFlowRate','WindowUval','WallInsuThick','RoofInsuThick']
     Bounds = [[0.5,0.9],[1,5],[0.2,0.4],[0.5,1.6],[18,22],[0.35,1],[0.7,2],[0.1,0.3],[0.2,0.4]]
-    NbRuns = 1000
+    NbRuns = 200
     CPUusage = 0.8
     SepThreads = True
     CreateFMU = False
@@ -151,19 +151,21 @@ if __name__ == '__main__' :
         LogFile=[]
         CurrentPath = os.getcwd()
 
-
-
         for idx,nbBuild in enumerate(BuildNum2Launch):
             #First, lets create the folder for the building and simulation processes
-            SimDir,LogFile1 = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,LogFile,Refrech=False)
+            SimDir,LogFile1 = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,LogFile,Refresh=False)
             LogFile1.close() #this file was define by the olde way of doing things
             os.remove(os.path.join(SimDir, 'Build_' + str(nbBuild) + '_Logs.log'))
             Paramfile = os.path.join(os.path.dirname(SimDir), 'ParamSample.pickle')
+            newpath = 'C:\\Users\\xav77\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\ComputedElem4Calibration'
+            Paramfile = os.path.join(newpath, 'Bld31_WeeklyCovarCalibratedSample.pickle')
             with open(Paramfile, 'rb') as handle:
-                ParamSample = pickle.load(handle)
+                 ParamSample = pickle.load(handle)
+            import numpy as np
+            ParamSample = np.array(ParamSample)
             #ParamSample = SetParamSample(SimDir, NbRuns, VarName2Change, Bounds)
 
-            if idx<len(DataBaseInput['Build']):
+            if idx-200<len(DataBaseInput['Build']):
                 MainInputs = {}
                 MainInputs['FirstRun'] = True
                 MainInputs['CorePerim'] = CorePerim
@@ -176,12 +178,12 @@ if __name__ == '__main__' :
                 MainInputs['nbBuild'] = nbBuild
                 MainInputs['ParamVal'] = ParamSample[0, :]
                 MainInputs['VarName2Change'] = VarName2Change
-                LaunchOAT(MainInputs,ParamSample[0, :],0)
+                LaunchOAT(MainInputs,ParamSample[0, :],idx)
                 MainInputs['FirstRun'] = False
                 nbcpu = max(mp.cpu_count() * CPUusage, 1)
                 pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
                 for i in range(1,len(ParamSample)):
-                    pool.apply_async(LaunchOAT, args=(MainInputs,ParamSample[i, :],i))
+                    pool.apply_async(LaunchOAT, args=(MainInputs,ParamSample[i, :],i+idx))
                 pool.close()
                 pool.join()
                 #getting through the mainfunction above :LaunchProcess() each building sees its idf done in a row within this function
@@ -201,6 +203,11 @@ if __name__ == '__main__' :
                     except:
                         pass
                     file2run = LaunchSim.initiateprocess(SimDir)
+                    newlist2run = []
+                    for file in file2run:
+                        if not os.path.isfile(os.path.join(SimDir, 'Sim_Results', file[:-4] + '.pickle')):
+                            newlist2run.append(file)
+                    file2run = newlist2run
                     nbcpu = max(mp.cpu_count()*CPUusage,1)
                     pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
                     for i in range(len(file2run)):
