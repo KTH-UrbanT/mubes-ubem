@@ -349,6 +349,8 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
             FloorArea = FloorArea * FloorMultiplier
             #creating the internalMass element if the dict is not empty
             if building.InternalMass['HeatedZoneIntMass']:
+                if FloorArea==0:
+                    a=1
                 CreateInternalMass(idf, zone, FloorArea, 'HeatedZoneIntMassObj', building.InternalMass['HeatedZoneIntMass'])
             if ExtWallArea != 0 and building.EnvLeak !=0 :
                 CreateEnvLeakage(idf, zone, building, ExtWallArea)

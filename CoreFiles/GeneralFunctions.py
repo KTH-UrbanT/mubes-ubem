@@ -103,12 +103,11 @@ def SaveCase(MainPath,SepThreads,CaseName,nbBuild):
         except:
             pass
 
-def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,LogFile,Refresh = False):
+def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,Refresh = False):
     if not os.path.exists(os.path.join(os.path.dirname(os.path.dirname(CurrentPath)),'MUBES_SimResults')):
         os.mkdir(os.path.join(os.path.dirname(os.path.dirname(CurrentPath)),'MUBES_SimResults'))
     SimDir = os.path.normcase(
         os.path.join(os.path.dirname(os.path.dirname(CurrentPath)), os.path.join('MUBES_SimResults', CaseName)))
-    LogFileName = CaseName + '_Logs.log'
     if not os.path.exists(SimDir):
         os.mkdir(SimDir)
     elif idx == 0 and Refresh:
@@ -117,18 +116,12 @@ def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,LogFile,Refresh = F
     if SepThreads:
         SimDir = os.path.normcase(
             os.path.join(SimDir, 'Build_' + str(nbBuild)))
-        LogFileName = 'Build_' + str(nbBuild) + '_Logs.log'
         if not os.path.exists(SimDir):
             os.mkdir(SimDir)
         elif idx == 0:
             shutil.rmtree(SimDir)
             os.mkdir(SimDir)
-    # creating the log file
-    if idx ==0 or SepThreads:
-        if os.path.exists(os.path.join(SimDir, LogFileName)) and idx==0:
-            os.remove(os.path.join(SimDir, LogFileName))
-        LogFile = open(os.path.join(SimDir, LogFileName), 'w')
-    return SimDir, LogFile
+    return SimDir
 
     # if not SepThreads:
     #     SimDir = os.path.normcase(

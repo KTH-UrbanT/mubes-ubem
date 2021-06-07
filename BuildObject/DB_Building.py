@@ -266,7 +266,7 @@ class Building:
             centroide = list(Polygon(DB.geometry.coordinates[0]).centroid.coords)
             x = centroide[0][0]
             y = centroide[0][1]
-        ref = (round(x,2), round(y,2))
+        ref = (round(x,8), round(y,8)) #there might be not a true need for suche precision....
         return ref
 
     def getfootprint(self,DB,LogFile=[],RefCoord=[],nbfloor=0):

@@ -45,10 +45,11 @@ def AddOutputs(idf,building,path,EMSOutputs,OutputsFile):
             Reporting_Frequency=OutputsVar['Reportedfrequency'],
         )
     zonelist = getHeatedZones(idf)
-    setEMS4MeanTemp(idf, zonelist, OutputsVar['Reportedfrequency'],EMSOutputs[0])
-    setEMS4TotHeatPow(idf, building,zonelist, OutputsVar['Reportedfrequency'], EMSOutputs[1])
-    if len(EMSOutputs)>2:
-        setEMS4TotDHWPow(idf, building, zonelist, OutputsVar['Reportedfrequency'], EMSOutputs[2])
+    if EMSOutputs:
+        setEMS4MeanTemp(idf, zonelist, OutputsVar['Reportedfrequency'],EMSOutputs[0])
+        setEMS4TotHeatPow(idf, building,zonelist, OutputsVar['Reportedfrequency'], EMSOutputs[1])
+        if len(EMSOutputs)>2:
+            setEMS4TotDHWPow(idf, building, zonelist, OutputsVar['Reportedfrequency'], EMSOutputs[2])
     return idf
 
 def getHeatedZones(idf):

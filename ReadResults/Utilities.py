@@ -208,7 +208,7 @@ def plotBasicGraph(fig_name,ax0,varx,vary,varxname,varyname,title,sign,markersiz
             ax0.plot(varx,var,sign,label= varyname[nb], mfc='none',markersize=markersize)
         ax0.set_xlabel(varxname)
         ax0.set_ylabel(title)
-        #ax0.legend()
+        ax0.legend()
     else:
         for nb,var in enumerate(vary):
             ax0.plot(varx,var,sign, mfc='none',markersize=markersize)

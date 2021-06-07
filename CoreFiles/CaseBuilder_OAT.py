@@ -64,6 +64,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
             if FirstRun:
                 GrlFct.Write2LogFile(msg, LogFile)
                 GrlFct.Write2LogFile('##############################################################\n', LogFile)
+                return
 
             # change on the building __init__ class in the simulation level should be done here as the function below defines the related objects
         GrlFct.setSimLevel(idf, building)
@@ -163,14 +164,14 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
             # nbAppartments = building.nbAppartments
             # building.nbAppartments = 1
             # Lets read the correction factors
-    work_dir = os.path.normcase('C:\\Users\\xav77\Documents\FAURE\prgm_python\\UrbanT\Eplus4Mubes\MUBES_SimResults\ham4calibwithmeasuredandnewweather\Sim_Results')
-    CorFactPath = os.path.normcase(os.path.join(work_dir, 'DHWCorFact.txt'))
-    with open(CorFactPath, 'r') as handle:
-        FileLines = handle.readlines()
-    CorFact = {}
-    for line in FileLines:
-        CorFact[int(line[:line.index('\t')])] = float(line[line.index('\t') + 1:line.index('\n')])
-    building.DHWInfos['WaterTapsMultiplier'] *= CorFact[nbcase]
+    # work_dir = os.path.normcase('C:\\Users\\xav77\Documents\FAURE\prgm_python\\UrbanT\Eplus4Mubes\MUBES_SimResults\ham4calibwithmeasuredandnewweather\Sim_Results')
+    # CorFactPath = os.path.normcase(os.path.join(work_dir, 'DHWCorFact.txt'))
+    # with open(CorFactPath, 'r') as handle:
+    #     FileLines = handle.readlines()
+    # CorFact = {}
+    # for line in FileLines:
+    #     CorFact[int(line[:line.index('\t')])] = float(line[line.index('\t') + 1:line.index('\n')])
+    # building.DHWInfos['WaterTapsMultiplier'] *= CorFact[nbcase]
             #add some extra energy loads like domestic Hot water
     GrlFct.setExtraEnergyLoad(idf,building)
             #to give back the good values
@@ -180,10 +181,11 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
             #and if present, the heating needs for DHW production as heated by direct heating
             #these are added thourgh EMS option of EnergyPlus
     EMSOutputs = []
-    EMSOutputs.append('Mean Heated Zones Air Temperature')
-    EMSOutputs.append('Total Building Heating Power')
-    if building.DHWInfos:
-        EMSOutputs.append('Total DHW Heating Power')
+    if len(idf.idfobjects["ZONE"])<50:
+        EMSOutputs.append('Mean Heated Zones Air Temperature')
+        EMSOutputs.append('Total Building Heating Power')
+        if building.DHWInfos:
+            EMSOutputs.append('Total DHW Heating Power')
 
     GrlFct.setOutputLevel(idf,building,MainPath,EMSOutputs,OutputsFile)
 
@@ -197,11 +199,12 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
             #the data object is saved as needed afterward aside the Eplus results
     with open('Building_' + str(nbcase) +  'v'+str(currentRun)+ '.pickle', 'wb') as handle:
         pickle.dump(Case, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    msg = 'Input IDF file ' + str(currentRun+1)+ '/'  + str(TotNbRun)+ ' is done\n'
+    msg = 'Building_' + str(nbcase)+' IDF file ' + str(currentRun+1)+ '/'  + str(TotNbRun)+ ' is done\n'
     print(msg[:-1])
-    GrlFct.Write2LogFile(msg, LogFile)
+    #GrlFct.Write2LogFile(msg, LogFile)
     GrlFct.Write2LogFile('##############################################################\n', LogFile)
-
+    if FirstRun:
+        LogFile.close()
     # lets get back to the Main Folder we were at the very beginning
     os.chdir(MainPath)
 
@@ -269,7 +272,7 @@ if __name__ == '__main__' :
         ParamVal = []
         VarName2Change = []
     else:
-        ParamVal = re.findall("\d+\.\d+", ParamVal)
+        ParamVal = re.findall("[0-9.Ee\-+]+", ParamVal)
         ParamVal = [float(val) for val in ParamVal]
         VarName2Change = re.split(r'\W+', VarName2Change)[1:-1]
 

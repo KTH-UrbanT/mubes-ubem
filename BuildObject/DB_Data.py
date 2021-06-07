@@ -13,7 +13,7 @@ SimuData = \
 
 #files are needed to be located in the eather folder of EnergyPlus asthe same path is used afterward to launch the simulation
 WeatherFile = \
- {'Loc' : 'WeatherData/Year2012WithIRfromStandard.epw',#'WeatherData/SWE_Stockholm.Arlanda.024600_IWEC.epw',#
+ {'Loc' : 'WeatherData/SWE_Stockholm.Arlanda.024600_IWEC.epw',#'WeatherData/Year2012WithIRfromStandard.epw',#
   }
 
 #Thisdict gives all the materials characteristics.
@@ -117,7 +117,7 @@ GeomElement = \
   'ShadingIdKey' : 'vaggid',
   'BuildingIdKey' : 'byggnadsid',
   'VertexKey':'geometries',
-  'MaxShadingDist': 200,
+  'MaxShadingDist': 0,#200,
   }
 #this dict gives information on occupancy times each day. If DCV = True, the airflow will follow the number of person
 # and the schedule. if not it will be based only on the extra airflow rate but without schedule (all the time)
@@ -134,7 +134,7 @@ BasisElement = \
  'wwr': 0.25,
  'ExternalInsulation' : False,
  'ElecYearlyLoad' :15,          #this is the W\m2 value that will be applied constantly for appliances and occupancy consumptipon impact. It is replace by the values in EPCs if available
- 'IntLoadType' : 'winter',        #change either by 'Cste', 'winter', or 'summer' for reversed sigmoid or sigmoid this will generate hourly values file in the InputFiles folder
+ 'IntLoadType' : 'Cste',        #change either by 'Cste', 'winter', or 'summer' for reversed sigmoid or sigmoid this will generate hourly values file in the InputFiles folder
  'IntLoadMultiplier': 1,        #this is a multiplier the modeler would like to play with for calibration
  'IntLoadCurveShape':3,         #this defines the slop of the curves
  'OffOccRandom' : False,

@@ -42,7 +42,10 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
     except:
         pass
     for bloc in range(Nb_blocs):
-        bloc_coord =  Full_coord[bloc]# if building.Multipolygon else Full_coord
+        if not ForPlots:
+            bloc_coord =  [(node[0] - building.RefCoord[0], node[1] - building.RefCoord[1]) for node in Full_coord[bloc]]
+        else:
+            bloc_coord =  Full_coord[bloc]# if building.Multipolygon else Full_coord
         Height = building.BlocHeight[bloc]# if building.Multipolygon else building.height
         nbstories = building.BlocNbFloor[bloc]# if building.Multipolygon else building.nbfloor
         #if building.Multipolygon:

@@ -188,7 +188,7 @@ def getMatches(Res,Meas,VarName2Change,CalibrationBasis):
     return {'YearlyBasis' : YearlyMatchedParam,'MonthlyBasis' : MonthlyMatchedParam,'WeeklyBasis' : WeeklyMatchedParam,
             'DailyBasis' : DailyMatchedParam}
 
-def getCovarCalibratedParam(Data,VarName2Change,nbruns):
+def getCovarCalibratedParam(Data,VarName2Change,nbruns,BoundLim):
         #if len(Data[VarName2Change[0]]) > 10:
             ParamSample = []
             for key in VarName2Change:
@@ -235,23 +235,16 @@ def getCovarCalibratedParam(Data,VarName2Change,nbruns):
             y_transformed = []
             for i in range(len(y[:,0])):
                 full_range = ParamSample[i, :].max()-ParamSample[i, :].min()
-                if i==0:
-                    y_transformed.append(np.interp(y[i], (y[i].min(), y[i].max()), (ParamSample[i, :].min()-0.1*full_range, min(1,ParamSample[i, :].max()+0.1*full_range))))
-                else:
-                    y_transformed.append(np.interp(y[i], (y[i].min(), y[i].max()), (
-                    ParamSample[i, :].min() - 0.1 * full_range, ParamSample[i, :].max() + 0.1 * full_range)))
+                y_transformed.append(np.interp(y[i], (y[i].min(), y[i].max()), (max(BoundLim[i][0],ParamSample[i, :].min()-0.1*full_range), min(BoundLim[i][1],ParamSample[i, :].max()+0.1*full_range))))
             Param2keep = list(np.array(y_transformed).transpose())
 
             return np.array(Param2keep)
 
-def getNewBounds(Bounds):
+def getNewBounds(Bounds,BoundLim):
     newBounds = []
     for idx, bd in enumerate(Bounds):
-        if idx == 0:  # it is the efficiency that cannot be over 1
-            newBounds.append(
-                [bd[0] - 0.1 * (bd[1] - bd[0]), min(1, bd[1] + 0.1 * (bd[1] - bd[0]))])
-        else:
-            newBounds.append([bd[0] - 0.1 * (bd[1] - bd[0]), bd[1] + 0.1 * (bd[1] - bd[0])])
+        newBounds.append(
+                [max(bd[0] - 0.1 * (bd[1] - bd[0]),BoundLim[idx][0]), min(BoundLim[idx][1], bd[1] + 0.1 * (bd[1] - bd[0]))])
     return newBounds
 
 
@@ -296,10 +289,11 @@ if __name__ == '__main__' :
     for line in FileLines:
         Bld2Sim.append(int(line))
 
-    CaseName = 'CalibYearly'
-    BuildNum = Bld2Sim
+    CaseName = 'CalibMonthly'
+    BuildNum = Bld2Sim[12:]
     VarName2Change = ['AirRecovEff','IntLoadCurveShape','wwr','EnvLeak','setTempLoL','AreaBasedFlowRate','WindowUval','WallInsuThick','RoofInsuThick']
     Bounds = [[0.5,0.9],[1,5],[0.2,0.4],[0.5,1.6],[18,22],[0.35,1],[0.7,2],[0.1,0.3],[0.2,0.4]]
+    BoundLim = [[0,1],[0,9],[0.05,0.7],[0.2,4],[15,27],[0.2,2],[0.5,4],[0.05,0.9],[0.05,0.9]]
     NbRuns = 200
     CPUusage = 0.8
     SepThreads = True
@@ -310,7 +304,7 @@ if __name__ == '__main__' :
     PathInputFile = 'HammarbyLast.txt'#'Pathways_Template.txt'
     OutputsFile = 'Outputs.txt'
     ZoneOfInterest = ''
-    CalibBasis = 'YearlyBasis' #'YearlyBasis' #'MonthlyBasis' # 'WeeklyBasis' # 'DailyBasis'
+    CalibBasis = 'MonthlyBasis' #'YearlyBasis' #'MonthlyBasis' # 'WeeklyBasis' # 'DailyBasis'
 
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
@@ -342,7 +336,7 @@ if __name__ == '__main__' :
 
         done = False #artefcat for continuing a simulation tat has stoped
         for idx,nbBuild in enumerate(BuildNum2Launch):
-            if nbBuild==17:
+            if nbBuild==12:
                 done = True
                 idx = 1
             #First, lets create the folder for the building and simulation processes
@@ -352,13 +346,13 @@ if __name__ == '__main__' :
             Paramfile = os.path.join(os.path.dirname(SimDir), 'ParamSample.pickle')
             newpath = 'C:\\Users\\xav77\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\ComputedElem4Calibration'
             ParamSample = SetParamSample(SimDir, NbRuns, VarName2Change, Bounds)
-
             if idx < len(DataBaseInput['Build']):
                 Finished = False
                 idx_offset = 0
                 while not Finished:
                     if not done:
                         print(len(ParamSample[:, 0]))
+                        #idx_offset=200
                         os.chdir(CurrentPath)
                         MainInputs = {}
                         MainInputs['FirstRun'] = True if idx_offset==0 else False
@@ -370,7 +364,7 @@ if __name__ == '__main__' :
                         MainInputs['SimDir'] = SimDir
                         MainInputs['PathInputFiles'] = PathInputFile
                         MainInputs['nbBuild'] = nbBuild
-                        MainInputs['ParamVal'] = ParamSample[0, :]
+                        #MainInputs['ParamVal'] = ParamSample[0, :]
                         MainInputs['VarName2Change'] = VarName2Change
                         LaunchOAT(MainInputs,ParamSample[idx_offset, :],idx_offset)
                         MainInputs['FirstRun'] = False
@@ -425,24 +419,33 @@ if __name__ == '__main__' :
                             print('New runs loop')
                             if len(Matches[CalibBasis][VarName2Change[0]]) > 10:
                                 try:
-                                    NewSample = getCovarCalibratedParam(Matches[CalibBasis], VarName2Change, NbRuns)
+                                    NewSample = getCovarCalibratedParam(Matches[CalibBasis], VarName2Change, NbRuns,BoundLim)
                                     print('Covariance worked !')
                                 except:
-                                    Bounds = getNewBounds(Bounds)
-                                    NewSample = SetParamSample(SimDir, NbRuns, VarName2Change, Bounds)
+                                    Bounds = getNewBounds(Bounds,BoundLim)
+                                    NewSample = GrlFct.getParamSample(VarName2Change,Bounds,NbRuns)
                             else:
-                                Bounds = getNewBounds(Bounds)
-                                NewSample = SetParamSample(SimDir, NbRuns, VarName2Change, Bounds)
+                                Bounds = getNewBounds(Bounds,BoundLim)
+                                NewSample = GrlFct.getParamSample(VarName2Change,Bounds,NbRuns)
+                            idx_offset = len(ParamSample[:, 0])
+                            ParamSample = np.concatenate((ParamSample, NewSample))
+                            Paramfile = os.path.join(SimDir, 'ParamSample.pickle')
+                            with open(Paramfile, 'wb') as handle:
+                                pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
                     except:
                         print('No matches at all from now...')
                         if len(ParamSample[:,0])>=1000:
                             Finished = True
                         else:
-                            Bounds = getNewBounds(Bounds)
-                            NewSample = SetParamSample(SimDir, NbRuns, VarName2Change, Bounds)
+                            Bounds = getNewBounds(Bounds,BoundLim)
+                            NewSample = GrlFct.getParamSample(VarName2Change,Bounds,NbRuns)
+                            idx_offset = len(ParamSample[:, 0])
+                            ParamSample = np.concatenate((ParamSample, NewSample))
+                            Paramfile = os.path.join(SimDir, 'ParamSample.pickle')
+                            with open(Paramfile, 'wb') as handle:
+                                pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-                    idx_offset = len(ParamSample[:, 0])
-                    ParamSample = np.concatenate((ParamSample, NewSample))
+
                     done = False
                 Paramfile = os.path.join(SimDir, 'ParamSample.pickle')
                 with open(Paramfile, 'wb') as handle:

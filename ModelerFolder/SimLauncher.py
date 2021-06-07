@@ -46,8 +46,8 @@ def SetParamSample(SimDir,nbruns,VarName2Change,Bounds):
 
     return ParamSample
 
-def LaunchOAT(MainInputs,ParamVal,currentRun):
-    print('Launched')
+def LaunchOAT(MainInputs,SimDir,nbBuild,ParamVal,currentRun):
+    #print('Launched')
     # lets prepare the commande lines
     virtualenvline = os.path.normcase('C:\\Users\\xav77\Envs\\UBEMGitTest\Scripts\\python.exe')
     # virtualenvline = virtualenvline+'\n'
@@ -60,8 +60,16 @@ def LaunchOAT(MainInputs,ParamVal,currentRun):
             cmdline.append(MainInputs[key])
         else:
             cmdline.append(str(MainInputs[key]))
+
+    cmdline.append('-SimDir')
+    cmdline.append(str(SimDir))
+
+    cmdline.append('-nbBuild')
+    cmdline.append(str(nbBuild))
+
     cmdline.append('-ParamVal')
     cmdline.append(str(ParamVal))
+
     cmdline.append('-currentRun')
     cmdline.append(str(currentRun))
     # cmdline = [virtualenvline, os.path.join(scriptpath, 'CaseBuilder_OAT.py'), '-FirstRun', '-SimDir', SimDir,
@@ -110,25 +118,28 @@ if __name__ == '__main__' :
     for line in FileLines:
         Bld2Sim.append(int(line))
 
-    CaseName = 'CalibHamm_Bld31'
-    BuildNum = [31]#Bld2Sim
+    CaseName = 'fortest'#'Minneberg2floorzone'
+    BuildNum = [38]#[31]#Bld2Sim
     VarName2Change = ['AirRecovEff','IntLoadCurveShape','wwr','EnvLeak','setTempLoL','AreaBasedFlowRate','WindowUval','WallInsuThick','RoofInsuThick']
     Bounds = [[0.5,0.9],[1,5],[0.2,0.4],[0.5,1.6],[18,22],[0.35,1],[0.7,2],[0.1,0.3],[0.2,0.4]]
-    NbRuns = 200
+    NbRuns = 1
     CPUusage = 0.8
-    SepThreads = True
     CreateFMU = False
-    CorePerim = False
-    FloorZoning = True
-    PlotBuilding = False
-    PathInputFile = 'HammarbyLast.txt'#'Pathways_Template.txt'
+    CorePerim = True
+    FloorZoning = False
+    #PlotBuilding = True
+    PathInputFile = 'HammarbyLast.txt'#'Pathways_Template.txt''Minneberg2D.txt'#'MinnebergLast.txt'#
     OutputsFile = 'Outputs.txt'
     ZoneOfInterest = ''
 
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
 ######################################################################################################################
-
+    if NbRuns>1:
+        SepThreads = True
+    else:
+        SepThreads = False
+    nbcpu = max(mp.cpu_count() * CPUusage, 1)
     # reading the pathfiles and the geojsonfile
     keyPath = GrlFct.readPathfile(PathInputFile)
     epluspath = keyPath['epluspath']
@@ -148,85 +159,58 @@ if __name__ == '__main__' :
     else:
 
         FigCenter = []
-        LogFile=[]
         CurrentPath = os.getcwd()
-
+        MainInputs = {}
+        MainInputs['CorePerim'] = CorePerim
+        MainInputs['FloorZoning'] = FloorZoning
+        MainInputs['CreateFMU'] = CreateFMU
+        MainInputs['TotNbRun'] = NbRuns
+        MainInputs['OutputsFile'] = OutputsFile
+        MainInputs['VarName2Change'] = VarName2Change
+        MainInputs['PathInputFiles'] = PathInputFile
+        File2Launch = {'nbBuild' : []}
         for idx,nbBuild in enumerate(BuildNum2Launch):
+            MainInputs['FirstRun'] = True
             #First, lets create the folder for the building and simulation processes
-            SimDir,LogFile1 = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,LogFile,Refresh=False)
-            LogFile1.close() #this file was define by the olde way of doing things
-            os.remove(os.path.join(SimDir, 'Build_' + str(nbBuild) + '_Logs.log'))
-            Paramfile = os.path.join(os.path.dirname(SimDir), 'ParamSample.pickle')
-            newpath = 'C:\\Users\\xav77\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\ComputedElem4Calibration'
-            Paramfile = os.path.join(newpath, 'Bld31_WeeklyCovarCalibratedSample.pickle')
-            with open(Paramfile, 'rb') as handle:
-                 ParamSample = pickle.load(handle)
-            import numpy as np
-            ParamSample = np.array(ParamSample)
-            #ParamSample = SetParamSample(SimDir, NbRuns, VarName2Change, Bounds)
+            SimDir = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,Refresh=True)
+            ParamSample = SetParamSample(SimDir, NbRuns, VarName2Change, Bounds)
+            if idx<len(DataBaseInput['Build']):
+                #lets check if there are several simulation for one building or not
+                if NbRuns > 1:
+                    LaunchOAT(MainInputs,SimDir,nbBuild,ParamSample[0, :],0)
+                    MainInputs['FirstRun'] = False
 
-            if idx-200<len(DataBaseInput['Build']):
-                MainInputs = {}
-                MainInputs['FirstRun'] = True
-                MainInputs['CorePerim'] = CorePerim
-                MainInputs['FloorZoning'] = FloorZoning
-                MainInputs['CreateFMU'] = CreateFMU
-                MainInputs['TotNbRun'] = NbRuns
-                MainInputs['OutputsFile'] = OutputsFile
-                MainInputs['SimDir'] = SimDir
-                MainInputs['PathInputFiles'] = PathInputFile
-                MainInputs['nbBuild'] = nbBuild
-                MainInputs['ParamVal'] = ParamSample[0, :]
-                MainInputs['VarName2Change'] = VarName2Change
-                LaunchOAT(MainInputs,ParamSample[0, :],idx)
-                MainInputs['FirstRun'] = False
-                nbcpu = max(mp.cpu_count() * CPUusage, 1)
-                pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
-                for i in range(1,len(ParamSample)):
-                    pool.apply_async(LaunchOAT, args=(MainInputs,ParamSample[i, :],i+idx))
-                pool.close()
-                pool.join()
-                #getting through the mainfunction above :LaunchProcess() each building sees its idf done in a row within this function
-                # try:
-                #     epluspath,NewCentroid = LaunchProcess(SimDir,DataBaseInput,LogFile,idx,keyPath,nbBuild,CorePerim,FloorZoning,
-                #             VarName2Change,Bounds,NbRuns,SepThreads,CreateFMU,FigCenter,PlotBuilding,OutputsFile)
-                # except:
-                #     msg = '[ERROR] There was an error on this building, process aborted\n'
-                #     print(msg[:-1])
-                #     GrlFct.Write2LogFile(msg, LogFile)
-                #     GrlFct.Write2LogFile('##############################################################\n', LogFile)
-                #     os.chdir(CurrentPath)
-                #if choicies is done, once the building is finished parallel computing is launched for this one
+                    pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
+                    for i in range(1,len(ParamSample)):
+                        pool.apply_async(LaunchOAT, args=(MainInputs,SimDir,nbBuild,ParamSample[i, :],i))
+                    pool.close()
+                    pool.join()
+                else:
+                    File2Launch['nbBuild'].append(nbBuild)
+
                 if SepThreads and not CreateFMU:
-                    try:
-                        LogFile.close()
-                    except:
-                        pass
                     file2run = LaunchSim.initiateprocess(SimDir)
-                    newlist2run = []
-                    for file in file2run:
-                        if not os.path.isfile(os.path.join(SimDir, 'Sim_Results', file[:-4] + '.pickle')):
-                            newlist2run.append(file)
-                    file2run = newlist2run
                     nbcpu = max(mp.cpu_count()*CPUusage,1)
                     pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
                     for i in range(len(file2run)):
                         pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath))
                     pool.close()
                     pool.join()
-                    #GrlFct.SaveCase(SimDir,SepThreads,CaseName,nbBuild)
+
             else:
                 print('All buildings in the input file have been treated.')
                 print('###################################################')
                 break
         # if choicies is done, once the building is finished parallel computing is launched for all files
         if not SepThreads and not CreateFMU:
-            try:
-                LogFile.close()
-            except:
-                pass
+            #lets launche the idf file creation process
+            pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
+            for nbBuild in File2Launch['nbBuild']:
+                pool.apply_async(LaunchOAT, args=(MainInputs,SimDir,nbBuild,[1],0))
+            pool.close()
+            pool.join()
             file2run = LaunchSim.initiateprocess(SimDir)
-            nbcpu = max(mp.cpu_count()*CPUusage,1)
+            nbcpu = max(mp.cpu_count() * CPUusage, 1)
             pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
             for i in range(len(file2run)):
                 pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath))

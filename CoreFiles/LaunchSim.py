@@ -21,7 +21,7 @@ def initiateprocess(MainPath):
     listOfFiles = os.listdir(MainPath)
     file2run = []
     for file in listOfFiles:
-        if '.idf' in file and 'template' not in file:
+        if '.idf' in file and 'template' not in file and not os.path.isfile(os.path.join(MainPath, 'Sim_Results', file[:-4] + '.pickle')):
             file2run.append(file)
     return file2run
 
