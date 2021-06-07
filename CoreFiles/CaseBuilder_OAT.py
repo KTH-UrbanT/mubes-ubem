@@ -8,7 +8,7 @@ path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geome
 sys.path.append(path2addgeom)
 from geomeppy import IDF
 #add needed packages
-import pickle5 as pickle
+import pickle#5 as pickle
 import copy
 import shutil
 #add scripts from the project as well
@@ -153,6 +153,9 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
             # change on the building __init__ class in the envelope level should be done here
 
     GrlFct.setEnvelopeLevel(idf, building)
+
+    #uncomment only to have a look at the splitting surfaces function effect. it will make a figure for each building created
+    #idf.view_model(test=True, FigCenter=(0,0))
 
         #change on the building __init__ class in the zone level should be done here
     GrlFct.setZoneLevel(idf, building,FloorZoning)

@@ -126,6 +126,15 @@ class Building:
         self.WeatherDataFile = DB_Data.WeatherFile['Loc']
         self.InternalMass = DB_Data.InternalMass
         if not PlotOnly:
+            #weneed to convert change the refrence coordinate because precision is needed for boundary conditions definition:
+            newfoot = []
+            for foot in self.footprint:
+                newfoot.append([(node[0]-self.RefCoord[0],node[1]-self.RefCoord[1]) for node in foot])
+            self.footprint = newfoot
+            for shade in self.shades.keys():
+                newcoord = [(node[0]-self.RefCoord[0],node[1]-self.RefCoord[1]) for node in self.shades[shade]['Vertex']]
+                self.shades[shade]['Vertex'] = newcoord
+
             self.IntLoad = self.getIntLoad(MainPath,LogFile)
             self.DHWInfos = self.getExtraEnergy(ExEn, MainPath)
         #if there are no cooling comsumption, lets considerer a set point at 50deg max

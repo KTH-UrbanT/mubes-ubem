@@ -207,6 +207,23 @@ def ReadZoneOfInterest(ZoneOfInterest,keyWord):
         BldIds.append(Vals[idx])
     return BldIds
 
+def CleanUpLogFiles(MainPath):
+    listOfFiles = os.listdir(MainPath)
+    file2pick = []
+    for file in listOfFiles:
+        if file[-8:] in '_Logs.log':
+            file2pick.append(file)
+    MainLogFile = open(os.path.join(MainPath, 'MainFile_Logs.log'), 'w')
+    for file in file2pick:
+        file1 = open(os.path.join(MainPath,file), 'r')
+        Lines = file1.readlines()
+        file1.close()
+        for line in Lines:
+            Write2LogFile(line,MainLogFile)
+        os.remove(os.path.join(MainPath,file))
+    MainLogFile.close()
+
+
 
 if __name__ == '__main__' :
     print('GeneralFunctions.py')

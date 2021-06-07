@@ -7,7 +7,7 @@ import sys
 path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 sys.path.append(path2addgeom)
 #add needed packages
-import pickle5 as pickle
+import pickle#5 as pickle
 import copy
 import shutil
 #add scripts from the project as well
@@ -94,10 +94,6 @@ if __name__ == '__main__' :
 #                                       allocated value (see sampling in LaunchProcess)
 # CPUusage = 0.7                        #factor of possible use of total CPU for multiprocessing. If only one core is available,
 #                                       this value should be 1
-# SepThreads = False / True             #True = multiprocessing will be run for each building and outputs will have specific
-#                                       folders (CaseName string + number of the building. False = all input files for all
-#                                       building will be generated first, all results will be saved in one single folder
-#                                       This options is to be set to True only for several simulation over one building
 # CreateFMU = False / True             #True = FMU are created for each building selected to be computed in BuildNum
 #                                       #no simulation will be run but the folder CaseName will be available for the FMUSimPlayground.py
 # CorePerim = False / True             #True = create automatic core and perimeter zonning of each building. This options increases in a quite
@@ -106,30 +102,22 @@ if __name__ == '__main__' :
 #                                       building will be generated first, all results will be saved in one single folder
 # FloorZoning = False / True            True = thermal zoning will be realized for each floor of the building, if false, there will be 1 zone
 #                                       for the heated volume and, if present, one zone for the basement (non heated volume
-## PlotBuilding = False / True          #True = after each building (and before the zoning details (setZoneLevel) the building will
-#                                       be plotted for viisuaal check of geometrie and thermal zoning. It include the shadings
 # PathInputFile = 'String'              #Name of the PathFile containing the paths to the data and to energyplus application (see ReadMe)
 # OutputsFile = 'String'               #Name of the Outfile with the selected outputs wanted and the associated frequency (see file's template)
 # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
-    with open('Ham2Simu4Calib_Last2complete.txt') as f: #'Ham2Simu4Calib_Last.txt') as f:
-        FileLines = f.readlines()
-    Bld2Sim = []
-    for line in FileLines:
-        Bld2Sim.append(int(line))
 
-    CaseName = 'fortest'#'Minneberg2floorzone'
-    BuildNum = [38]#[31]#Bld2Sim
-    VarName2Change = ['AirRecovEff','IntLoadCurveShape','wwr','EnvLeak','setTempLoL','AreaBasedFlowRate','WindowUval','WallInsuThick','RoofInsuThick']
-    Bounds = [[0.5,0.9],[1,5],[0.2,0.4],[0.5,1.6],[18,22],[0.35,1],[0.7,2],[0.1,0.3],[0.2,0.4]]
+    CaseName = 'ForTest'
+    BuildNum = [0,1,2,3,4]
+    VarName2Change = []
+    Bounds = []
     NbRuns = 1
     CPUusage = 0.8
     CreateFMU = False
-    CorePerim = True
-    FloorZoning = False
-    #PlotBuilding = True
-    PathInputFile = 'HammarbyLast.txt'#'Pathways_Template.txt''Minneberg2D.txt'#'MinnebergLast.txt'#
-    OutputsFile = 'Outputs.txt'
+    CorePerim = False
+    FloorZoning = True
+    PathInputFile = 'Pathways_Template.txt'
+    OutputsFile = 'Outputs_Template.txt'
     ZoneOfInterest = ''
 
 ######################################################################################################################
@@ -209,15 +197,17 @@ if __name__ == '__main__' :
                 pool.apply_async(LaunchOAT, args=(MainInputs,SimDir,nbBuild,[1],0))
             pool.close()
             pool.join()
+            # now that all the files are created, we can aggregate all the log files into a single one.
+            GrlFct.CleanUpLogFiles(SimDir)
             file2run = LaunchSim.initiateprocess(SimDir)
-            nbcpu = max(mp.cpu_count() * CPUusage, 1)
             pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
             for i in range(len(file2run)):
                 pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath))
             pool.close()
             pool.join()
-            #GrlFct.SaveCase(SimDir, SepThreads,CaseName,nbBuild)
-        #lets supress the path we needed for geomeppy
-        # import matplotlib.pyplot as plt
-        # plt.show()
-        sys.path.remove(path2addgeom)
+        elif CreateFMU:
+            # now that all the files are created, we can aggregate all the log files into a single one.
+            GrlFct.CleanUpLogFiles(SimDir)
+            for nbBuild in File2Launch['nbBuild']:
+                LaunchOAT(MainInputs,SimDir,nbBuild,[1],0)
+
