@@ -46,7 +46,7 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
         Height = building.BlocHeight[bloc]# if building.Multipolygon else building.height
         nbstories = building.BlocNbFloor[bloc]# if building.Multipolygon else building.nbfloor
         #if building.Multipolygon:
-        Height = nbstories*building.StoreyHeigth        #correction of the height in order to have same storey hieght everyware
+        #Height = nbstories*building.StoreyHeigth        #correction of the height in order to have same storey hieght everywhere : this could be removed as should have been corredted earlier...
         #last check of the Zonning level if 1 per floor or 1 per building bloc
         nbstories = nbstories if FloorZoning else 1
         nbBasementstories = building.nbBasefloor if FloorZoning else min(building.nbBasefloor,1)

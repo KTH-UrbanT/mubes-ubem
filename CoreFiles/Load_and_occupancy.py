@@ -3,7 +3,7 @@
 
 import CoreFiles.ProbGenerator as ProbGenerator
 import os
-import CoreFiles.Envelope_Param as Envelope_Param
+#import CoreFiles.Envelope_Param as Envelope_Param
 #script to define the loads for each zones
 # import os
 # import numpy as np
@@ -338,7 +338,6 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
             # Lets modify the floor area depending on the zoning level
             FloorMultiplier = 1 if FloorZoning else building.nbBasefloor
             FloorArea = FloorArea * FloorMultiplier
-
             CreateBasementLeakage(idf, zone, ACH=building.BasementAirLeak)
             #creating the internalMass element if the dict is not empty
             if building.InternalMass['NonHeatedZoneIntMass']:
@@ -349,8 +348,6 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
             FloorArea = FloorArea * FloorMultiplier
             #creating the internalMass element if the dict is not empty
             if building.InternalMass['HeatedZoneIntMass']:
-                if FloorArea==0:
-                    a=1
                 CreateInternalMass(idf, zone, FloorArea, 'HeatedZoneIntMassObj', building.InternalMass['HeatedZoneIntMass'])
             if ExtWallArea != 0 and building.EnvLeak !=0 :
                 CreateEnvLeakage(idf, zone, building, ExtWallArea)

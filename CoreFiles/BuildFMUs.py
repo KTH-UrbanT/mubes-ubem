@@ -7,10 +7,7 @@
 #the core file are intergated into a specific folder intregrated in the pathway file
 import os, sys
 from subprocess import check_call
-import CoreFiles.Set_Outputs as Set_Outputs
-path2addFMU = os.path.normcase(os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'FMUsKit\EnergyPlusToFMU-v3.1.0'))
-sys.path.append(path2addFMU)
-from Scripts import EnergyPlusToFMU
+# import CoreFiles.Set_Outputs as Set_Outputs
 
 def CreateZoneList(idf,name,zonelist):
     ZoneListObj= idf.newidfobject(
@@ -83,6 +80,11 @@ def DefineFMUsParameters(idf,building,VarExchange):
             )
 
 def buildEplusFMU(epluspath,weatherpath,Filepath):
+    path2addFMU = os.path.normcase(
+        os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'FMUsKit/EnergyPlusToFMU-v3.1.0'))
+    sys.path.append(path2addFMU)
+    from Scripts import EnergyPlusToFMU
+
     Path2FMUs = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),os.path.normcase('FMUsKit/EnergyPlusToFMU-v3.1.0/Scripts'))
     EpluIddPath = os.path.join(os.path.normcase(epluspath),'Energy+.idd')
     EplusEpwPath = os.path.join(epluspath,os.path.normcase(weatherpath))

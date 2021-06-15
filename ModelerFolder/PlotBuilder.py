@@ -90,11 +90,11 @@ if __name__ == '__main__' :
 #                                       It include the shadings, if False, all the building will be plotted wihtout the shadings
 # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
-    BuildNum = []
-    PathInputFile = 'Pathways_Template.txt'
+    BuildNum = [0]
+    PathInputFile ='MinnebergLast.txt'#'HammarbyLast.txt'#Pathways_Template.txt''Minneberg2d.txt'#
     CorePerim = False
-    FloorZoning = True
-    PlotBuilding = False
+    FloorZoning = False
+    PlotBuilding = True
     ZoneOfInterest = ''
 
 ######################################################################################################################
@@ -105,6 +105,13 @@ if __name__ == '__main__' :
     # reading the pathfiles and the geojsonfile
     keyPath = GrlFct.readPathfile(PathInputFile)
     DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
+    # for i,bld in enumerate(DataBaseInput['Build']):
+    #     try:
+    #         if bld.properties['FormularId'] == 930001:
+    #             BuildNum.append(i)
+    #     except:
+    #         pass
+
     BuildNum2Launch = [i for i in range(len(DataBaseInput['Build']))]
     if BuildNum:
         BuildNum2Launch = BuildNum

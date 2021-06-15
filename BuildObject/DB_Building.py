@@ -126,7 +126,7 @@ class Building:
         self.WeatherDataFile = DB_Data.WeatherFile['Loc']
         self.InternalMass = DB_Data.InternalMass
         if not PlotOnly:
-            #weneed to convert change the refrence coordinate because precision is needed for boundary conditions definition:
+            #we need to convert change the refrence coordinate because precision is needed for boundary conditions definition:
             newfoot = []
             for foot in self.footprint:
                 newfoot.append([(node[0]-self.RefCoord[0],node[1]-self.RefCoord[1]) for node in foot])
@@ -369,6 +369,7 @@ class Building:
 
     def EvenFloorCorrection(self,BlocHeight,nbfloor,BlocNbFloor,coord,LogFile):
         # we compute a storey height as well to choosen the one that correspond to the highest part of the building afterward
+        BlocNbFloor=[] #the number of blocks is reset to comply with the old 2D geojson files is anyway empty for multipolygons files
         StoreyHeigth = 3
         if nbfloor !=0:
             storeyRatio = StoreyHeigth / (max(BlocHeight) / nbfloor) if (max(BlocHeight) / nbfloor) > 0.5 else 1
@@ -514,11 +515,11 @@ class Building:
         height = checkLim(height,DBL['height_lim'][0],DBL['height_lim'][1])
         return height
 
-    def getshade(self, DB,Shadingsfile,Buildingsfile,GE,LogFile):
+    def getshade(self, DB,Shadingsfile,Buildingsfile,GE,LogFile,PlotOnly = True):
         "Get all the shading surfaces to be build for surrounding building effect"
         shades = {}
         shadesID = DB.properties[GE['ShadingIdKey']]
-        ref = (0,0) #self.RefCoord
+        ref = (0,0) if PlotOnly else self.RefCoord
         idlist = [-1]
         for m in re.finditer(';', shadesID):
             idlist.append(m.start())

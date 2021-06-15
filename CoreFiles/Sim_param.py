@@ -21,10 +21,10 @@ def setSimparam(idf,building):
     runperiod.End_Day_of_Month = building.End_Day_of_Month
     runperiod.End_Month = building.End_Month
     #set the heat algorithm
-    idf.newidfobject(
-        'HEATBALANCEALGORITHM',
-        Algorithm = 'ConductionTransferFunction',#'ConductionFiniteDifference', #
-    )
+    # idf.newidfobject(
+    #     'HEATBALANCEALGORITHM',
+    #     Algorithm = 'ConductionTransferFunction',#'ConductionFiniteDifference', #
+    # )
     #time step
     timestepobj = idf.idfobjects['TIMESTEP'][0]
     timestepobj.Number_of_Timesteps_per_Hour = 4

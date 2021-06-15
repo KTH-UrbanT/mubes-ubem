@@ -3,19 +3,24 @@
 
 import os
 import sys
-#add the required path
+# #add the required path for geomeppy special branch
 path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 sys.path.append(path2addgeom)
+# #add the required path for making the FMU
+# path2addFMU = os.path.normcase(os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'FMUsKit/EnergyPlusToFMU-v3.1.0'))
+# sys.path.append(path2addFMU)
+#add the reauired path for all the above folder
+sys.path.append('..')
+
 #add needed packages
 import pickle#5 as pickle
-import copy
-import shutil
+#import copy
+#import shutil
 #add scripts from the project as well
-sys.path.append("..")
 import CoreFiles.GeneralFunctions as GrlFct
 import CoreFiles.LaunchSim as LaunchSim
-from BuildObject.DB_Building import BuildingList
-import BuildObject.DB_Data as DB_Data
+#from BuildObject.DB_Building import BuildingList
+#import BuildObject.DB_Data as DB_Data
 import multiprocessing as mp
 from subprocess import check_call
 
@@ -108,12 +113,12 @@ if __name__ == '__main__' :
 
 
     CaseName = 'ForTest'
-    BuildNum = [0,1,2,3,4]
+    BuildNum = [0,1,2]
     VarName2Change = []
     Bounds = []
     NbRuns = 1
     CPUusage = 0.8
-    CreateFMU = False
+    CreateFMU = True
     CorePerim = False
     FloorZoning = True
     PathInputFile = 'Pathways_Template.txt'

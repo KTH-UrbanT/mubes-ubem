@@ -5,12 +5,12 @@ import fmipp
 import os, sys
 path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 sys.path.append(path2addgeom)
-sys.path.append(os.path.dirname(os.getcwd()))
+sys.path.append('..')#os.path.dirname(os.getcwd()))
 from CoreFiles import LaunchSim as LaunchSim
 import pickle#5 as pickle
-import shutil
+# import shutil
 import time as timedelay
-from ReadResults import Utilities
+# from ReadResults import Utilities
 
 def launchFMUCoSim(work_dir):
 
@@ -102,7 +102,7 @@ def CleanUpSimRes(work_dir,keepLogFolder = False):
 
 if __name__ == '__main__' :
   MainPath = os.getcwd()
-  SavedFolder = 'MUBES_SimResults/fortest'
+  SavedFolder = 'MUBES_SimResults/ForTest'
 
   work_dir = os.path.normcase(
     os.path.join(os.path.dirname(os.path.dirname(MainPath)),SavedFolder))

@@ -2,11 +2,11 @@
 # @Email   : xavierf@kth.se
 
 import os
-import sys
+#import sys
 #add the required path
-path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
-sys.path.append(path2addgeom)
-sys.path.append("..")
+# path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
+# sys.path.append(path2addgeom)
+# sys.path.append("..")
 import CoreFiles.GeomScripts as GeomScripts
 import CoreFiles.Set_Outputs as Set_Outputs
 import CoreFiles.Sim_param as Sim_param
@@ -223,7 +223,44 @@ def CleanUpLogFiles(MainPath):
         os.remove(os.path.join(MainPath,file))
     MainLogFile.close()
 
-
+def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shadingsfile,nbcase,DB_Data,LogFile=[]):
+    #there is a loop file along the variable name to change and if specific ation are required it should be define here
+    roundVal = 3 #this is a more physical based thresehold, so could be 8...."
+    for varnum,var in enumerate(VarName2Change):
+        if 'InternalMass' in var:
+            intmass = building.InternalMass
+            intmass['HeatedZoneIntMass']['WeightperZoneArea'] = round(ParamVal[varnum],roundVal)
+            setattr(building, var, intmass)
+        elif 'ExtMass' in var:
+            exttmass = building.Materials
+            exttmass['Wall Inertia']['Thickness'] = round(ParamVal[varnum],roundVal)
+            setattr(building, var, exttmass)
+        elif 'WindowUval' in var:
+            building.Materials['Window']['UFactor'] = round(ParamVal[varnum],roundVal)
+        elif 'setTempLoL' in var:
+            building.setTempLoL = [round(ParamVal[varnum], 3),round(ParamVal[varnum], roundVal)]
+        elif 'WallInsuThick' in var:
+            exttmass = building.Materials
+            exttmass['Wall Insulation']['Thickness'] = round(ParamVal[varnum], roundVal)
+            setattr(building, var, exttmass)
+        elif 'RoofInsuThick' in var:
+            exttmass = building.Materials
+            exttmass['Roof Insulation']['Thickness'] = round(ParamVal[varnum], roundVal)
+            setattr(building, var, exttmass)
+        elif 'MaxShadingDist' in var:
+            building.MaxShadingDist = round(ParamVal[varnum], roundVal)
+            building.shades = building.getshade(Buildingsfile[nbcase], Shadingsfile, Buildingsfile,DB_Data.GeomElement,LogFile,PlotOnly = False)
+        elif 'IntLoadCurveShape' in var:
+            building.IntLoadCurveShape = round(ParamVal[varnum], roundVal)
+            building.IntLoad = building.getIntLoad(MainPath, LogFile)
+        elif 'AreaBasedFlowRate' in var:
+            building.AreaBasedFlowRate = round(ParamVal[varnum], roundVal)
+            building.AreaBasedFlowRateDefault = round(ParamVal[varnum], roundVal)
+        else:
+            try:
+                setattr(building, var, ParamVal[varnum])     #for all other cases with simple float, this line just change the attribute's value directly
+            except:
+                print('This one needs special care : '+var)
 
 if __name__ == '__main__' :
     print('GeneralFunctions.py')

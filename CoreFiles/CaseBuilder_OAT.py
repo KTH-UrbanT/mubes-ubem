@@ -9,15 +9,15 @@ sys.path.append(path2addgeom)
 from geomeppy import IDF
 #add needed packages
 import pickle#5 as pickle
-import copy
-import shutil
+#import copy
+#import shutil
 #add scripts from the project as well
-sys.path.append("..")
+# sys.path.append("..")
 import CoreFiles.GeneralFunctions as GrlFct
-import CoreFiles.LaunchSim as LaunchSim
+#import CoreFiles.LaunchSim as LaunchSim
 from BuildObject.DB_Building import BuildingList
 import BuildObject.DB_Data as DB_Data
-import multiprocessing as mp
+#import multiprocessing as mp
 import re
 
 def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,CorePerim,FloorZoning,ParamVal,VarName2Change,
@@ -45,7 +45,6 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
         StudiedCase = BuildingList()
         #lets build the two main object we'll be playing with in the following'
         idf, building = GrlFct.appendBuildCase(StudiedCase, epluspath, nbcase, DataBaseInput, MainPath,LogFile)
-
         #Rounds of check if we continue with this building or not
         Var2check = len(building.BlocHeight) if building.Multipolygon else building.height
         #if the building have bloc with no Height or if the hiegh is below 1m (shouldn't be as corrected in the Building class now)
@@ -99,40 +98,8 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
             #if these are embedded into several layer of dictionnaries than there is a need to make checks and change accordingly the correct element
             #here are examples for InternalMass impact using 'InternalMass' keyword in the VarName2Change list to play with the 'WeightperZoneArea' parameter
             #and for ExternalMass impact using 'ExtMass' keyword in the VarName2Change list to play with the 'Thickness' of the wall inertia layer
-    for varnum,var in enumerate(VarName2Change):
-        if 'InternalMass' in var:
-            intmass = building.InternalMass
-            intmass['HeatedZoneIntMass']['WeightperZoneArea'] = ParamVal[varnum]
-            setattr(building, var, intmass)
-        elif 'ExtMass' in var:
-            exttmass = building.Materials
-            exttmass['Wall Inertia']['Thickness'] = round(ParamVal[varnum],3)
-            setattr(building, var, exttmass)
-        elif 'WindowUval' in var:
-            building.Materials['Window']['UFactor'] = round(ParamVal[varnum],3)
-        elif 'setTempLoL' in var:
-            building.setTempLoL = [round(ParamVal[varnum], 3),round(ParamVal[varnum], 3)]
-        elif 'WallInsuThick' in var:
-            exttmass = building.Materials
-            exttmass['Wall Insulation']['Thickness'] = round(ParamVal[varnum], 3)
-            setattr(building, var, exttmass)
-        elif 'RoofInsuThick' in var:
-            exttmass = building.Materials
-            exttmass['Roof Insulation']['Thickness'] = round(ParamVal[varnum], 3)
-            setattr(building, var, exttmass)
-        elif 'MaxShadingDist' in var:
-            building.shades = building.getshade(Buildingsfile[nbcase], Shadingsfile, Buildingsfile,DB_Data.GeomElement,LogFile)
-        elif 'IntLoadCurveShape' in var:
-            building.IntLoadCurveShape = round(ParamVal[varnum], 3)
-            building.IntLoad = building.getIntLoad(MainPath, LogFile)
-        elif 'AreaBasedFlowRate' in var:
-            building.AreaBasedFlowRate = round(ParamVal[varnum], 3)
-            building.AreaBasedFlowRateDefault = round(ParamVal[varnum], 3)
-        else:
-            try:
-                setattr(building, var, ParamVal[varnum])     #for all other cases with simple float, this line just change the attribute's value directly
-            except:
-                print('This one needs special care : '+var)
+    GrlFct.setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shadingsfile,nbcase,DB_Data)
+
 
 
                 #here is an other example for changing the distance underwhich the surrounding building are considered for shading aspects

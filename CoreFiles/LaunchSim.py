@@ -4,17 +4,17 @@
 
 #this program laucnhes all the simulation
 import os, sys, stat, platform
-import time
-import multiprocessing as mp
+# import time
+# import multiprocessing as mp
 import pickle#5 as pickle
 import shutil
-sys.path.append("..")
+# sys.path.append("..")
 import CoreFiles.Set_Outputs as Set_Outputs
-import CoreFiles.csv2tabdelim as csv2tabdelim
+# import CoreFiles.csv2tabdelim as csv2tabdelim
 from subprocess import check_call
-path2addgeom = os.path.join(os.path.dirname(os.getcwd()) ,'geomeppy')
-sys.path.append(path2addgeom)
-from geomeppy import IDF
+# path2addgeom = os.path.join(os.path.dirname(os.getcwd()) ,'geomeppy')
+# sys.path.append(path2addgeom)
+# from geomeppy import IDF
 
 
 def initiateprocess(MainPath):
@@ -56,7 +56,7 @@ def runcase(file,filepath, epluspath):
         eplus_exe = os.path.join(epluspath, "energyplus")
     weatherpath = os.path.join(epluspath,building.WeatherDataFile)
     cmd = [eplus_exe, '--weather',os.path.normcase(weatherpath),'--output-directory',RunDir, \
-           '--idd',os.path.join(epluspath,'Energy+.idd'),'--expandobjects','--output-prefix',CaseName,Runfile]
+           '--idd',os.path.join(epluspath,'Energy+.idd'),'--expandobjects','-r','--output-prefix',CaseName,Runfile]
     check_call(cmd, stdout=open(os.devnull, "w"))
     #savecase(CaseName, RunDir, building, ResSimpath,file,idf,filepath)
     savecase(CaseName, RunDir, building, ResSimpath, file, filepath)
