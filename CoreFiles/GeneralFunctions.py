@@ -2,11 +2,6 @@
 # @Email   : xavierf@kth.se
 
 import os
-#import sys
-#add the required path
-# path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
-# sys.path.append(path2addgeom)
-# sys.path.append("..")
 import CoreFiles.GeomScripts as GeomScripts
 import CoreFiles.Set_Outputs as Set_Outputs
 import CoreFiles.Sim_param as Sim_param
@@ -17,6 +12,7 @@ import CoreFiles.BuildFMUs as BuildFMUs
 from openpyxl import load_workbook
 from SALib.sample import latin
 import shutil
+import pickle
 
 def appendBuildCase(StudiedCase,epluspath,nbcase,DataBaseInput,MainPath,LogFile,PlotOnly = False):
     StudiedCase.addBuilding('Building'+str(nbcase),DataBaseInput,nbcase,MainPath,epluspath,LogFile,PlotOnly)
@@ -63,7 +59,7 @@ def setOutputLevel(idf,building,MainPath,EMSOutputs,OutputsFile):
     Set_Outputs.AddOutputs(idf,building,MainPath,EMSOutputs,OutputsFile)
 
 def readPathfile(Pathways):
-    keyPath = {'epluspath': '', 'Buildingsfile': '', 'Shadingsfile': '','GeojsonProperties':''}
+    keyPath = {'epluspath': '', 'Buildingsfile': '', 'Shadingsfile': '','pythonpath': '','GeojsonProperties':''}
     with open(Pathways, 'r') as PathFile:
         Paths = PathFile.readlines()
         for line in Paths:
@@ -261,6 +257,30 @@ def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shad
                 setattr(building, var, ParamVal[varnum])     #for all other cases with simple float, this line just change the attribute's value directly
             except:
                 print('This one needs special care : '+var)
+
+def SetParamSample(SimDir,nbruns,VarName2Change,Bounds,SepThreads):
+    #the parameter are constructed. the oupute gives a matrix ofn parameter to change with nbruns values to simulate
+    if SepThreads:
+        Paramfile = os.path.join(os.path.dirname(SimDir), 'ParamSample.pickle')
+        if os.path.isfile(Paramfile):
+            with open(Paramfile, 'rb') as handle:
+                ParamSample = pickle.load(handle)
+        else:
+            ParamSample = getParamSample(VarName2Change,Bounds,nbruns)
+            if nbruns>1:
+                with open(Paramfile, 'wb') as handle:
+                    pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    else:
+        Paramfile = os.path.join(SimDir,'ParamSample.pickle')
+        if os.path.isfile(Paramfile):
+            with open(Paramfile, 'rb') as handle:
+                ParamSample = pickle.load(handle)
+        else:
+            ParamSample = getParamSample(VarName2Change, Bounds, nbruns)
+            if nbruns > 1:
+                with open(Paramfile, 'wb') as handle:
+                    pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    return ParamSample
 
 if __name__ == '__main__' :
     print('GeneralFunctions.py')

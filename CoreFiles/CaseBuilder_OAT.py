@@ -6,19 +6,45 @@ import sys
 #add the required path
 path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 sys.path.append(path2addgeom)
-from geomeppy import IDF
-#add needed packages
-import pickle#5 as pickle
-#import copy
-#import shutil
 #add scripts from the project as well
-# sys.path.append("..")
+sys.path.append("..")
+from subprocess import check_call
+from geomeppy import IDF
+import pickle#5 as pickle
 import CoreFiles.GeneralFunctions as GrlFct
-#import CoreFiles.LaunchSim as LaunchSim
 from BuildObject.DB_Building import BuildingList
 import BuildObject.DB_Data as DB_Data
-#import multiprocessing as mp
 import re
+
+def LaunchOAT(MainInputs,SimDir,nbBuild,ParamVal,currentRun,pythonpath=[]):
+    #print('Launched')
+
+    if not pythonpath:
+        LaunchProcess(SimDir, MainInputs['FirstRun'], MainInputs['TotNbRun'], currentRun,
+                                  MainInputs['PathInputFiles'], nbBuild, MainInputs['CorePerim'],
+                                  MainInputs['FloorZoning'], ParamVal,MainInputs['VarName2Change'],MainInputs['CreateFMU'],
+                                    MainInputs['OutputsFile'])
+    # lets prepare the commande lines
+    else:
+        virtualenvline = os.path.join(pythonpath,'python.exe')
+        scriptpath =os.path.join(os.path.dirname(os.getcwd()),'CoreFiles')
+        cmdline = [virtualenvline, os.path.join(scriptpath, 'CaseBuilder_OAT.py')]
+        for key in MainInputs.keys():
+            cmdline.append('-'+key)
+            if type(MainInputs[key]) == str:
+                cmdline.append(MainInputs[key])
+            else:
+                cmdline.append(str(MainInputs[key]))
+
+        cmdline.append('-SimDir')
+        cmdline.append(str(SimDir))
+        cmdline.append('-nbBuild')
+        cmdline.append(str(nbBuild))
+        cmdline.append('-ParamVal')
+        cmdline.append(str(ParamVal))
+        cmdline.append('-currentRun')
+        cmdline.append(str(currentRun))
+        check_call(cmdline)#,stdout=open(os.devnull, "w"))
 
 def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,CorePerim,FloorZoning,ParamVal,VarName2Change,
                   CreateFMU,OutputsFile):

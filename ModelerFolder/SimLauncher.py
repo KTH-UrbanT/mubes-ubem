@@ -6,86 +6,18 @@ import sys
 # #add the required path for geomeppy special branch
 path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 sys.path.append(path2addgeom)
-# #add the required path for making the FMU
-# path2addFMU = os.path.normcase(os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'FMUsKit/EnergyPlusToFMU-v3.1.0'))
-# sys.path.append(path2addFMU)
 #add the reauired path for all the above folder
 sys.path.append('..')
 
-#add needed packages
-import pickle#5 as pickle
-#import copy
-#import shutil
-#add scripts from the project as well
 import CoreFiles.GeneralFunctions as GrlFct
 import CoreFiles.LaunchSim as LaunchSim
-#from BuildObject.DB_Building import BuildingList
-#import BuildObject.DB_Data as DB_Data
+import CoreFiles.CaseBuilder_OAT as CB_OAT
 import multiprocessing as mp
-from subprocess import check_call
-
-def SetParamSample(SimDir,nbruns,VarName2Change,Bounds):
-
-    #the parameter are constructed. the oupute gives a matrix ofn parameter to change with nbruns values to simulate
-    Paramfile = os.path.join(SimDir,'ParamSample.pickle')
-    if SepThreads:
-        Paramfile = os.path.join(os.path.dirname(SimDir), 'ParamSample.pickle')
-        if os.path.isfile(Paramfile):
-            with open(Paramfile, 'rb') as handle:
-                ParamSample = pickle.load(handle)
-        else:
-            ParamSample = GrlFct.getParamSample(VarName2Change,Bounds,nbruns)
-            if nbruns>1:
-                with open(Paramfile, 'wb') as handle:
-                    pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    else:
-        Paramfile = os.path.join(SimDir,'ParamSample.pickle')
-        if os.path.isfile(Paramfile):
-            with open(Paramfile, 'rb') as handle:
-                ParamSample = pickle.load(handle)
-        else:
-            ParamSample = GrlFct.getParamSample(VarName2Change, Bounds, nbruns)
-            if nbruns > 1:
-                with open(Paramfile, 'wb') as handle:
-                    pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    return ParamSample
-
-def LaunchOAT(MainInputs,SimDir,nbBuild,ParamVal,currentRun):
-    #print('Launched')
-    # lets prepare the commande lines
-    virtualenvline = os.path.normcase('C:\\Users\\xav77\Envs\\UBEMGitTest\Scripts\\python.exe')
-    # virtualenvline = virtualenvline+'\n'
-
-    scriptpath = os.path.normcase('C:\\Users\\xav77\Documents\FAURE\prgm_python\\UrbanT\Eplus4Mubes\MUBES_UBEM\CoreFiles')
-    cmdline = [virtualenvline, os.path.join(scriptpath, 'CaseBuilder_OAT.py')]
-    for key in MainInputs.keys():
-        cmdline.append('-'+key)
-        if type(MainInputs[key]) == str:
-            cmdline.append(MainInputs[key])
-        else:
-            cmdline.append(str(MainInputs[key]))
-
-    cmdline.append('-SimDir')
-    cmdline.append(str(SimDir))
-
-    cmdline.append('-nbBuild')
-    cmdline.append(str(nbBuild))
-
-    cmdline.append('-ParamVal')
-    cmdline.append(str(ParamVal))
-
-    cmdline.append('-currentRun')
-    cmdline.append(str(currentRun))
-    # cmdline = [virtualenvline, os.path.join(scriptpath, 'CaseBuilder_OAT.py'), '-FirstRun', '-SimDir', SimDir,
-    #            '-PathInputFiles', PathInputFile, '-nbcase', str(nbBuild),'-VarName2Change',VarName2Change,'-ParamVal',ParamVal]
-    check_call(cmdline)#,stdout=open(os.devnull, "w"))
-
 
 if __name__ == '__main__' :
 
 ######################################################################################################################
-########        MAIN INPUT PART     ##################################################################################
+########        MAIN INPUT PART  (choices from the modeler)   ########################################################
 ######################################################################################################################
 #The Modeler have to fill in the following parameter to define his choices
 
@@ -111,14 +43,13 @@ if __name__ == '__main__' :
 # OutputsFile = 'String'               #Name of the Outfile with the selected outputs wanted and the associated frequency (see file's template)
 # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
-
     CaseName = 'ForTest'
     BuildNum = [0,1,2]
-    VarName2Change = []
-    Bounds = []
+    VarName2Change = ['MaxShadingDist']
+    Bounds = [[0,300]]
     NbRuns = 1
     CPUusage = 0.8
-    CreateFMU = True
+    CreateFMU = False
     CorePerim = False
     FloorZoning = True
     PathInputFile = 'Pathways_Template.txt'
@@ -126,16 +57,22 @@ if __name__ == '__main__' :
     ZoneOfInterest = ''
 
 ######################################################################################################################
-########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
+########     LAUNCHING MULTIPROCESS PROCESS PART  (nothing should be changed hereafter)   ############################
 ######################################################################################################################
     if NbRuns>1:
         SepThreads = True
+        if CreateFMU:
+            print('/!\ /!\ ###  INPUT ERROR ### /!\/!\ ' )
+            print('/!\ It is asked to ceate FMUs but the number of runs for each building is above 1...')
+            print('/!\ Please, check you inputs as this case is not allowed yet')
+            sys.exit()
     else:
         SepThreads = False
     nbcpu = max(mp.cpu_count() * CPUusage, 1)
     # reading the pathfiles and the geojsonfile
     keyPath = GrlFct.readPathfile(PathInputFile)
     epluspath = keyPath['epluspath']
+    pythonpath = keyPath['pythonpath'] #this is needed only if processes are launch in terminal as it could be an options instead of staying in python environnement
     DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
     BuildNum2Launch = [i for i in range(len(DataBaseInput['Build']))]
     if BuildNum:
@@ -166,16 +103,15 @@ if __name__ == '__main__' :
             MainInputs['FirstRun'] = True
             #First, lets create the folder for the building and simulation processes
             SimDir = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,Refresh=True)
-            ParamSample = SetParamSample(SimDir, NbRuns, VarName2Change, Bounds)
+            ParamSample =  GrlFct.SetParamSample(SimDir, NbRuns, VarName2Change, Bounds,SepThreads)
             if idx<len(DataBaseInput['Build']):
                 #lets check if there are several simulation for one building or not
                 if NbRuns > 1:
-                    LaunchOAT(MainInputs,SimDir,nbBuild,ParamSample[0, :],0)
+                    CB_OAT.LaunchOAT(MainInputs,SimDir,nbBuild,ParamSample[0, :],0,pythonpath)
                     MainInputs['FirstRun'] = False
-
                     pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
                     for i in range(1,len(ParamSample)):
-                        pool.apply_async(LaunchOAT, args=(MainInputs,SimDir,nbBuild,ParamSample[i, :],i))
+                        pool.apply_async(CB_OAT.LaunchOAT, args=(MainInputs,SimDir,nbBuild,ParamSample[i, :],i,pythonpath))
                     pool.close()
                     pool.join()
                 else:
@@ -199,7 +135,7 @@ if __name__ == '__main__' :
             #lets launche the idf file creation process
             pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
             for nbBuild in File2Launch['nbBuild']:
-                pool.apply_async(LaunchOAT, args=(MainInputs,SimDir,nbBuild,[1],0))
+                pool.apply_async(CB_OAT.LaunchOAT, args=(MainInputs,SimDir,nbBuild,[1],0,pythonpath))
             pool.close()
             pool.join()
             # now that all the files are created, we can aggregate all the log files into a single one.
@@ -214,5 +150,5 @@ if __name__ == '__main__' :
             # now that all the files are created, we can aggregate all the log files into a single one.
             GrlFct.CleanUpLogFiles(SimDir)
             for nbBuild in File2Launch['nbBuild']:
-                LaunchOAT(MainInputs,SimDir,nbBuild,[1],0)
+                CB_OAT.LaunchOAT(MainInputs,SimDir,nbBuild,[1],0,pythonpath)
 

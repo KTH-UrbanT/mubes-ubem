@@ -8,8 +8,6 @@ import numpy as np
 sys.path.append(os.path.dirname(os.getcwd()))
 import Utilities
 
-
-
 # the main idea of this file is to present some way for analyzing the data.
 # some useful function are implemented in Utilities. Such as agregating the data from several simulation in one disctionary
 # this enable to make easy plots of variables over others.

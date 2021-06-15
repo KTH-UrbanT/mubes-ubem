@@ -5,12 +5,12 @@ import fmipp
 import os, sys
 path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 sys.path.append(path2addgeom)
-sys.path.append('..')#os.path.dirname(os.getcwd()))
+sys.path.append('..')
 from CoreFiles import LaunchSim as LaunchSim
 import pickle#5 as pickle
-# import shutil
 import time as timedelay
-# from ReadResults import Utilities
+from BuildObject import DB_Building #this import is because a pickle file is loaded that embeded this objtect type
+
 
 def launchFMUCoSim(work_dir):
 
@@ -56,7 +56,7 @@ def launchFMUCoSim(work_dir):
   while ( ( time + step_size ) - stop_time < time_diff_resolution ):
     if (time % (240 * 3600))==0:
       day +=10
-      print(str(day)+' simulation Day done')
+      print(str(day)+' simulation days done')
     if time%(2*3600)==0:
       bld += 1
       bld = bld%len(FMUElement.keys())

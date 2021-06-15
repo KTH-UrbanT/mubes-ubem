@@ -3,7 +3,6 @@
 
 import os
 import sys
-
 path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 sys.path.append(path2addgeom)
 sys.path.append("..")
