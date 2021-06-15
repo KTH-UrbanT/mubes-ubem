@@ -56,7 +56,7 @@ def launchFMUCoSim(work_dir):
   while ( ( time + step_size ) - stop_time < time_diff_resolution ):
     if (time % (240 * 3600))==0:
       day +=10
-      print(str(day)+' simulation Day done')
+      print(str(day)+' simulation days done')
     if time%(2*3600)==0:
       bld += 1
       bld = bld%len(FMUElement.keys())

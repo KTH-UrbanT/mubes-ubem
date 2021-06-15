@@ -8,7 +8,7 @@
 import os, sys
 from subprocess import check_call
 import CoreFiles.Set_Outputs as Set_Outputs
-path2addFMU = os.path.normcase(os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'FMUsKit\EnergyPlusToFMU-v3.1.0'))
+path2addFMU = os.path.normcase(os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'FMUsKit/EnergyPlusToFMU-v3.1.0'))
 sys.path.append(path2addFMU)
 from Scripts import EnergyPlusToFMU
 
