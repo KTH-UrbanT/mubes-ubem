@@ -236,14 +236,20 @@ class Geometry:
             elif self.type == "MultiPolygon":
                 coordsgen = (point[:2] for polygon in self._data["coordinates"] for point in polygon[0]) # only the first exterior polygon should matter for bbox, not any of the holes
                 #coordsgen = (point for polygon in self._data["coordinates"] for point in polygon[0])  # only the first exterior polygon should matter for bbox, not any of the holes
-            firstpoint = next(coordsgen)
-            _xmin = _xmax = firstpoint[0]
-            _ymin = _ymax = firstpoint[1]
-            for _x,_y in coordsgen:
-                if _x < _xmin: _xmin = _x
-                elif _x > _xmax: _xmax = _x
-                if _y < _ymin: _ymin = _y
-                elif _y > _ymax: _ymax = _y
+            try:
+                firstpoint = next(coordsgen)
+                _xmin = _xmax = firstpoint[0]
+                _ymin = _ymax = firstpoint[1]
+                for _x,_y in coordsgen:
+                    if _x < _xmin: _xmin = _x
+                    elif _x > _xmax: _xmax = _x
+                    if _y < _ymin: _ymin = _y
+                    elif _y > _ymax: _ymax = _y
+            except:
+                _xmin = 0
+                _ymin = 0
+                _xmax = 0
+                _ymax = 0
             return _xmin,_ymin,_xmax,_ymax
     
     @property
@@ -284,7 +290,6 @@ class Geometry:
 
         - An Exception if not valid. 
         """
-
         # validate nullgeometry or has type and coordinates keys
         if not self._data:
             # null geometry, no further checking needed
@@ -306,31 +311,36 @@ class Geometry:
             self._data['coordinates'] = []
             self._data['poly3rdcoord'] = []
             for polygon in Multipolygons:  # self._data['geometries'][0]['coordinates']:
-                alt = [point[-1] for point in polygon[0]]
-                if max([abs(alt[i + 1] - val) for i, val in enumerate(alt[:-1])]) == 0:
-                    self._data['poly3rdcoord'].append(min([point[-1] for point in polygon[0]]))
-                    self._data['coordinates'].append([[point[:2] for point in polygon[0]]])
+                try:
+                    alt = [point[2] for point in polygon[0]]  #[point[-1] for point in polygon[0]]
+                    if max([abs(alt[i + 1] - val) for i, val in enumerate(alt[:-1])]) == 0:
+                        self._data['poly3rdcoord'].append(min([point[-1] for point in polygon[0]]))
+                        self._data['coordinates'].append([[point[:2] for point in polygon[0]]])
+                except:
+                    self._data['coordinates'].append(polygon)       #this exception has been done to eread the json file from https://data.agglo-lehavre.fr/api/v1/file/data/36/RG_BATIMENT_AGREGE_N2/json
+                    self._data['poly3rdcoord'].append(0)
+                    #self.type = 'MultiPolygon'
         elif "type" not in self._data or "coordinates" not in self._data:
             raise Exception("A geometry dictionary or instance must have the type and coordinates entries")
 
-        #lets round the values frst for all data
-        newcoord=[]
-        try:
-            for poly in self._data['coordinates']:
-                newcoord.append([[[round(point[0],round_factor),round(point[1],round_factor)] for point in poly[0]]])
-            for i, height in enumerate(self._data['poly3rdcoord']):
-                self._data['poly3rdcoord'][i] = round(height, round_factor)
-        except:
-            try:
-                for poly in self._data['coordinates']:
-                    newcoord.append([round(poly[0], round_factor), round(poly[1], round_factor)])
-            except:
-                try:
-                    for poly in self._data['coordinates']:
-                        newcoord.append([[round(point[0], round_factor), round(point[1], round_factor)] for point in poly])
-                except:
-                    print('error in the file')
-        self._data['coordinates'] =newcoord
+        # #lets round the values frst for all data
+        # newcoord=[]
+        # try:
+        #     for poly in self._data['coordinates']:
+        #         newcoord.append([[[round(point[0],round_factor),round(point[1],round_factor)] for point in poly[0]]])
+        #     for i, height in enumerate(self._data['poly3rdcoord']):
+        #         self._data['poly3rdcoord'][i] = round(height, round_factor)
+        # except:
+        #     try:
+        #         for poly in self._data['coordinates']:
+        #             newcoord.append([round(poly[0], round_factor), round(poly[1], round_factor)])
+        #     except:
+        #         try:
+        #             for poly in self._data['coordinates']:
+        #                 newcoord.append([[round(point[0], round_factor), round(point[1], round_factor)] for point in poly])
+        #         except:
+        #             print('error in the file')
+        # self._data['coordinates'] =newcoord
 
 
 
@@ -490,7 +500,7 @@ class GeojsonFile:
     - **common_attributes**: Collects and returns a list of attributes/properties/fields common to all features. Read only. 
     """
     
-    def __init__(self, filepath=None, data=None,round_factor=10, skiperrors=False, fixerrors=True, **kwargs):
+    def __init__(self, filepath=None, data=None,round_factor=15, skiperrors=False, fixerrors=True, **kwargs):
         """
         Can load from data or from a file,
         which can then be read or edited.
@@ -815,7 +825,7 @@ def validate(data,round_factor, skiperrors=False, fixerrors=True):
             except: data["features"].remove(featuredict)
 
     else:
-        for featuredict in data["features"]:
+        for idx,featuredict in enumerate(data["features"]):
             feat = Feature(featuredict)
             feat.validate(round_factor, fixerrors)
 

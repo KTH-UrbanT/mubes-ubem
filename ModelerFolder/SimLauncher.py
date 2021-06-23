@@ -44,7 +44,7 @@ if __name__ == '__main__' :
 # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
     CaseName = 'ForTest'
-    BuildNum = [0,1,2]
+    BuildNum = []
     VarName2Change = ['MaxShadingDist']
     Bounds = [[0,300]]
     NbRuns = 1
@@ -52,7 +52,7 @@ if __name__ == '__main__' :
     CreateFMU = False
     CorePerim = False
     FloorZoning = True
-    PathInputFile = 'Pathways_Template.txt'
+    PathInputFile = 'Hammarby0401.txt'#'Belfort.txt'#'Pathways_Template.txt'
     OutputsFile = 'Outputs_Template.txt'
     ZoneOfInterest = ''
 
@@ -62,7 +62,7 @@ if __name__ == '__main__' :
     if NbRuns>1:
         SepThreads = True
         if CreateFMU:
-            print('/!\ /!\ ###  INPUT ERROR ### /!\/!\ ' )
+            print('###  INPUT ERROR ### ' )
             print('/!\ It is asked to ceate FMUs but the number of runs for each building is above 1...')
             print('/!\ Please, check you inputs as this case is not allowed yet')
             sys.exit()
@@ -74,6 +74,8 @@ if __name__ == '__main__' :
     epluspath = keyPath['epluspath']
     pythonpath = keyPath['pythonpath'] #this is needed only if processes are launch in terminal as it could be an options instead of staying in python environnement
     DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
+
+    #check of the building to run
     BuildNum2Launch = [i for i in range(len(DataBaseInput['Build']))]
     if BuildNum:
         BuildNum2Launch = BuildNum
@@ -87,7 +89,8 @@ if __name__ == '__main__' :
     if not BuildNum2Launch:
         print('Sorry, but no building matches with the requirements....Please, check your ZoneOfInterest')
     else:
-
+        #all argument are packed in a dictionnarie, as parallel process is used, the arguments shall be strictly kept for each
+        #no moving object of dictionnary values that should change between two processes.
         FigCenter = []
         CurrentPath = os.getcwd()
         MainInputs = {}
@@ -98,16 +101,20 @@ if __name__ == '__main__' :
         MainInputs['OutputsFile'] = OutputsFile
         MainInputs['VarName2Change'] = VarName2Change
         MainInputs['PathInputFiles'] = PathInputFile
+        MainInputs['DataBaseInput'] = DataBaseInput
         File2Launch = {'nbBuild' : []}
         for idx,nbBuild in enumerate(BuildNum2Launch):
             MainInputs['FirstRun'] = True
             #First, lets create the folder for the building and simulation processes
             SimDir = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,Refresh=True)
+            #a sample of parameter is generated is needed
             ParamSample =  GrlFct.SetParamSample(SimDir, NbRuns, VarName2Change, Bounds,SepThreads)
             if idx<len(DataBaseInput['Build']):
                 #lets check if there are several simulation for one building or not
                 if NbRuns > 1:
+                    #there is a need to laucnhe the first one that will also cereate the template for all the others
                     CB_OAT.LaunchOAT(MainInputs,SimDir,nbBuild,ParamSample[0, :],0,pythonpath)
+                    #now the pool can be created changing the FirstRun key to False for all other runs
                     MainInputs['FirstRun'] = False
                     pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
                     for i in range(1,len(ParamSample)):
@@ -115,8 +122,9 @@ if __name__ == '__main__' :
                     pool.close()
                     pool.join()
                 else:
+                #if not, then the building number will be appended to alist that will be used afterward
                     File2Launch['nbBuild'].append(nbBuild)
-
+                #the simulation atre laucnhed below using a pool of the earlier created idf files
                 if SepThreads and not CreateFMU:
                     file2run = LaunchSim.initiateprocess(SimDir)
                     nbcpu = max(mp.cpu_count()*CPUusage,1)
@@ -130,18 +138,18 @@ if __name__ == '__main__' :
                 print('All buildings in the input file have been treated.')
                 print('###################################################')
                 break
-        # if choicies is done, once the building is finished parallel computing is launched for all files
         if not SepThreads and not CreateFMU:
-            #lets launche the idf file creation process
-            pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
+            #lets launch the idf file creation process using the listed created above
+            pool = mp.Pool(processes=int(nbcpu))
             for nbBuild in File2Launch['nbBuild']:
                 pool.apply_async(CB_OAT.LaunchOAT, args=(MainInputs,SimDir,nbBuild,[1],0,pythonpath))
             pool.close()
             pool.join()
             # now that all the files are created, we can aggregate all the log files into a single one.
             GrlFct.CleanUpLogFiles(SimDir)
+            # lest create the pool and launch the simulations
             file2run = LaunchSim.initiateprocess(SimDir)
-            pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
+            pool = mp.Pool(processes=int(nbcpu))
             for i in range(len(file2run)):
                 pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath))
             pool.close()
@@ -149,6 +157,7 @@ if __name__ == '__main__' :
         elif CreateFMU:
             # now that all the files are created, we can aggregate all the log files into a single one.
             GrlFct.CleanUpLogFiles(SimDir)
+            #the FMU are not taking advantage of the parallel computing option yet
             for nbBuild in File2Launch['nbBuild']:
                 CB_OAT.LaunchOAT(MainInputs,SimDir,nbBuild,[1],0,pythonpath)
 

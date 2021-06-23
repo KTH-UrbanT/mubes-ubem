@@ -13,18 +13,21 @@ from geomeppy import IDF
 import pickle#5 as pickle
 import CoreFiles.GeneralFunctions as GrlFct
 from BuildObject.DB_Building import BuildingList
+from BuildObject.DB_Filter4Simulations import checkBldFilter
 import BuildObject.DB_Data as DB_Data
 import re
 
 def LaunchOAT(MainInputs,SimDir,nbBuild,ParamVal,currentRun,pythonpath=[]):
-    #print('Launched')
 
+    #this function was made to enable either to launch a process in a seperate terminal or not, given a python path to a virtualenv
+    #but if kept in seperate terminal, the inputfile needs to be read for each simulation...not really efficient,
+    #thus, the first option, being fully in the same envirnment is used with the optionnal argument 'DataBaseInput'
     if not pythonpath:
         LaunchProcess(SimDir, MainInputs['FirstRun'], MainInputs['TotNbRun'], currentRun,
                                   MainInputs['PathInputFiles'], nbBuild, MainInputs['CorePerim'],
                                   MainInputs['FloorZoning'], ParamVal,MainInputs['VarName2Change'],MainInputs['CreateFMU'],
-                                    MainInputs['OutputsFile'])
-    # lets prepare the commande lines
+                                    MainInputs['OutputsFile'],DataBaseInput = MainInputs['DataBaseInput'])
+    # if willing to launch each run in seperate terminals, all arguments must be given in text form and the pythonpath is required
     else:
         virtualenvline = os.path.join(pythonpath,'python.exe')
         scriptpath =os.path.join(os.path.dirname(os.getcwd()),'CoreFiles')
@@ -44,19 +47,24 @@ def LaunchOAT(MainInputs,SimDir,nbBuild,ParamVal,currentRun,pythonpath=[]):
         cmdline.append(str(ParamVal))
         cmdline.append('-currentRun')
         cmdline.append(str(currentRun))
-        check_call(cmdline)#,stdout=open(os.devnull, "w"))
+        check_call(cmdline,stdout=open(os.devnull, "w"))
 
 def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,CorePerim,FloorZoning,ParamVal,VarName2Change,
-                  CreateFMU,OutputsFile):
+                  CreateFMU,OutputsFile,DataBaseInput = []):
+    #This function builds the idf file, a log file is generated if the buildiung is run for the first time,
+    #the idf file will be saved as well as the building object as a pickle. the latter could be commented as not required
+
     MainPath = os.getcwd()
-    #Building and Shading objects fronm reading the geojson file as input for further functions
+
     keyPath = GrlFct.readPathfile(PathInputFiles)
-    DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
+    if not DataBaseInput:
+        # Building and Shading objects from reading the geojson file as input for further functionsif not given as arguments
+        DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
     Buildingsfile = DataBaseInput['Build']
     Shadingsfile = DataBaseInput['Shades']
     epluspath = keyPath['epluspath']
     os.chdir(SimDir)
-    #process is launched for the considered building
+    #Creating the log file for this building if it's his frist run
     if FirstRun:
         LogFile = open(os.path.join(SimDir, 'Build_'+str(nbcase)+'_Logs.log'), 'w')
         msg = 'Building ' + str(nbcase) + ' is starting\n'
@@ -64,26 +72,17 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
         GrlFct.Write2LogFile(msg,LogFile)
     else:
         LogFile = False
-    #All buildings are organized and append in a list (list of building object. But the process finally is not used as it have been thought to.
-    #each building is laucnhed afterward using the idf file and not the object directly (see LaunchSim.runcase() function
-    #Nevertheless this organization still enable to order things !
+
+    #if its the first run of a pool for the same building, than only the simulation parameters and the building geometry will run.
+    #a 'tewmplate file will be created and openned by the following runs to save the geometry construction process (as it is the longest one)
     if FirstRun:
         StudiedCase = BuildingList()
-        #lets build the two main object we'll be playing with in the following'
+        #lets build the two main object we'll be playing with in the following : the idf and the building
         idf, building = GrlFct.appendBuildCase(StudiedCase, epluspath, nbcase, DataBaseInput, MainPath,LogFile)
-        #Rounds of check if we continue with this building or not
-        Var2check = len(building.BlocHeight) if building.Multipolygon else building.height
-        #if the building have bloc with no Height or if the hiegh is below 1m (shouldn't be as corrected in the Building class now)
-        if len(building.BlocHeight) > 0 and min(building.BlocHeight) < 1:
-            Var2check = 0
-        #is heated area is below 50m2, we just drop the building
-        if building.EPHeatedArea < 50:
-            Var2check = 0
-        #is no floor is present...(shouldn't be as corrected in the Building class now)
-        if 0 in building.BlocNbFloor:
-            Var2check = 0
-        if Var2check == 0:
-            msg =  '[Error] This Building/bloc has either no height, height below 1, surface below 50m2 or no floors, process abort for this one\n'
+        #Rounds of check if we continue with this building or not, see DB_Filter4Simulation.py if other filter are to add
+        CaseOK = checkBldFilter(building)
+        if not CaseOK:
+            msg =  '[Error] This Building/bloc is not valid to continue, please check DB_Filter4Simulation.py to see what is of concerned\n'
             print(msg[:-1])
             os.chdir(MainPath)
             if FirstRun:
@@ -91,11 +90,11 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
                 GrlFct.Write2LogFile('##############################################################\n', LogFile)
                 return
 
-            # change on the building __init__ class in the simulation level should be done here as the function below defines the related objects
+        # The simulation parameters are assigned here
         GrlFct.setSimLevel(idf, building)
-            # change on the building __init__ class in the building level should be done here as the function below defines the related objects
+        # The geometry is assigned here
         GrlFct.setBuildingLevel(idf, building,LogFile,CorePerim,FloorZoning)
-
+        # if the number of run for one building is greater than 1 it means parametric simulation, a template file will be saved
         if TotNbRun>1:
             Case = {}
             Case['BuildData'] = building
@@ -103,79 +102,39 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
             with open('Building_' + str(nbcase) + '_template.pickle', 'wb') as handle:
                 pickle.dump(Case, handle, protocol=pickle.HIGHEST_PROTOCOL)
     else:
+        #for all but the first run, the template file and the building object are loaded (geometry is already done)
         IDF.setiddname(os.path.join(epluspath, "Energy+.idd"))
         idf = IDF(os.path.normcase(os.path.join(SimDir, 'Building_' + str(nbcase) +  '_template.idf')))
         with open(os.path.join(SimDir,'Building_' + str(nbcase) +  '_template.pickle'), 'rb') as handle:
                 LoadBld = pickle.load(handle)
         building = LoadBld['BuildData']
+
     Case = {}
     #Case['BuildIDF'] = idf
     Case['BuildData'] = building
-
+    # assignement of the building name for the simulation
     building.name = 'Building_' + str(nbcase) +  'v'+str(currentRun)
 
-            # # example of modification with half of the runs with external insulation and half of the runs with internal insulation
-            # if i < round(nbruns / 2):
-            #     building.ExternalInsulation = True
-            # else:
-            #     building.ExternalInsulation = False
-
-            #now lets go along the VarName2Change list and change the building object attributes
-            #if these are embedded into several layer of dictionnaries than there is a need to make checks and change accordingly the correct element
-            #here are examples for InternalMass impact using 'InternalMass' keyword in the VarName2Change list to play with the 'WeightperZoneArea' parameter
-            #and for ExternalMass impact using 'ExtMass' keyword in the VarName2Change list to play with the 'Thickness' of the wall inertia layer
+    #in order to make parametric simulation, lets go along the VarName2Change list and change the building object attributes accordingly
     GrlFct.setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shadingsfile,nbcase,DB_Data)
 
-
-
-                #here is an other example for changing the distance underwhich the surrounding building are considered for shading aspects
-                #as 'MaxShadingDist' is an input for the Class building method getshade, the method shall be called again after modifying this value (see getshade methods)
-
-
-            #here is an other example of simplemodification we want as forcing the building to have recovery on its ventilation system
-            #or the change the U value of the Window.
-            #for changes done this way, there are no modification in each runs. all the runs will have forced values for the considered attributes
-            #lets put all ventilation with heat recovery to True
-            # building.VentSyst['BalX'] = True
-            # building.VentSyst['ExhX'] = True
-            #lets change the windos U value
-            # building.Materials['Window']['UFactor'] = 0.78
-
-            ##############################################################
-            ##After having made the changes we wanted in the building object, we can continue the construction of the idf (input file for EnergyPLus)
-            # change on the building __init__ class in the envelope level should be done here
-
+    # lets assign the material and finalize the envelope definition
     GrlFct.setEnvelopeLevel(idf, building)
 
     #uncomment only to have a look at the splitting surfaces function effect. it will make a figure for each building created
     #idf.view_model(test=True, FigCenter=(0,0))
 
-        #change on the building __init__ class in the zone level should be done here
+    # lets define the zone level now
     GrlFct.setZoneLevel(idf, building,FloorZoning)
 
-            #Lets change the path of the water taps file :
-            # ComputfFilePath = os.path.normcase('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\ComputedElem4Calibration')
-            # building.DHWInfos['WatertapsFile'] = os.path.join(ComputfFilePath,'FlowRate'+str(nbcase)+'.txt')
-            # building.DHWInfos['WaterTapsMultiplier'] = 1
-            # nbAppartments = building.nbAppartments
-            # building.nbAppartments = 1
-            # Lets read the correction factors
-    # work_dir = os.path.normcase('C:\\Users\\xav77\Documents\FAURE\prgm_python\\UrbanT\Eplus4Mubes\MUBES_SimResults\ham4calibwithmeasuredandnewweather\Sim_Results')
-    # CorFactPath = os.path.normcase(os.path.join(work_dir, 'DHWCorFact.txt'))
-    # with open(CorFactPath, 'r') as handle:
-    #     FileLines = handle.readlines()
-    # CorFact = {}
-    # for line in FileLines:
-    #     CorFact[int(line[:line.index('\t')])] = float(line[line.index('\t') + 1:line.index('\n')])
-    # building.DHWInfos['WaterTapsMultiplier'] *= CorFact[nbcase]
-            #add some extra energy loads like domestic Hot water
+    # add some extra energy loads like domestic Hot water
     GrlFct.setExtraEnergyLoad(idf,building)
-            #to give back the good values
-            # building.nbAppartments = nbAppartments
 
-            #lets add the main gloval variable : Mean temperautre over the heated areas and the total building power consumption
-            #and if present, the heating needs for DHW production as heated by direct heating
-            #these are added thourgh EMS option of EnergyPlus
+    #lets add the main gloval variable : Mean temperautre over the heated areas and the total building power consumption
+    #and if present, the heating needs for DHW production as heated by direct heating
+    #these are added using EMS option of EnergyPlus, and used for the FMU option
+    # but if the building has more than 50 zones, than these are not computed as is will wrtie function in the idf file
+    #could work with more than 50 zone though
     EMSOutputs = []
     if len(idf.idfobjects["ZONE"])<50:
         EMSOutputs.append('Mean Heated Zones Air Temperature')
@@ -183,21 +142,22 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
         if building.DHWInfos:
             EMSOutputs.append('Total DHW Heating Power')
 
+    # the outputs are set using the Output file
     GrlFct.setOutputLevel(idf,building,MainPath,EMSOutputs,OutputsFile)
 
+    #special ending process if FMU is wanted
     if CreateFMU:
         GrlFct.CreatFMU(idf,building,nbcase,epluspath,SimDir, currentRun,EMSOutputs,LogFile)
     else:
          # saving files and objects
         idf.saveas('Building_' + str(nbcase) +  'v'+str(currentRun)+'.idf')
 
-
-            #the data object is saved as needed afterward aside the Eplus results
+    #the data object is saved as needed afterward aside the Eplus results (might be not needed, to be checked)
     with open('Building_' + str(nbcase) +  'v'+str(currentRun)+ '.pickle', 'wb') as handle:
         pickle.dump(Case, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
     msg = 'Building_' + str(nbcase)+' IDF file ' + str(currentRun+1)+ '/'  + str(TotNbRun)+ ' is done\n'
     print(msg[:-1])
-    #GrlFct.Write2LogFile(msg, LogFile)
     GrlFct.Write2LogFile('##############################################################\n', LogFile)
     if FirstRun:
         LogFile.close()

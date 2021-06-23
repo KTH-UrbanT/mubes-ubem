@@ -135,7 +135,7 @@ def ZoneCtrl(idf,zone,building,PeopleDensity,ThermostatName, Multiplier,Correctd
         Outdoor_Air_Flow_Rate_per_Person=building.OccupBasedFlowRate/1000,
         Demand_Controlled_Ventilation_Type = 'OccupancySchedule' if PeopleDensity>0 and building.DemandControlledVentilation else 'None',
         Heating_Limit = building.HVACLimitMode,
-        Maximum_Sensible_Heating_Capacity =  FloorArea*Multiplier*building.HVACPowLimit,
+        Maximum_Sensible_Heating_Capacity =  FloorArea*building.HVACPowLimit, #the floor area already takes into account the zone multiplier
         #Outdoor_Air_Inlet_Node_Name = 'OutdoorAirNode'
         )
     idf.newidfobject(
@@ -246,6 +246,18 @@ def getEfficiencyCor(OfficeTypeZone,ZoningMultiplier,building,PeopleDensity):
         ZoneAreaBasedFlowRate = building.AreaBasedFlowRate
     return {'HReff' : Correctdeff, 'AreaBasedFlowRate' : ZoneAreaBasedFlowRate}
 
+def setWindowShaginControl(idf,Name,ZoneName,surfName):
+    Details = {'Name': Name,
+    'Zone_Name' : ZoneName,
+    'Shading_Type' : 'InteriorShade',
+    'Shading_Control_Type' : 'AlwaysOn',
+    'Shading_Device_Material_Name' : 'Interior_Shade',
+               }
+    for id,name in enumerate(surfName):
+        Details['Fenestration_Surface_'+str(id+1)+'_Name'] = name
+
+    idf.newidfobject('WINDOWSHADINGCONTROL',**Details)
+
 
 def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
     # create the schedule type if not created before
@@ -255,12 +267,13 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
     #if the building.Intload is a path to a file, then the schedule file needs to be define, but if some constant value
     # is needed, then there is no need for this schedule and a constant unity schedule instead (let us use the leakcge schedule defined below)
     # the constant load will be dealed afterward in the ZoneLoad function with isfile variable
+    isfile = False
     try:
-        os.path.isfile(building.IntLoad)
-        create_ScheduleFile(idf, 'LoadSchedule', building.IntLoad)
-        isfile = True
+        if os.path.isfile(building.IntLoad):
+            create_ScheduleFile(idf, 'LoadSchedule', building.IntLoad)
+            isfile = True
     except TypeError:
-        isfile = False
+        pass
     # we need a schedule for the infiltration rates in each zone. there will a unique one
     # the set point is 1 (multiplayer)
     ScheduleCompact(idf, 'AlwaysON', 1)
@@ -328,11 +341,19 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
         # we need to compute the enveloppe area facing outside as well as the floor area (for HVAC)
         ExtWallArea = 0
         sur2lookat = (s for s in zone.zonesurfaces if s.key not in ['INTERNALMASS'])
+        # fen2append = []               #this is for having shading on the indoor face of each window
+        # fen = idf.idfobjects["FENESTRATIONSURFACE:DETAILED"] #this is for having shading on the indoor face of each window
         for s in sur2lookat:
             if s.Outside_Boundary_Condition in 'outdoors':
                 ExtWallArea += s.area
             if s.Surface_Type in 'floor':
                 FloorArea = s.area
+            # #lets add sinterior shadings inside the building for each windows
+            # for nbfen in fen:
+            #     if nbfen.Building_Surface_Name in s.Name:
+            #         fen2append.append(nbfen.Name)
+        # if fen2append:
+        #     setWindowShaginControl(idf, 'ShadingCtrl' + str(idx), zone.Name, fen2append) #this is for having shading on the indoor face of each window
         #we need to create envelope infiltration for each zone facing outside and specific ones for the basement
         if zoneStoreylist[idx]<0: #means that we are in the basement
             # Lets modify the floor area depending on the zoning level

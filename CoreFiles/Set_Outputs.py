@@ -232,7 +232,7 @@ def setEMS4TotDHWPow(idf,building,zonelist,Freq,name):
         Reporting_Frequency=Freq,
     )
 
-def Read_OutputsEso(CaseName,ZoneOutput):
+def Read_OutputsEso(CaseName,ExtSurfNames, ZoneOutput):
     #visualization of the results
     eso = esoreader.read_from_path(CaseName)
     ZoneAgregRes = {}
@@ -241,6 +241,8 @@ def Read_OutputsEso(CaseName,ZoneOutput):
     res ={}
     for idx in eso.dd.variables.keys():
         currentData = eso.dd.variables[idx]
+        if 'Surface' in currentData[2] and currentData[1] not in ExtSurfNames:
+            continue
         if currentData[1].find('STOREY')>0:
             try:
                 nb = int(currentData[1][currentData[1].find('STOREY')+6:])
@@ -288,7 +290,8 @@ def Read_OutputsEso(CaseName,ZoneOutput):
             ZoneAgregRes[key][i]['TimeStep'] = res[key][i]['TimeStep']
             ZoneAgregRes[key][i]['Unit'] = res[key][i]['Unit']
             ZoneAgregRes[key][i]['NbNode'] = len(res[key][i]['Data'])
-            if res[key][i]['Unit'] in {'C'}: #then lets compute the mean, if not lets sum it
+            #here I need to introduce some filtering in order to catch only outside facing surfaces (to compare core/perimeter thermal zoning woth other kind
+            if res[key][i]['Unit'] in {'C','W/m2-K','W/m2'}: #then lets compute the mean, if not lets sum it
                 for ii in zip(*res[key][i]['Data']):
                     ZoneAgregRes[key][i]['GlobData'].append(sum(ii)/len(res[key][i]['Data']))
             else:
@@ -302,7 +305,7 @@ def Read_OutputsEso(CaseName,ZoneOutput):
                 BuildAgregRes[KeyArea][i]['Unit'] = ZoneAgregRes[key][i]['Unit']
                 BuildAgregRes[KeyArea][i]['NbNode'] = ZoneAgregRes[key][i]['NbNode']
             else:
-                if res[key][i]['Unit'] in {'C'}:
+                if res[key][i]['Unit'] in {'C','W/m2-K','W/m2'}:
                     BuildAgregRes[KeyArea][i]['GlobData'] = [sum(x)/2 for x in zip(BuildAgregRes[KeyArea][i]['GlobData'], ZoneAgregRes[key][i]['GlobData'])]
                 else:
                     BuildAgregRes[KeyArea][i]['GlobData'] = [sum(x) for x in zip(BuildAgregRes[KeyArea][i]['GlobData'], ZoneAgregRes[key][i]['GlobData'])]
@@ -329,12 +332,23 @@ def Read_Outputhtml(CaseName):
     fname = CaseName
     filehandle = open(fname, 'r',encoding='latin-1').read() # get a file handle to the html file
     htables = readhtml.titletable(filehandle)
+    #this few lines below is just to grab the names of outdoor facing surfaces and windows
+    for i in range(len(htables)):
+        if htables[i][0] in 'Opaque Exterior':
+            Opaque_exterior = htables[i][1][1:]
+        elif htables[i][0] in 'Exterior Fenestration':
+            Windows_exterior = htables[i][1][1:]
+    EndUsesIdx = 3
+    ExtSurf = [name[0] for name in Opaque_exterior if 'WALL' in name[1]]
+    ExtWin = [name[0] for name in Windows_exterior]
+    ExtNames = ExtSurf+ExtWin
     Res = {}
-    for key in range(len(htables[3][1][1:-2])):
-        Res[htables[3][1][key+1][0]] = {}
-        for val in range(len(htables[3][1][0][1:])):
-            Res[htables[3][1][key+1][0]][htables[3][1][0][val+1]] = htables[3][1][key+1][val+1]
-    return {'GlobRes':Res}
+
+    for key in range(len(htables[EndUsesIdx][1][1:-2])):
+        Res[htables[EndUsesIdx][1][key+1][0]] = {}
+        for val in range(len(htables[EndUsesIdx][1][0][1:])):
+            Res[htables[EndUsesIdx][1][key+1][0]][htables[EndUsesIdx][1][0][val+1]] = htables[EndUsesIdx][1][key+1][val+1]
+    return {'GlobRes':Res, 'OutdoorSurfacesNames' : ExtNames}
 
 def Read_OutputError(CaseName):
     fname = CaseName

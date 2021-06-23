@@ -11,7 +11,7 @@ from BuildObject.DB_Building import BuildingList
 import BuildObject.DB_Data as DB_Data
 
 
-def LaunchProcess(SimDir,DataBaseInput,LogFile,bldidx,keyPath,nbcase,CorePerim = False,FloorZoning = False,FigCenter=(0,0),PlotBuilding = False):
+def LaunchProcess(SimDir,DataBaseInput,LogFile,bldidx,keyPath,nbcase,CorePerim = False,FloorZoning = False,FigCenter=(0,0),WindSize = 50, PlotBuilding = False):
     #process is launched for the considered building
     msg = 'Building ' + str(nbBuild) + ' is starting\n'
     print('#############################################')
@@ -23,14 +23,17 @@ def LaunchProcess(SimDir,DataBaseInput,LogFile,bldidx,keyPath,nbcase,CorePerim =
     StudiedCase = BuildingList()
     #lets build the two main object we'll be playing with in the following'
     idf_ref, building_ref = GrlFct.appendBuildCase(StudiedCase, epluspath, nbcase, DataBaseInput, MainPath,LogFile, PlotOnly = True)
-    idf_ref.idfname = 'Building_' + str(nbcase) + '\n FormularId : ' + str(
-        building_ref.BuildID['FormularId']) + '\n 50A_UUID : ' + str(building_ref.BuildID['50A_UUID'])
+    refName ='Building_' + str(nbcase)
+    for key in building_ref.BuildID:
+        print(key + ' : ' + str(building_ref.BuildID[key]))
+        refName += '\n ' + key + str(building_ref.BuildID[key])
+    idf_ref.idfname = refName
+    #'Building_' + str(nbcase) + '\n FormularId : ' + str(
+    #    building_ref.BuildID['FormularId']) + '\n 50A_UUID : ' + str(building_ref.BuildID['50A_UUID'])
 
-    print('50A_UUID : ' + str(building_ref.BuildID['50A_UUID']))
-    print('FormularId : ' + str(building_ref.BuildID['FormularId']))
-    FigCenter.append(building_ref.RefCoord)
-    refx = sum([center[0] for center in FigCenter]) / len(FigCenter)
-    refy = sum([center[1] for center in FigCenter]) / len(FigCenter)
+    # print('50A_UUID : ' + str(building_ref.BuildID['50A_UUID']))
+    # print('FormularId : ' + str(building_ref.BuildID['FormularId']))
+
     #Rounds of check if we continue with this building or not
     Var2check = len(building_ref.BlocHeight) if building_ref.Multipolygon else building_ref.height
     #if the building have bloc with no Height or if the hiegh is below 1m (shouldn't be as corrected in the Building class now)
@@ -51,23 +54,31 @@ def LaunchProcess(SimDir,DataBaseInput,LogFile,bldidx,keyPath,nbcase,CorePerim =
         GrlFct.Write2LogFile('##############################################################\n', LogFile)
         return epluspath, building_ref.WeatherDataFile,(refx,refy)
 
+    FigCenter.append(building_ref.RefCoord)
+    refx = sum([center[0] for center in FigCenter]) / len(FigCenter)
+    refy = sum([center[1] for center in FigCenter]) / len(FigCenter)
+
     if not PlotBuilding:
         building_ref.MaxShadingDist = 0
         building_ref.shades = building_ref.getshade(DataBaseInput['Build'][nbcase], DataBaseInput['Shades'], DataBaseInput['Build'],DB_Data.GeomElement,LogFile)
     # change on the building __init__ class in the simulation level should be done here as the function below defines the related objects
-    GrlFct.setSimLevel(idf_ref, building_ref)
+    #GrlFct.setSimLevel(idf_ref, building_ref)
     # change on the building __init__ class in the building level should be done here as the function below defines the related objects
     GrlFct.setBuildingLevel(idf_ref, building_ref,LogFile,CorePerim,FloorZoning,ForPlots = True)
 
     GrlFct.setEnvelopeLevel(idf_ref, building_ref)
     FigCentroid = building_ref.RefCoord if PlotBuilding else (refx, refy)
-    idf_ref.view_model(test=PlotBuilding, FigCenter=FigCentroid)
+    #compåuting the windox size for visualization
+    for poly in building_ref.footprint:
+        for vertex in poly:
+            WindSize = max(GrlFct.ComputeDistance(FigCentroid, vertex),WindSize)
+    idf_ref.view_model(test=PlotBuilding, FigCenter=FigCentroid, WindSize = 2*WindSize)
 
     GrlFct.Write2LogFile('##############################################################\n', LogFile)
 
     # lets get back to the Main Folder we were at the very beginning
     os.chdir(MainPath)
-    return epluspath, building_ref.WeatherDataFile, (refx,refy)
+    return (refx,refy),WindSize
 
 
 if __name__ == '__main__' :
@@ -75,7 +86,7 @@ if __name__ == '__main__' :
 ######################################################################################################################
 ########        MAIN INPUT PART     ##################################################################################
 ######################################################################################################################
-#The Modeler have to fill in the following parameter to define his choices
+#This file is only to make graphs of the building geometry given in the GoeJsonF
 
 # BuildNum = [1,2,3,4]                  #list of numbers : number of the buildings to be simulated (order respecting the
 # PathInputFile = 'String'              #Name of the PathFile containing the paths to the data and to energyplus application (see ReadMe)
@@ -89,11 +100,12 @@ if __name__ == '__main__' :
 #                                       It include the shadings, if False, all the building will be plotted wihtout the shadings
 # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
-    BuildNum = [0]
-    PathInputFile ='MinnebergLast.txt'#'HammarbyLast.txt'#Pathways_Template.txt''Minneberg2d.txt'#
+    import numpy as np
+    BuildNum = []#int(i) for i in np.linspace(0,500,501)]
+    PathInputFile ='Hammarby0401.txt'#'MinnebergLast.txt'#'Belfort.txt'#'MinnebergLast.txt'#'LeHavre.txt'#'Hammarby0401.txt'#'Belfort.txt'#'Hammarby0401.txt'#'HammarbyLast.txt'#Pathways_Template.txt''Minneberg2d.txt'#''Belfort.txt'#'Belfort.txt'#
     CorePerim = False
     FloorZoning = False
-    PlotBuilding = True
+    PlotBuilding = False
     ZoneOfInterest = ''
 
 ######################################################################################################################
@@ -104,12 +116,6 @@ if __name__ == '__main__' :
     # reading the pathfiles and the geojsonfile
     keyPath = GrlFct.readPathfile(PathInputFile)
     DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
-    # for i,bld in enumerate(DataBaseInput['Build']):
-    #     try:
-    #         if bld.properties['FormularId'] == 930001:
-    #             BuildNum.append(i)
-    #     except:
-    #         pass
 
     BuildNum2Launch = [i for i in range(len(DataBaseInput['Build']))]
     if BuildNum:
@@ -127,17 +133,15 @@ if __name__ == '__main__' :
         FigCenter = []
         LogFile=[]
         CurrentPath = os.getcwd()
-
+        WindSize = 50
+        SimDir = CurrentPath
+        LogFile = open(os.path.join(SimDir, 'PlotBuilder_Logs.log'), 'w')
         for idx,nbBuild in enumerate(BuildNum2Launch):
-            #First, lets create the folder for the building and simulation processes
-            SimDir = CurrentPath
-            LogFile = open(os.path.join(SimDir, 'PlotBuilder_Logs.log'), 'w')
-
             if idx<len(DataBaseInput['Build']):
                 #getting through the mainfunction above :LaunchProcess() each building sees its idf done in a row within this function
                 try:
-                    epluspath, weatherpath,NewCentroid = LaunchProcess(SimDir,DataBaseInput,LogFile,idx,keyPath,nbBuild,CorePerim,FloorZoning,
-                            FigCenter,PlotBuilding)
+                    NewCentroid,WindSize = LaunchProcess(SimDir,DataBaseInput,LogFile,idx,keyPath,nbBuild,CorePerim,FloorZoning,
+                            FigCenter,WindSize,PlotBuilding)
                 except:
                     msg = '[ERROR] There was an error on this building, process aborted\n'
                     print(msg[:-1])
@@ -149,6 +153,7 @@ if __name__ == '__main__' :
                 print('All buildings in the input file have been treated.')
                 print('###################################################')
                 break
+        LogFile.close()
         import matplotlib.pyplot as plt
         plt.show()
         sys.path.remove(path2addgeom)

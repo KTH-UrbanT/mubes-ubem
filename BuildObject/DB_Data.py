@@ -1,7 +1,5 @@
 # @Author  : Xavier Faure
 # @Email   : xavierf@kth.se
-
-
 SimuData = \
  {  'Begin_Day_of_Month' : 1,
     'Begin_Month' : 1,
@@ -20,7 +18,7 @@ WeatherFile = \
 # There are 2 layer maximum, the word Inertia and Insulation or key factor further in the code. If one layer is wanted, just comment the other one.
 #the basement is considered not heated and thus never insulated layer
 BaseMaterial = \
- {'Window' : {'UFactor' :  1.9,
+ {'Window' : {'UFactor' :  0.19,
             'Solar_Heat_Gain_Coefficient' : 0.7,
             'Visible_Transmittance' : 0.8,
             },
@@ -30,11 +28,12 @@ BaseMaterial = \
                 'Density' : 2300,
                 'Specific_Heat' : 1000,
                 },
-'Wall Insulation' : {'Thickness' : 0.2,
+'Wall Insulation' : {'Thickness' : 0.52,
             'Conductivity' : 0.03,
             'Roughness' : "Rough",
             'Density' : 150,
             'Specific_Heat' : 1000,
+            #'Thermal_Absorptance' : 0.001,
             },
 'Basement Floor' : {'Thickness' : 0.1,     #this layer will be considered also for the basement floor
             'Conductivity' : 0.9,
@@ -54,11 +53,12 @@ BaseMaterial = \
 #             'Density' : 1000,
 #             'Specific_Heat' : 1000,
 #             },
-'Roof Insulation' : {'Thickness' : 0.3,
+'Roof Insulation' : {'Thickness' : 0.53,
             'Conductivity' : 0.03,
             'Roughness' : "Rough",
             'Density' : 150,
             'Specific_Heat' : 1000,
+            #'Thermal_Absorptance' : 0.001,
             },
 'Heated1rstFloor Inertia' : {'Thickness' : 0.1,
             'Conductivity' : 0.9,
@@ -66,11 +66,12 @@ BaseMaterial = \
             'Density' : 2300,
             'Specific_Heat' : 1000,
             },
-'Heated1rstFloor Insulation' : {'Thickness' : 0.15,
+'Heated1rstFloor Insulation' : {'Thickness' : 0.515,
             'Conductivity' : 0.035,
             'Roughness' : "Rough",
             'Density' : 150,
             'Specific_Heat' : 1000,
+            #'Thermal_Absorptance' : 0.001,
             },
   }
 
@@ -113,7 +114,7 @@ ExtraEnergy = \
 #the other one contains for each shading surface id the vertex point and the building Id in order to catch the height of it.
 #to externalize as much as possible, these elements are reported in the dict below
 GeomElement = \
- {'BuildIDKey' : ['50A_UUID', 'FormularId'],
+ {'BuildIDKey' : ['50A_UUID', 'FormularId','objectid','OBJECTID'],
   'ShadingIdKey' : 'vaggid',
   'BuildingIdKey' : 'byggnadsid',
   'VertexKey':'geometries',
@@ -185,12 +186,12 @@ VentSyst = \
 
 #this dict defines the acceptable limits for the element precised as well as the swedish key for the DataBase
 DBLimits = \
-{'surface_key': 'EgenAtemp',                   'surface_lim':      [0, 50000],
+{'surface_key': ['EgenAtemp','SHAPE.AREA'],                  'surface_lim':      [0, 50000],
  'nbfloor_key': 'EgenAntalPlan',               'nbfloor_lim':      [0, 100],
  'nbBasefloor_key': 'EgenAntalKallarplan',     'nbBasefloor_lim':  [0, 4],
  'year_key': 'EgenNybyggAr',                   'year_lim':         [0, 2022],
  'nbAppartments_key': 'EgenAntalBolgh',        'nbAppartments_lim':[0, 100],
- 'height_key': 'height',                       'height_lim':       [0, 100],
+ 'height_key': ['height', 'SHAPE.LEN','st_lengthshape'],                      'height_lim':       [0, 100],
  'AreaBasedFlowRate_key': 'EgenProjVentFlode', 'AreaBasedFlowRate_lim':     [0.35, 10],
  'nbStairwell_key': 'EgenAntalTrapphus',       'nbStairwell_lim': [0, 100],
  }

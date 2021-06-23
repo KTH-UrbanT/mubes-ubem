@@ -26,6 +26,22 @@ def checkLim(val, ll, ul):
             val = ul
     return val
 
+#get the value from the correct key
+def getDBValue(DB, Keys):
+    Val = ''
+    if type(Keys) ==list:
+        for key in Keys:
+            try:
+                Val = DB[key]
+                break
+            except:
+                pass
+    else:
+        try: Val = DB[Keys]
+        except: pass
+    return Val
+
+
 #find the wall id for the shading surfaces from surrounding buildings
 def findWallId(Id, Shadingsfile, ref,GE):
     finished = 0
@@ -96,36 +112,41 @@ class Building:
         EPC = DB_Data.EPCMeters
         SD = DB_Data.SimuData
         ExEn = DB_Data.ExtraEnergy
+        try:
+            self.CRS = Buildingsfile.crs['properties']['name'] #this is the coordinates reference system for the polygons
+        except:
+            self.CRS = 'Null'
+
         self.getBEData(BE)
         self.getSimData(SD)
-
         self.name = name
         self.BuildID = self.getBuildID(DB, GE,LogFile)
         self.Multipolygon = self.getMultipolygon(DB)
-        self.RefCoord = self.getRefCoord(DB)
         self.nbfloor = self.getnbfloor(DB, DBL,LogFile)
         self.nbBasefloor = self.getnbBasefloor(DB, DBL)
         self.height = self.getheight(DB, DBL)
-        self.footprint,  self.BlocHeight, self.BlocNbFloor = self.getfootprint(DB,LogFile,self.RefCoord,self.nbfloor)
+        self.footprint,  self.BlocHeight, self.BlocNbFloor = self.getfootprint(DB,LogFile,self.nbfloor)
+        self.RefCoord = self.getRefCoord(DB)
         self.ATemp = self.getsurface(DB, DBL,LogFile)
         self.SharedBld, self.VolumeCorRatio = self.IsSameFormularIdBuilding(Buildingsfile, nbcase, LogFile, DBL)
         self.BlocHeight, self.BlocNbFloor, self.StoreyHeigth = self.EvenFloorCorrection(self.BlocHeight, self.nbfloor, self.BlocNbFloor, self.footprint, LogFile)
-        self.year = self.getyear(DB, DBL)
-        self.EPCMeters = self.getEPCMeters(DB,EPC,LogFile)
-        if len(self.SharedBld)>0:
-            self.CheckAndCorrEPCs(Buildingsfile,LogFile,nbcase,EPC)
-        self.nbAppartments = self.getnbAppartments(DB, DBL)
+        self.EPHeatedArea = self.getEPHeatedArea(LogFile)
         self.MaxShadingDist = GE['MaxShadingDist']
         self.shades = self.getshade(DB,Shadingsfile,Buildingsfile,GE,LogFile)
-        self.VentSyst = self.getVentSyst(DB,LogFile)
-        self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB,DBL, BE)
-        self.OccupType = self.getOccupType(DB,LogFile)
-        self.nbStairwell = self.getnbStairwell(DB, DBL)
-        self.EPHeatedArea = self.getEPHeatedArea(LogFile)
         self.Materials = DB_Data.BaseMaterial
-        self.WeatherDataFile = DB_Data.WeatherFile['Loc']
         self.InternalMass = DB_Data.InternalMass
         if not PlotOnly:
+            #the attributres above are needed in all case, the one below are needed only if energy simulation is asked for
+            self.VentSyst = self.getVentSyst(DB, LogFile)
+            self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB, DBL, BE)
+            self.OccupType = self.getOccupType(DB, LogFile)
+            self.nbStairwell = self.getnbStairwell(DB, DBL)
+            self.WeatherDataFile = DB_Data.WeatherFile['Loc']
+            self.year = self.getyear(DB, DBL)
+            self.EPCMeters = self.getEPCMeters(DB, EPC, LogFile)
+            if len(self.SharedBld) > 0:
+                self.CheckAndCorrEPCs(Buildingsfile, LogFile, nbcase, EPC)
+            self.nbAppartments = self.getnbAppartments(DB, DBL)
             #we need to convert change the refrence coordinate because precision is needed for boundary conditions definition:
             newfoot = []
             for foot in self.footprint:
@@ -134,15 +155,15 @@ class Building:
             for shade in self.shades.keys():
                 newcoord = [(node[0]-self.RefCoord[0],node[1]-self.RefCoord[1]) for node in self.shades[shade]['Vertex']]
                 self.shades[shade]['Vertex'] = newcoord
-
+            #we define the internal load only if it's not for making picture
             self.IntLoad = self.getIntLoad(MainPath,LogFile)
             self.DHWInfos = self.getExtraEnergy(ExEn, MainPath)
-        #if there are no cooling comsumption, lets considerer a set point at 50deg max
-        for key in self.EPCMeters['Cooling']:
-            if self.EPCMeters['Cooling'][key]>0:
-                self.setTempUpL = BE['setTempUpL']
-            else:
-                self.setTempUpL = [50]*len(BE['setTempUpL'])
+            #if there are no cooling comsumption, lets considerer a set point at 50deg max
+            for key in self.EPCMeters['Cooling']:
+                if self.EPCMeters['Cooling'][key]>0:
+                    self.setTempUpL = BE['setTempUpL']
+                else:
+                    self.setTempUpL = [50]*len(BE['setTempUpL'])
 
     def CheckAndCorrEPCs(self,Buildingsfile,LogFile,nbcase,EPC):
         totHeat = []
@@ -189,9 +210,8 @@ class Building:
         Volume = [sum([Polygon(foot).area * self.BlocHeight[idx] for idx,foot in enumerate(self.footprint)])]
         for nb in SharedBld:
             ATemp.append(self.getsurface(Buildingsfile[nb], DBL,[]))
-            BldRefCoord = self.getRefCoord(Buildingsfile[nb])
-            floors.append(self.getnbfloor(Buildingsfile[nb],DBL,LogFile))
-            Bldfootprint,  BldBlocHeight, BldBlocNbFloor = self.getfootprint(Buildingsfile[nb],[],BldRefCoord,floors[-1])
+            floors.append(self.getnbfloor(Buildingsfile[nb],DBL,[]))
+            Bldfootprint,  BldBlocHeight, BldBlocNbFloor = self.getfootprint(Buildingsfile[nb],[],floors[-1])
             maxHeight.append(max(BldBlocHeight))
             Volume.append(sum([Polygon(foot).area * BldBlocHeight[idx] for idx,foot in enumerate(Bldfootprint)]))
         if Correction:
@@ -248,11 +268,11 @@ class Building:
             try:
                 BuildID[key] = DB.properties[key]
             except:
-                BuildID[key] = None
-        msg = '[Bld ID] 50A_UUID : ' + str(BuildID['50A_UUID']) + '\n'
-        GrlFct.Write2LogFile(msg, LogFile)
-        msg = '[Bld ID] FormularId : ' + str(BuildID['FormularId']) + '\n'
-        GrlFct.Write2LogFile(msg, LogFile)
+                pass #BuildID[key] = None
+        if BuildID:
+            for key in BuildID:
+                msg = '[Bld ID] '+ key+' : ' + str(BuildID[key]) + '\n'
+                GrlFct.Write2LogFile(msg, LogFile)
         return BuildID
 
     def getMultipolygon(self,DB):
@@ -266,19 +286,19 @@ class Building:
     def getRefCoord(self,DB):
         "get the reference coodinates for visualisation afterward"
         #check for Multipolygon first
-        test = DB.geometry.coordinates[0][0][0]
-        if type(test) is list:
-            centroide = [list(Polygon(DB.geometry.coordinates[i][0]).centroid.coords) for i in range(len(DB.geometry.coordinates))]
+        if self.Multipolygon:
+            centroide = [list(Polygon(foot).centroid.coords) for foot in self.footprint] #same reason than below, foot print is computed before now [list(Polygon(DB.geometry.coordinates[i][0]).centroid.coords) for i in range(len(DB.geometry.coordinates))]
             x = sum([centroide[i][0][0] for i in range(len(centroide))])/len(centroide)
             y = sum([centroide[i][0][1] for i in range(len(centroide))])/len(centroide)
         else:
-            centroide = list(Polygon(DB.geometry.coordinates[0]).centroid.coords)
+            centroide = list(Polygon(self.footprint[0]).centroid.coords)# now the foot print is computed nbefore the reference. before it was defined with list(Polygon(DB.geometry.coordinates[0]).centroid.coords)
             x = centroide[0][0]
             y = centroide[0][1]
-        ref = (round(x,8), round(y,8)) #there might be not a true need for suche precision....
+        #ref = (round(x,8), round(y,8))
+        ref = (x, y) #there might be not a true need for suche precision....
         return ref
 
-    def getfootprint(self,DB,LogFile=[],RefCoord=[],nbfloor=0):
+    def getfootprint(self,DB,LogFile=[],nbfloor=0):
         "get the footprint coordinate and the height of each building bloc"
         coord = []
         node2remove =[]
@@ -355,7 +375,7 @@ class Building:
                 newbloccoor.append(newcoor)
             coord = newbloccoor
         else:
-            #old fashion of making thing with the very first 2D file
+            #for dealing with 2D files
             for j in DB.geometry.coordinates[0]:
                 new = (j[0], j[1])
                 new_coor = new#[]
@@ -408,7 +428,6 @@ class Building:
     def getEPHeatedArea(self,LogFile):
         "get the heated area based on the footprint and the number of floors"
         self.BlocFootprintArea=[]
-#        if self.Multipolygon:
         EPHeatedArea = 0
         for i,foot in enumerate(self.footprint):
             EPHeatedArea += Polygon(foot).area*self.BlocNbFloor[i]
@@ -417,33 +436,24 @@ class Building:
         GrlFct.Write2LogFile(msg, LogFile)
         msg = '[Geom Info] The total heated area is : ' + str(EPHeatedArea)+' for a declared ATemp of : '+str(self.ATemp)+' --> discrepancy of : '+str(round((self.ATemp-EPHeatedArea)/self.ATemp*100,2))+'\n'
         GrlFct.Write2LogFile(msg, LogFile)
-        # else:
-        #     EPHeatedArea = Polygon(self.footprint).area * self.nbfloor
-        #     self.BlocFootprintArea.append(Polygon(self.footprint).area)
         return EPHeatedArea
 
     def getsurface(self,DB, DBL,LogFile):
         "Get the surface from the input file, ATemp"
-        try:
-            ATemp = int(DB.properties[DBL['surface_key'] ])
-            if self.BuildID['50A_UUID']=='e653799c-c19c-4ab8-a110-836b5ec1253c':
-                ATemp /= 100
-                msg = '[WARNING] This buildings ATemp is divided by 100\n'
-                GrlFct.Write2LogFile(msg, LogFile)
-        except:
-            ATemp = 1
+        try: ATemp = int(getDBValue(DB.properties, DBL['surface_key']))
+        except: ATemp = 1
+        if ATemp == 1:
             msg = '[Geom ERROR] Atemp not recognized as number, fixed to 1\n'
             GrlFct.Write2LogFile(msg, LogFile)
         ATemp = checkLim(ATemp,DBL['surface_lim'][0],DBL['surface_lim'][1])
-        self.ATempOr= ATemp
+        self.ATempOr= ATemp     #this is to keep the original value as some correction might done afterward if more then 1 bld is present in 1 Id
         return ATemp
 
     def getnbfloor(self,DB, DBL,LogFile):
         "Get the number of floor above ground"
-        try:
-            nbfloor = int(DB.properties[DBL['nbfloor_key']])
-        except:
-            nbfloor = 0
+        try: nbfloor=int(getDBValue(DB.properties, DBL['nbfloor_key']))
+        except: nbfloor = 0
+        if nbfloor == 0:
             msg = '[EPCs Warning] The nb of floors is 0. It will be defined using the max bloc height and a storey height of 3m\n'
             GrlFct.Write2LogFile(msg, LogFile)
         nbfloor = checkLim(nbfloor,DBL['nbfloor_lim'][0],DBL['nbfloor_lim'][1])
@@ -451,74 +461,61 @@ class Building:
 
     def getnbStairwell(self,DB, DBL):
         "Get the number of stariwell, need for natural stack effect on infiltration"
-        try:
-            nbStairwell = int(DB.properties[DBL['Stairwell_key']])
-        except:
-            nbStairwell = 0
+        try: nbStairwell = int(getDBValue(DB.properties, DBL['nbStairwell_key']))
+        except: nbStairwell=0
         nbStairwell = checkLim(nbStairwell,DBL['nbStairwell_lim'][0],DBL['nbStairwell_lim'][1])
         return nbStairwell
 
 
     def getnbBasefloor(self,DB, DBL):
         "Get the number of floor below ground"
-        try:
-            nbBasefloor = int(DB.properties[DBL['nbBasefloor_key']])
-        except:
-            nbBasefloor = 0
+        try: nbBasefloor = int(getDBValue(DB.properties, DBL['nbBasefloor_key']))
+        except: nbBasefloor = 0
         nbBasefloor = checkLim(nbBasefloor,DBL['nbBasefloor_lim'][0],DBL['nbBasefloor_lim'][1])
         return nbBasefloor
 
     def getyear(self,DB, DBL):
         "Get the year of construction in the input file"
-        try:
-            year = int(DB.properties[DBL['year_key']])
-        except:
-            year = 1900
+        try: year = int(getDBValue(DB.properties, DBL['year_key']))
+        except: year = 1900
         year = checkLim(year,DBL['year_lim'][0],DBL['year_lim'][1])
         return year
 
     def getEPCMeters(self,DB,EPC,LogFile):
         "Get the EPC meters values"
         Meters = {}
-        if self.BuildID['50A_UUID'] == 'e653799c-c19c-4ab8-a110-836b5ec1253c':
-            cor = 100
-            msg = '[WARNING] This buildings EPCs is divided by 100\n'
-            GrlFct.Write2LogFile(msg, LogFile)
-        else:
-            cor = 1
         for key1 in EPC:
             Meters[key1] = {}
             for key2 in EPC[key1]:
                 if '_key' in key2:
                     try:
                         Meters[key1][key2[:-4]] = DB.properties[EPC[key1][key2]]
-                        Meters[key1][key2[:-4]] = int(DB.properties[EPC[key1][key2]])*EPC[key1][key2[:-4]+'COP']/cor
+                        Meters[key1][key2[:-4]] = int(DB.properties[EPC[key1][key2]])*EPC[key1][key2[:-4]+'COP']
                     except:
                         pass
         return Meters
 
     def getnbAppartments(self, DB, DBL):
         "Get the number of appartment in the building"
-        try:
-            nbApp = int(DB.properties[DBL['nbAppartments_key']])
-        except:
-            nbApp = 0
+        try: nbApp = int(getDBValue(DB.properties, DBL['nbAppartments_key']))
+        except: nbApp = 0
         nbApp = checkLim(nbApp,DBL['nbAppartments_lim'][0],DBL['nbAppartments_lim'][1])
         return nbApp
 
     def getheight(self, DB, DBL):
         "Get the building height from the input file, but not used if 3D coordinates in the footprints"
-        try:
-            height = int(DB.properties[DBL['height_key']])
-        except:
-            height = 0
+        try: height = int(getDBValue(DB.properties, DBL['height_key']))
+        except: height = 0
         height = checkLim(height,DBL['height_lim'][0],DBL['height_lim'][1])
         return height
 
     def getshade(self, DB,Shadingsfile,Buildingsfile,GE,LogFile,PlotOnly = True):
         "Get all the shading surfaces to be build for surrounding building effect"
         shades = {}
-        shadesID = DB.properties[GE['ShadingIdKey']]
+        try:
+            shadesID = DB.properties[GE['ShadingIdKey']]
+        except:
+            return shades
         ref = (0,0) if PlotOnly else self.RefCoord
         idlist = [-1]
         for m in re.finditer(';', shadesID):
@@ -591,10 +588,8 @@ class Building:
 
     def getAreaBasedFlowRate(self, DB, DBL, BE):
         "Get the airflow rates based on the floor area"
-        try:
-            AreaBasedFlowRate = float(DB.properties[DBL['AreaBasedFlowRate_key']])
-        except:
-            AreaBasedFlowRate = BE['AreaBasedFlowRate']  #l/s/m2, minimum flowrate
+        try: AreaBasedFlowRate = float(getDBValue(DB.properties, DBL['AreaBasedFlowRate_key']))
+        except : AreaBasedFlowRate = BE['AreaBasedFlowRate']
         AreaBasedFlowRate = checkLim(AreaBasedFlowRate,DBL['AreaBasedFlowRate_lim'][0],DBL['AreaBasedFlowRate_lim'][1])
         return AreaBasedFlowRate
 

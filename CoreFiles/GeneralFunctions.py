@@ -13,6 +13,7 @@ from openpyxl import load_workbook
 from SALib.sample import latin
 import shutil
 import pickle
+import pyproj
 
 def appendBuildCase(StudiedCase,epluspath,nbcase,DataBaseInput,MainPath,LogFile,PlotOnly = False):
     StudiedCase.addBuilding('Building'+str(nbcase),DataBaseInput,nbcase,MainPath,epluspath,LogFile,PlotOnly)
@@ -31,7 +32,7 @@ def setBuildingLevel(idf,building,LogFile,CorePerim = False,FloorZoning = False,
     ######################################################################################
     #Building Level
     ######################################################################################
-    #this is the function that requires the most time
+    #this is the function that requires the longest time
     GeomScripts.createBuilding(LogFile,idf,building, perim = CorePerim,FloorZoning = FloorZoning,ForPlots=ForPlots)
 
 
@@ -59,7 +60,7 @@ def setOutputLevel(idf,building,MainPath,EMSOutputs,OutputsFile):
     Set_Outputs.AddOutputs(idf,building,MainPath,EMSOutputs,OutputsFile)
 
 def readPathfile(Pathways):
-    keyPath = {'epluspath': '', 'Buildingsfile': '', 'Shadingsfile': '','pythonpath': '','GeojsonProperties':''}
+    keyPath = {'epluspath': '', 'Buildingsfile': '', 'Shadingsfile': '','pythonpath': '','GeojsonProperties':''} #these keys are hard written as there as used aftewrad at several places
     with open(Pathways, 'r') as PathFile:
         Paths = PathFile.readlines()
         for line in Paths:
@@ -69,15 +70,39 @@ def readPathfile(Pathways):
     return keyPath
 
 def ReadGeoJsonFile(keyPath):
+    print('Reading Input files,...')
     try:
         BuildObjectDict = ReadGeojsonKeyNames(keyPath['GeojsonProperties'])
-        Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'], round_factor=4)
-        Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'], round_factor=4)
+        Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'])
+        Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'])
+        Buildingsfile = checkRefCoordinates(Buildingsfile)
+        Shadingsfile = checkRefCoordinates(Shadingsfile)
         return {'BuildObjDict':BuildObjectDict,'Build' :Buildingsfile, 'Shades': Shadingsfile}
     except:
-        Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'], round_factor=4)
-        Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'], round_factor=4)
+        Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'])
+        Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'])
+        Buildingsfile = checkRefCoordinates(Buildingsfile)
+        Shadingsfile = checkRefCoordinates(Shadingsfile)
         return {'Build': Buildingsfile, 'Shades': Shadingsfile}
+
+def checkRefCoordinates(GeojsonFile):
+    if 'EPSG' in GeojsonFile.crs['properties']['name']:
+        return GeojsonFile
+    if "CRS84" in GeojsonFile.crs['properties']['name']:
+        print('Projecting coordinates of Input file,...')
+        transformer = pyproj.Transformer.from_crs("CRS84", "epsg:3950") #this transformation if done for the France's reference
+        for idx,obj in enumerate(GeojsonFile):
+            newCoord = []
+            for poly in obj.geometry.coordinates:
+                newpoly = []
+                for vertex in poly:
+                    newpoly.append(list(transformer.transform(vertex[0], vertex[1])))
+                newCoord.append(newpoly)
+            obj.geometry.coordinates = newCoord
+        return GeojsonFile
+
+def ComputeDistance(v1,v2):
+    return ((v2[0]-v1[0])**2+(v2[1]-v1[1])**2)**0.5
 
 def SaveCase(MainPath,SepThreads,CaseName,nbBuild):
     SaveDir = os.path.join(os.path.dirname(os.path.dirname(MainPath)), 'SimResults')
@@ -119,18 +144,6 @@ def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,Refresh = False):
             os.mkdir(SimDir)
     return SimDir
 
-    # if not SepThreads:
-    #     SimDir = os.path.normcase(
-    #             os.path.join(os.path.dirname(os.path.dirname(CurrentPath)), os.path.join('SimResults', CaseName)))
-    # else:
-    #     SimDir = os.path.normcase(
-    #         os.path.join(os.path.dirname(os.path.dirname(CurrentPath)), os.path.join('SimResults', CaseName + '_Build_' + str(nbBuild))))
-    # if not os.path.exists(SimDir):
-    #     os.mkdir(SimDir)
-    # elif SepThreads or idx == 0:
-    #     shutil.rmtree(SimDir)
-    #     os.mkdir(SimDir)
-
 def getParamSample(VarName2Change,Bounds,nbruns):
     # Sampling process if someis define int eh function's arguments
     # It is currently using the latin hyper cube methods for the sampling generation (latin.sample)
@@ -155,6 +168,7 @@ def CreatFMU(idf,building,nbcase,epluspath,SimDir, i,varOut,LogFile):
     Write2LogFile('##############################################################\n',LogFile)
 
 def ReadGeojsonKeyNames(GeojsonProperties):
+    #this is currently ot used....
     file = load_workbook(GeojsonProperties).active
     #get the headers
     BldObjName = {}
@@ -221,6 +235,9 @@ def CleanUpLogFiles(MainPath):
 
 def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shadingsfile,nbcase,DB_Data,LogFile=[]):
     #there is a loop file along the variable name to change and if specific ation are required it should be define here
+    # if the variable to change are embedded into several layer of dictionnaries than there is a need to make checks and change accordingly to the correct element
+    # here are examples for InternalMass impact using 'InternalMass' keyword in the VarName2Change list to play with the 'WeightperZoneArea' parameter
+    # and for ExternalMass impact using 'ExtMass' keyword in the VarName2Change list to play with the 'Thickness' of the wall inertia layer
     roundVal = 3 #this is a more physical based thresehold, so could be 8...."
     for varnum,var in enumerate(VarName2Change):
         if 'InternalMass' in var:

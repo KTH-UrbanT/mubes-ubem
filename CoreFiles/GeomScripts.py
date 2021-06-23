@@ -32,9 +32,6 @@ def BuildBloc(idf,perim,bloc,bloc_coord,Height,nbstories,nbBasementstories,Basem
 
 def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
     Full_coord = building.footprint
-    #Adding two blocks, one with two storey (the nb of storey defines the nb of Zones)
-    #Nb_blocs = 1
-    #if building.Multipolygon:
     Nb_blocs = len(Full_coord)
     print('Number of blocs for this building : '+ str(Nb_blocs))
     try:
@@ -42,17 +39,12 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
     except:
         pass
     for bloc in range(Nb_blocs):
-        bloc_coord =  Full_coord[bloc]# if building.Multipolygon else Full_coord
-        Height = building.BlocHeight[bloc]# if building.Multipolygon else building.height
-        nbstories = building.BlocNbFloor[bloc]# if building.Multipolygon else building.nbfloor
-        #if building.Multipolygon:
-        #Height = nbstories*building.StoreyHeigth        #correction of the height in order to have same storey hieght everywhere : this could be removed as should have been corredted earlier...
-        #last check of the Zonning level if 1 per floor or 1 per building bloc
-        nbstories = nbstories if FloorZoning else 1
+        bloc_coord =  Full_coord[bloc]
+        Height = building.BlocHeight[bloc]
+        nbstories = building.BlocNbFloor[bloc] if FloorZoning else 1
         nbBasementstories = building.nbBasefloor if FloorZoning else min(building.nbBasefloor,1)
-        BasementstoriesHeight = 2.5 if FloorZoning else 2.5*building.nbBasefloor
-        #function that build the bloc, it is externalize in order to introduce a Try except and reducing the perim depth
-        #print(nbstories, Height)
+        BasementstoriesHeight = 2.5 if FloorZoning else 2.5*building.nbBasefloor #this needs to be checked....I am not sure while going through it
+
         Perim_depth = 3
         matched = False
         while not matched:
@@ -77,8 +69,8 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
     #this function enable to create all the boundary conditions for all surfaces
     idf.intersect_match()
 
-    # this last function on the Geometry is here to split the non convexe surfaces
-    # if not, some warning are appended because of shading computation. non convex surfaces can impact itself
+    # this last function on the Geometry is here to split the non convex surfaces
+    # if not, some warning are appended because of shading computation.
     # it should thus be only the roof surfaces. Non convex internal zone are not concerned as Solar distribution is 'FullExterior'
     try:
         if not ForPlots:
@@ -92,7 +84,7 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
         pass
 
 def createRapidGeomElem(idf,building):
-    #enveloppe can be creates now and allocated to to correct surfaces
+    #envelop can be created now and allocated to to correct surfaces
     createEnvelope(idf, building)
 
     #create parition walls as recommended in
@@ -145,7 +137,6 @@ def createEnvelope(idf,building):
     cstr = idf.idfobjects['CONSTRUCTION']
     mat = idf.idfobjects['MATERIAL']
     win = idf.idfobjects['WINDOWMATERIAL:SIMPLEGLAZINGSYSTEM']
-
     #we need to creates the associate wall from the material in two layers
     for id_cstr in cstr:
         Wall_Cstr = []

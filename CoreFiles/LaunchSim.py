@@ -68,8 +68,9 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,withFMU = False):
         Res = Set_Outputs.Read_Outputhtml(os.path.join(RunDir, CaseName + 'Table.htm'))
         #Endinfo = Set_Outputs.Read_OutputError(CaseName + '.end')
     else:
-        ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir,CaseName+'out.eso'), ZoneOutput=False)
         Res  = Set_Outputs.Read_Outputhtml(os.path.join(RunDir,CaseName+'tbl.htm'))
+        ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir,CaseName+'out.eso'), Res['OutdoorSurfacesNames'], ZoneOutput=False)
+
         #Endinfo = Set_Outputs.Read_OutputError(CaseName+'out.end')
     Res['BuildDB'] = building
     #Res['NbZones'] = len(idf.idfobjects['ZONE'])
