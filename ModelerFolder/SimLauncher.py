@@ -44,15 +44,15 @@ if __name__ == '__main__' :
 # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
     CaseName = 'ForTest'
-    BuildNum = []
-    VarName2Change = ['MaxShadingDist']
-    Bounds = [[0,300]]
+    BuildNum = [0,1,2]
+    VarName2Change = []
+    Bounds = []
     NbRuns = 1
     CPUusage = 0.8
     CreateFMU = False
     CorePerim = False
     FloorZoning = True
-    PathInputFile = 'Hammarby0401.txt'#'Belfort.txt'#'Pathways_Template.txt'
+    PathInputFile = 'Pathways_Template.txt'
     OutputsFile = 'Outputs_Template.txt'
     ZoneOfInterest = ''
 

@@ -9,7 +9,7 @@ sys.path.append("..")
 import CoreFiles.GeneralFunctions as GrlFct
 from BuildObject.DB_Building import BuildingList
 import BuildObject.DB_Data as DB_Data
-
+from BuildObject.DB_Filter4Simulations import checkBldFilter
 
 def LaunchProcess(SimDir,DataBaseInput,LogFile,bldidx,keyPath,nbcase,CorePerim = False,FloorZoning = False,FigCenter=(0,0),WindSize = 50, PlotBuilding = False):
     #process is launched for the considered building
@@ -28,31 +28,16 @@ def LaunchProcess(SimDir,DataBaseInput,LogFile,bldidx,keyPath,nbcase,CorePerim =
         print(key + ' : ' + str(building_ref.BuildID[key]))
         refName += '\n ' + key + str(building_ref.BuildID[key])
     idf_ref.idfname = refName
-    #'Building_' + str(nbcase) + '\n FormularId : ' + str(
-    #    building_ref.BuildID['FormularId']) + '\n 50A_UUID : ' + str(building_ref.BuildID['50A_UUID'])
+    # Rounds of check if we continue with this building or not, see DB_Filter4Simulation.py if other filter are to add
+    CaseOK = checkBldFilter(building_ref)
 
-    # print('50A_UUID : ' + str(building_ref.BuildID['50A_UUID']))
-    # print('FormularId : ' + str(building_ref.BuildID['FormularId']))
-
-    #Rounds of check if we continue with this building or not
-    Var2check = len(building_ref.BlocHeight) if building_ref.Multipolygon else building_ref.height
-    #if the building have bloc with no Height or if the hiegh is below 1m (shouldn't be as corrected in the Building class now)
-    if len(building_ref.BlocHeight) > 0 and min(building_ref.BlocHeight) < 1:
-        Var2check = 0
-    #is heated area is below 50m2, we just drop the building
-    if building_ref.EPHeatedArea < 50:
-        Var2check = 0
-    #is no floor is present...(shouldn't be as corrected in the Building class now)
-    if 0 in building_ref.BlocNbFloor:
-        Var2check = 0
-
-    if Var2check == 0:
+    if not CaseOK:
         msg =  '[Error] This Building/bloc has either no height, height below 1, surface below 50m2 or no floors, process abort for this one\n'
         print(msg[:-1])
         os.chdir(MainPath)
         GrlFct.Write2LogFile(msg, LogFile)
         GrlFct.Write2LogFile('##############################################################\n', LogFile)
-        return epluspath, building_ref.WeatherDataFile,(refx,refy)
+        return FigCenter, WindSize
 
     FigCenter.append(building_ref.RefCoord)
     refx = sum([center[0] for center in FigCenter]) / len(FigCenter)
@@ -61,14 +46,10 @@ def LaunchProcess(SimDir,DataBaseInput,LogFile,bldidx,keyPath,nbcase,CorePerim =
     if not PlotBuilding:
         building_ref.MaxShadingDist = 0
         building_ref.shades = building_ref.getshade(DataBaseInput['Build'][nbcase], DataBaseInput['Shades'], DataBaseInput['Build'],DB_Data.GeomElement,LogFile)
-    # change on the building __init__ class in the simulation level should be done here as the function below defines the related objects
-    #GrlFct.setSimLevel(idf_ref, building_ref)
-    # change on the building __init__ class in the building level should be done here as the function below defines the related objects
     GrlFct.setBuildingLevel(idf_ref, building_ref,LogFile,CorePerim,FloorZoning,ForPlots = True)
-
     GrlFct.setEnvelopeLevel(idf_ref, building_ref)
     FigCentroid = building_ref.RefCoord if PlotBuilding else (refx, refy)
-    #compåuting the windox size for visualization
+    #compåuting the window size for visualization
     for poly in building_ref.footprint:
         for vertex in poly:
             WindSize = max(GrlFct.ComputeDistance(FigCentroid, vertex),WindSize)
@@ -100,9 +81,8 @@ if __name__ == '__main__' :
 #                                       It include the shadings, if False, all the building will be plotted wihtout the shadings
 # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
-    import numpy as np
-    BuildNum = []#int(i) for i in np.linspace(0,500,501)]
-    PathInputFile ='Hammarby0401.txt'#'MinnebergLast.txt'#'Belfort.txt'#'MinnebergLast.txt'#'LeHavre.txt'#'Hammarby0401.txt'#'Belfort.txt'#'Hammarby0401.txt'#'HammarbyLast.txt'#Pathways_Template.txt''Minneberg2d.txt'#''Belfort.txt'#'Belfort.txt'#
+    BuildNum = []
+    PathInputFile = 'Pathways_Template.txt'
     CorePerim = False
     FloorZoning = False
     PlotBuilding = False

@@ -50,7 +50,7 @@ The systems and building's caracteristics are taken from the available data in t
 
 **Example of building geometry construction using MUBES_UBEM for Minneberg District, Stockholm, Sweden**  
 The corresponding goejson files are given in the ModelerFolder. This example can be launched after having changed the paths to local ones in the Pathways_Template.txt file without any other modification.    
-  
+The weather conditions used by default are from San Francisco as the weather file is automaticaly provdied while installing EnergyPlus (see _DB_Data.py_ in the __BuildObject__ folder).    
 _python3_ _SimLauncher.py_ will create the idf files and will launch all the simulations.  
 _python3_ _ReadOutputs_Template.py_ will read all the simulations' results and make some graphs as presented above.  
   

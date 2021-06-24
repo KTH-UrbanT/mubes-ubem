@@ -67,8 +67,11 @@ def launchFMUCoSim(work_dir):
   for line in FileLines:
     Watertaps.append(float(line)*1e-4 / 6 / 40) #in order to transform the l/min into m#/s and to consider an average for 1 apartment
   Waterthreshold = max(Watertaps)*0.7       #this is a limit for which the setpoint will be changed
-
+  day =0
   while ( ( time + step_size ) - stop_time < time_diff_resolution ):
+    if (time % (240 * 3600))==0:
+      day +=10
+      print(str(day)+' simulation days done')
     watercurrenttaps = Watertaps[int(time/3600)]
 
     for i,key in enumerate(FMUElement.keys()):
@@ -123,7 +126,7 @@ def CleanUpSimRes(work_dir):
 
 if __name__ == '__main__' :
   MainPath = os.getcwd()
-  SavedFolder = 'MUBES_SimResults/fortest'
+  SavedFolder = 'MUBES_SimResults/ForTest'
 
   work_dir = os.path.normcase(
     os.path.join(os.path.dirname(os.path.dirname(MainPath)),SavedFolder))

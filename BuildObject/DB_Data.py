@@ -11,14 +11,14 @@ SimuData = \
 
 #files are needed to be located in the eather folder of EnergyPlus asthe same path is used afterward to launch the simulation
 WeatherFile = \
- {'Loc' : 'WeatherData/SWE_Stockholm.Arlanda.024600_IWEC.epw',#'WeatherData/Year2012WithIRfromStandard.epw',#USA_CA_San.Francisco.Intl.AP.724940_TMY3
+ {'Loc' : 'WeatherData/USA_CA_San.Francisco.Intl.AP.724940_TMY3.epw', #SWE_Stockholm.Arlanda.024600_IWEC.epw'#
   }
 
 #Thisdict gives all the materials characteristics.
 # There are 2 layer maximum, the word Inertia and Insulation or key factor further in the code. If one layer is wanted, just comment the other one.
 #the basement is considered not heated and thus never insulated layer
 BaseMaterial = \
- {'Window' : {'UFactor' :  0.19,
+ {'Window' : {'UFactor' :  1.9,
             'Solar_Heat_Gain_Coefficient' : 0.7,
             'Visible_Transmittance' : 0.8,
             },
@@ -28,7 +28,7 @@ BaseMaterial = \
                 'Density' : 2300,
                 'Specific_Heat' : 1000,
                 },
-'Wall Insulation' : {'Thickness' : 0.52,
+'Wall Insulation' : {'Thickness' : 0.2,
             'Conductivity' : 0.03,
             'Roughness' : "Rough",
             'Density' : 150,
@@ -47,13 +47,13 @@ BaseMaterial = \
 #             'Density' : 1000,
 #             'Specific_Heat' : 1000,
 #             },
-# 'Roof Inertia' : {'Thickness' : 0.05,
+# 'Roof Inertia' : {'Thickness' : 0.05, #not needed unless one wants to have inertia in the roof layer
 #             'Conductivity' : 0.15*0.1,
 #             'Roughness' : "Rough",
 #             'Density' : 1000,
 #             'Specific_Heat' : 1000,
 #             },
-'Roof Insulation' : {'Thickness' : 0.53,
+'Roof Insulation' : {'Thickness' : 0.3,
             'Conductivity' : 0.03,
             'Roughness' : "Rough",
             'Density' : 150,
@@ -66,7 +66,7 @@ BaseMaterial = \
             'Density' : 2300,
             'Specific_Heat' : 1000,
             },
-'Heated1rstFloor Insulation' : {'Thickness' : 0.515,
+'Heated1rstFloor Insulation' : {'Thickness' : 0.15,
             'Conductivity' : 0.035,
             'Roughness' : "Rough",
             'Density' : 150,
@@ -76,7 +76,7 @@ BaseMaterial = \
   }
 
 #this dict is for specification of internalMass equivalence.
-#the material should represent the overwhole mean material of all partition and furnitures
+#the material should represent the overall mean material of all partition and furnitures
 #the weight par zone area gives the quentity and the Average thickness enable to compute the surface for heat transfer
 #the mass gives a volume thanks to the density that gives a surface thanks to the average thickness
 InternalMass = \
@@ -148,7 +148,7 @@ BasisElement = \
  'ACH_freecool' :4,             #this the the vol/hr of extra ventilation when free cooling is on
  'intT_freecool' : 26,          #internal temperature threshold for free coolong (opening windows with fixed ACH)
  'dT_freeCool': 1,              #Tint-Text to authorize free cooling to be turned on
- 'AirRecovEff' : 0.65,          #efficiency oif heat recovery from ventilation
+ 'AirRecovEff' : 0.65,          #efficiency if heat is recovered from ventilation
  'HVACLimitMode': 'NoLimit',    #'LimitCapacity', #can be NoLimit or LimitFlowRate or LimitFlowRateAndCpacity
  'HVACPowLimit' : 25,           #in Watt/m2
 
