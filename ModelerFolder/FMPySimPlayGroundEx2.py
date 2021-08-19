@@ -9,6 +9,7 @@ from fmpy.fmi1 import FMU1Slave
 from fmpy.fmi2 import FMU2Slave
 path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 sys.path.append(path2addgeom)
+sys.path.append('..')
 import shutil
 import pickle
 import time as timedelay
@@ -89,8 +90,8 @@ def LaunchFMU_Sim(FMUElement,VarNames, start_time,stop_time,step_size):
     extraVar = ['nbAppartments']
     Res = Utilities.GetData(work_dir, extraVar)
 
-    WatertapsFile = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),
-                                 'MUBES_UBEM\ExternalFiles\mDHW_Sum_over_40.txt')
+    WatertapsFile = os.path.normcase(os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),
+                                 'MUBES_UBEM/ExternalFiles/mDHW_Sum_over_40.txt'))
     with open(WatertapsFile, 'r') as handle:
         FileLines = handle.readlines()
     Watertaps = []

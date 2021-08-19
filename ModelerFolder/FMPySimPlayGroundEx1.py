@@ -9,6 +9,7 @@ from fmpy.fmi1 import FMU1Slave
 from fmpy.fmi2 import FMU2Slave
 path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 sys.path.append(path2addgeom)
+sys.path.append('..')
 import shutil
 import pickle
 import time as timedelay
