@@ -94,7 +94,7 @@ def buildEplusFMU(epluspath,weatherpath,Filepath):
         cmd = ['python',os.path.join(Path2FMUs,'EnergyPlusToFMU.py'),'-i',EpluIddPath,'-w',EplusEpwPath,'-d',Filepath]
         check_call(cmd, stdout=open(os.devnull, "w"))
     else:
-        EnergyPlusToFMU.exportEnergyPlusAsFMU(showDiagnostics=False, litter=False, iddFileName =EpluIddPath , wthFileName =EplusEpwPath, fmiVersion = 1, idfFileName = Filepath)
+        EnergyPlusToFMU.exportEnergyPlusAsFMU(showDiagnostics=False, litter=False, iddFileName =EpluIddPath , wthFileName =EplusEpwPath, fmiVersion = 2, idfFileName = Filepath)
 
 
 if __name__ == '__main__' :

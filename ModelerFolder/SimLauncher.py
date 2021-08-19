@@ -49,7 +49,7 @@ if __name__ == '__main__' :
     Bounds = []
     NbRuns = 1
     CPUusage = 0.8
-    CreateFMU = False
+    CreateFMU = True
     CorePerim = False
     FloorZoning = True
     PathInputFile = 'Pathways_Template.txt'
