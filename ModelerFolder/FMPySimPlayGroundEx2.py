@@ -170,8 +170,10 @@ if __name__ == '__main__':
     #to make it work if being either version1.0 or 2.0 or FMU Standards
     try:
         FMUElement = InstAndInitiV1(filelist,VarNames,start_time,stop_time)
+        print('FMU 1.0 used')
     except:
         FMUElement = InstAndInitiV2(filelist,VarNames, start_time, stop_time)
+        print('FMU 2.0 used')
     LaunchFMU_Sim(FMUElement,VarNames, start_time, stop_time, step_size)
     CleanUpSimRes(work_dir, keepLogFolder=True)
 
