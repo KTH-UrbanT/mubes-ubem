@@ -16,16 +16,24 @@ def create_MaterialObject(idf, Name, Material):
             Solar_Heat_Gain_Coefficient=Material['Solar_Heat_Gain_Coefficient'],
             Visible_Transmittance=Material['Visible_Transmittance'],
         )
+        # this is for having shading on the indoor face of each window
+        # idf.newidfobject(
+        #     'WINDOWMATERIAL:SHADE',
+        # Name = 'Interior_Shade',
+        # Solar_Transmittance = 0.01,
+        # Solar_Reflectance = 0.05,
+        # Visible_Transmittance = 0.01,
+        # Visible_Reflectance = 0.05,
+        # Infrared_Hemispherical_Emissivity = 0.01,
+        # Infrared_Transmittance = 0.05,
+        # Thickness = 0.01,
+        # Conductivity = 0.1,
+        # )
     else:
+        Material['Name'] = Name
         idf.newidfobject(
-            'MATERIAL',
-            Name=Name,
-            Thickness=Material['Thickness'],
-            Conductivity = Material['Conductivity'],
-            Roughness = Material['Roughness'],
-            Density = Material['Density'],
-            Specific_Heat = Material['Specific_Heat'],
-        )
+                'MATERIAL',
+                **Material)
     return idf
 
 def CreatAirwallsMat(idf):

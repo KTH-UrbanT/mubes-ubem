@@ -1,7 +1,5 @@
 # @Author  : Xavier Faure
 # @Email   : xavierf@kth.se
-
-
 SimuData = \
  {  'Begin_Day_of_Month' : 1,
     'Begin_Month' : 1,
@@ -13,8 +11,8 @@ SimuData = \
 
 #files are needed to be located in the eather folder of EnergyPlus asthe same path is used afterward to launch the simulation
 WeatherFile = \
- {'Loc' : 'WeatherData/USA_CA_San.Francisco.Intl.AP.724940_TMY3.epw', #'WeatherData/SWE_Stockholm.Arlanda.024600_IWEC.epw',#
-  }
+    {'Loc': 'WeatherData/USA_CA_San.Francisco.Intl.AP.724940_TMY3.epw',  # SWE_Stockholm.Arlanda.024600_IWEC.epw'#
+     }
 
 #Thisdict gives all the materials characteristics.
 # There are 2 layer maximum, the word Inertia and Insulation or key factor further in the code. If one layer is wanted, just comment the other one.
@@ -35,6 +33,7 @@ BaseMaterial = \
             'Roughness' : "Rough",
             'Density' : 150,
             'Specific_Heat' : 1000,
+            #'Thermal_Absorptance' : 0.001,
             },
 'Basement Floor' : {'Thickness' : 0.1,     #this layer will be considered also for the basement floor
             'Conductivity' : 0.9,
@@ -48,7 +47,7 @@ BaseMaterial = \
 #             'Density' : 1000,
 #             'Specific_Heat' : 1000,
 #             },
-# 'Roof Inertia' : {'Thickness' : 0.05,
+# 'Roof Inertia' : {'Thickness' : 0.05, #not needed unless one wants to have inertia in the roof layer
 #             'Conductivity' : 0.15*0.1,
 #             'Roughness' : "Rough",
 #             'Density' : 1000,
@@ -59,6 +58,7 @@ BaseMaterial = \
             'Roughness' : "Rough",
             'Density' : 150,
             'Specific_Heat' : 1000,
+            #'Thermal_Absorptance' : 0.001,
             },
 'Heated1rstFloor Inertia' : {'Thickness' : 0.1,
             'Conductivity' : 0.9,
@@ -71,11 +71,12 @@ BaseMaterial = \
             'Roughness' : "Rough",
             'Density' : 150,
             'Specific_Heat' : 1000,
+            #'Thermal_Absorptance' : 0.001,
             },
   }
 
 #this dict is for specification of internalMass equivalence.
-#the material should represent the overwhole mean material of all partition and furnitures
+#the material should represent the overall mean material of all partition and furnitures
 #the weight par zone area gives the quentity and the Average thickness enable to compute the surface for heat transfer
 #the mass gives a volume thanks to the density that gives a surface thanks to the average thickness
 InternalMass = \
@@ -101,19 +102,20 @@ InternalMass = \
 #if empty it is no longer taken into account. if new file are given, thses should be present in the Externael file folder
 ExtraEnergy = \
         {}          #if no DomesticHot Water is to be consdered, it still needs an empty dict
-# ExtraEnergy = \
-#     {'Name' : 'DHW',
-#             'WatertapsFile':'ExternalFiles/mDHW_Sum_over_40.txt', #this file is in l/mnin and will be converted into m3/s afertward. it needs to have hourly values
-#             'ColdWaterTempFile' :'ExternalFiles/ColdWaterTemp.txt',
-#             'HotWaterSetTemp': 55,
-#             'WaterTapsMultiplier':1e-4/6/40, #this is because the file given above is for 40 apartment and is in l/min where we need m3/s. in the code it is afterward multiplied by the number of apartement in the building
-#             }
+
+#ExtraEnergy = \
+#    {'Name' : 'DHW',
+#            'WatertapsFile':'ExternalFiles/mDHW_Sum_over_40.txt', #this file is in l/mnin and will be converted into m3/s afertward. it needs to have hourly values
+#            'ColdWaterTempFile' :'ExternalFiles/ColdWaterTemp.txt',
+#            'HotWaterSetTemp': 55,
+#            'WaterTapsMultiplier':1e-4/6/40, #this is because the file given above is for 40 apartment and is in l/min where we need m3/s. in the code in is afterward multiplied by the number of apartement in the building
+#            }
 
 #this dict is for the shading paradigm. There are two files that we need. the firt one is the main geojson that contains all buildings and their propreties
 #the other one contains for each shading surface id the vertex point and the building Id in order to catch the height of it.
 #to externalize as much as possible, these elements are reported in the dict below
 GeomElement = \
- {'BuildIDKey' : ['50A_UUID', 'FormularId'],
+ {'BuildIDKey' : ['50A_UUID', 'FormularId','objectid','OBJECTID'],
   'ShadingIdKey' : 'vaggid',
   'BuildingIdKey' : 'byggnadsid',
   'VertexKey':'geometries',
@@ -147,7 +149,7 @@ BasisElement = \
  'ACH_freecool' :4,             #this the the vol/hr of extra ventilation when free cooling is on
  'intT_freecool' : 26,          #internal temperature threshold for free coolong (opening windows with fixed ACH)
  'dT_freeCool': 1,              #Tint-Text to authorize free cooling to be turned on
- 'AirRecovEff' : 0.65,          #efficiency oif heat recovery from ventilation
+ 'AirRecovEff' : 0.65,          #efficiency if heat is recovered from ventilation
  'HVACLimitMode': 'NoLimit',    #'LimitCapacity', #can be NoLimit or LimitFlowRate or LimitFlowRateAndCpacity
  'HVACPowLimit' : 25,           #in Watt/m2 considered if the above attribute is not 'NoLimit'
 
@@ -185,12 +187,12 @@ VentSyst = \
 
 #this dict defines the acceptable limits for the element precised as well as the swedish key for the DataBase
 DBLimits = \
-{'surface_key': 'EgenAtemp',                   'surface_lim':      [0, 50000],
+{'surface_key': ['EgenAtemp','SHAPE.AREA'],                  'surface_lim':      [0, 50000],
  'nbfloor_key': 'EgenAntalPlan',               'nbfloor_lim':      [0, 100],
  'nbBasefloor_key': 'EgenAntalKallarplan',     'nbBasefloor_lim':  [0, 4],
  'year_key': 'EgenNybyggAr',                   'year_lim':         [0, 2022],
  'nbAppartments_key': 'EgenAntalBolgh',        'nbAppartments_lim':[0, 100],
- 'height_key': 'height',                       'height_lim':       [0, 100],
+ 'height_key': ['height', 'SHAPE.LEN','st_lengthshape'],                      'height_lim':       [0, 100],
  'AreaBasedFlowRate_key': 'EgenProjVentFlode', 'AreaBasedFlowRate_lim':     [0.35, 10],
  'nbStairwell_key': 'EgenAntalTrapphus',       'nbStairwell_lim': [0, 100],
  }

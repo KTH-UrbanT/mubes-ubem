@@ -31,10 +31,8 @@ def BuildBloc(idf,perim,bloc,bloc_coord,Height,nbstories,nbBasementstories,Basem
         )
 
 def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
+    #here, the building geometry is created and extruded for each bloc composing the builing, it uses the function above as well
     Full_coord = building.footprint
-    #Adding two blocks, one with two storey (the nb of storey defines the nb of Zones)
-    #Nb_blocs = 1
-    #if building.Multipolygon:
     Nb_blocs = len(Full_coord)
     print('Number of blocs for this building : '+ str(Nb_blocs))
     try:
@@ -42,18 +40,12 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
     except:
         pass
     for bloc in range(Nb_blocs):
-        bloc_coord =  Full_coord[bloc]# if building.Multipolygon else Full_coord
-        Height = building.BlocHeight[bloc]# if building.Multipolygon else building.height
-        nbstories = building.BlocNbFloor[bloc]# if building.Multipolygon else building.nbfloor
-        #if building.Multipolygon:
-        Height = nbstories*building.StoreyHeigth        #correction of the height in order to have same storey hieght everyware
-        #last check of the Zonning level if 1 per floor or 1 per building bloc
-        nbstories = nbstories if FloorZoning else 1
+        bloc_coord = Full_coord[bloc]
+        Height = building.BlocHeight[bloc]
+        nbstories = building.BlocNbFloor[bloc] if FloorZoning else 1
         nbBasementstories = building.nbBasefloor if FloorZoning else min(building.nbBasefloor,1)
         BasementstoriesHeight = 2.5 if FloorZoning else 2.5*building.nbBasefloor
-        #function that build the bloc, it is externalize in order to introduce a Try except and reducing the perim depth
-        #print(nbstories, Height)
-        Perim_depth = 3
+        Perim_depth = 3 #the perimeter depth is fixed to 3m and is reduced if some issue are encountered.
         matched = False
         while not matched:
             try:
@@ -77,8 +69,8 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
     #this function enable to create all the boundary conditions for all surfaces
     idf.intersect_match()
 
-    # this last function on the Geometry is here to split the non convexe surfaces
-    # if not, some warning are appended because of shading computation. non convex surfaces can impact itself
+    # this last function on the Geometry is here to split the non convex surfaces
+    # if not, some warning are appended because of shading computation.
     # it should thus be only the roof surfaces. Non convex internal zone are not concerned as Solar distribution is 'FullExterior'
     try:
         if not ForPlots:
@@ -92,17 +84,19 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
         pass
 
 def createRapidGeomElem(idf,building):
-    #enveloppe can be creates now and allocated to to correct surfaces
+    #envelop can be created now and allocated to the correct surfaces
     createEnvelope(idf, building)
 
-    #create parition walls as recommended in
+
+    #create parition walls
     #from EP9.2 there is a dedicated construction type (to be tried as well), but 'Fullexeterior' option is still required
     #see https://unmethours.com/question/42542/interior-air-walls-for-splitting-nonconvex-zones/
     # see https://unmethours.com/question/13094/change-all-interior-walls-to-air-walls/
     #see https://unmethours.com/question/41171/constructionairboundary-solar-enclosures-for-grouped-zones-solar-distribution/
     createAirwallsCstr(idf)
 
-    #the shading walls aroudn the building are created with the function baloew
+
+    #the shading walls around the building are created with the function below
     createShadings(building, idf)
 
     return idf
@@ -131,20 +125,23 @@ def createEnvelope(idf,building):
     # creating the construction, see Envelope_Param for material specifications for seperation with heated and non heated zones
     Envelope_Param.createNewConstruction(idf, 'Project Heated1rstFloor', 'Heated1rstFloor')
     Envelope_Param.createNewConstruction(idf, 'Project Heated1rstFloor Rev', 'Heated1rstFloor')
-    # special loop to assign the consctruction that seperates the basement to the other storeys.
+
+    # special loop to assign the construction that seperates the basement to the other storeis.
     for idx, zone in enumerate(idf.idfobjects["ZONE"]):
         storey = int(zone.Name[zone.Name.find(
-            'Storey') + 6:])  # the name ends with Storey # so lest get the storey number this way
+
+            'Storey') + 6:])  # the name ends with Storey # so lets get the storey number this way
+
         for s in zone.zonesurfaces:
-            if s.Surface_Type in 'ceiling' and storey == -1:  # which mean that we are on the basements juste below ground
-                s.Construction_Name = 'Project Heated1rstFloor Rev'        #this will enable to reverse the construction for the cieling compared to the floor of the adjacent zone
-            if s.Surface_Type in 'floor' and storey == 0:  # which mean that we are on the first floors just above basementthis states that wether or not there is basement zone, the floor slab isdefined by this layer
+
+            if s.Surface_Type in 'ceiling' and storey == -1:  # which mean that we are on the basements just below ground
+                s.Construction_Name = 'Project Heated1rstFloor Rev'  #this will enable to reverse the construction for the cieling compared to the floor of the adjacent zone
+            if s.Surface_Type in 'floor' and storey == 0:  # which mean that we are on the first floors just above basement this states that whether or not there is basement zone, the floor slab is defined by this layer
                 s.Construction_Name = 'Project Heated1rstFloor'
     #for all construction, see if some other material than default exist
     cstr = idf.idfobjects['CONSTRUCTION']
     mat = idf.idfobjects['MATERIAL']
     win = idf.idfobjects['WINDOWMATERIAL:SIMPLEGLAZINGSYSTEM']
-
     #we need to creates the associate wall from the material in two layers
     for id_cstr in cstr:
         Wall_Cstr = []
@@ -167,7 +164,7 @@ def createEnvelope(idf,building):
                 inertia_idx = 1
             if 'Insulation' in Wall_Cstr[0] and not building.ExternalInsulation:
                 Wall_Cstr.reverse()
-            # if Rev is present, then we need to reverse the order of the materials because same construction but seen from two adjacent zone (heated and not heated zones)
+            # if Rev is present, then we need to reverse the order of the materials because same construction but seen from two adjacent zones (heated and not heated zones)
             if 'Rev' in id_cstr.Name:
                 Wall_Cstr.reverse()
             if 'Basement' in id_cstr.Name:
@@ -175,7 +172,7 @@ def createEnvelope(idf,building):
             else:
                 id_cstr.Outside_Layer =  Wall_Cstr[0]
             if len(Wall_Cstr)>1 and 'Basement' not in id_cstr.Name:
-                id_cstr.Layer_2 = Wall_Cstr[1] #cannot create a liste comprehension for this because the else '' creates an error....
+                id_cstr.Layer_2 = Wall_Cstr[1] #cannot create a list comprehension for this because the else '' creates an error....
 
 
     #setting windows on all wall with ratio specified in DB-Database
@@ -299,7 +296,7 @@ def MergeTri(trigle):
                     PossibleMerge['surf1']=[i for i in subsurfi]
                     PossibleMerge['surf2']=[i for i in subsurfj]
         newtrigle[nbi]= PossibleMerge
-    #now let find the longests edge that could lead to merging surfaces
+    #now lets find the longests edge that could lead to merging surfaces
     #try to merge and if not, lets take the edge just befor and so on
     finished =0
     nb_tries = 0
@@ -319,7 +316,7 @@ def MergeTri(trigle):
             finished = 1
         else:
             nb_tries+=1
-            newtrigle[idx]['EdLg'][0]=0 #we just forced the edge length to be 0 in order to be avoid of the baove selection
+            newtrigle[idx]['EdLg'][0]=0 #we just force the edge length to be 0 in order to avoid the above selection
             if nb_tries>len(newtrigle):
                 newTrigle = trigle
                 stillleft = False

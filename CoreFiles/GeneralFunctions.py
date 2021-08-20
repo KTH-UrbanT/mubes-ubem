@@ -2,11 +2,6 @@
 # @Email   : xavierf@kth.se
 
 import os
-import sys
-#add the required path
-path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
-sys.path.append(path2addgeom)
-sys.path.append("..")
 import CoreFiles.GeomScripts as GeomScripts
 import CoreFiles.Set_Outputs as Set_Outputs
 import CoreFiles.Sim_param as Sim_param
@@ -17,6 +12,8 @@ import CoreFiles.BuildFMUs as BuildFMUs
 from openpyxl import load_workbook
 from SALib.sample import latin
 import shutil
+import pickle
+import pyproj
 
 def appendBuildCase(StudiedCase,epluspath,nbcase,DataBaseInput,MainPath,LogFile,PlotOnly = False):
     StudiedCase.addBuilding('Building'+str(nbcase),DataBaseInput,nbcase,MainPath,epluspath,LogFile,PlotOnly)
@@ -35,7 +32,7 @@ def setBuildingLevel(idf,building,LogFile,CorePerim = False,FloorZoning = False,
     ######################################################################################
     #Building Level
     ######################################################################################
-    #this is the function that requires the most time
+    #this is the function that requires the longest time
     GeomScripts.createBuilding(LogFile,idf,building, perim = CorePerim,FloorZoning = FloorZoning,ForPlots=ForPlots)
 
 
@@ -63,7 +60,7 @@ def setOutputLevel(idf,building,MainPath,EMSOutputs,OutputsFile):
     Set_Outputs.AddOutputs(idf,building,MainPath,EMSOutputs,OutputsFile)
 
 def readPathfile(Pathways):
-    keyPath = {'epluspath': '', 'Buildingsfile': '', 'Shadingsfile': '','GeojsonProperties':''}
+    keyPath = {'epluspath': '', 'Buildingsfile': '', 'Shadingsfile': '','pythonpath': '','GeojsonProperties':''} #these keys are hard written as there as used aftewrad at several places
     with open(Pathways, 'r') as PathFile:
         Paths = PathFile.readlines()
         for line in Paths:
@@ -73,15 +70,39 @@ def readPathfile(Pathways):
     return keyPath
 
 def ReadGeoJsonFile(keyPath):
+    print('Reading Input files,...')
     try:
         BuildObjectDict = ReadGeojsonKeyNames(keyPath['GeojsonProperties'])
-        Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'], round_factor=4)
-        Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'], round_factor=4)
+        Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'])
+        Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'])
+        Buildingsfile = checkRefCoordinates(Buildingsfile)
+        Shadingsfile = checkRefCoordinates(Shadingsfile)
         return {'BuildObjDict':BuildObjectDict,'Build' :Buildingsfile, 'Shades': Shadingsfile}
     except:
-        Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'], round_factor=4)
-        Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'], round_factor=4)
+        Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'])
+        Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'])
+        Buildingsfile = checkRefCoordinates(Buildingsfile)
+        Shadingsfile = checkRefCoordinates(Shadingsfile)
         return {'Build': Buildingsfile, 'Shades': Shadingsfile}
+
+def checkRefCoordinates(GeojsonFile):
+    if 'EPSG' in GeojsonFile.crs['properties']['name']:
+        return GeojsonFile
+    if "CRS84" in GeojsonFile.crs['properties']['name']:
+        print('Projecting coordinates of Input file,...')
+        transformer = pyproj.Transformer.from_crs("CRS84", "epsg:3950") #this transformation if done for the France's reference
+        for idx,obj in enumerate(GeojsonFile):
+            newCoord = []
+            for poly in obj.geometry.coordinates:
+                newpoly = []
+                for vertex in poly:
+                    newpoly.append(list(transformer.transform(vertex[0], vertex[1])))
+                newCoord.append(newpoly)
+            obj.geometry.coordinates = newCoord
+        return GeojsonFile
+
+def ComputeDistance(v1,v2):
+    return ((v2[0]-v1[0])**2+(v2[1]-v1[1])**2)**0.5
 
 def SaveCase(MainPath,SepThreads,CaseName,nbBuild):
     SaveDir = os.path.join(os.path.dirname(os.path.dirname(MainPath)), 'SimResults')
@@ -103,12 +124,11 @@ def SaveCase(MainPath,SepThreads,CaseName,nbBuild):
         except:
             pass
 
-def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,LogFile,Refresh = False):
+def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,Refresh = False):
     if not os.path.exists(os.path.join(os.path.dirname(os.path.dirname(CurrentPath)),'MUBES_SimResults')):
         os.mkdir(os.path.join(os.path.dirname(os.path.dirname(CurrentPath)),'MUBES_SimResults'))
     SimDir = os.path.normcase(
         os.path.join(os.path.dirname(os.path.dirname(CurrentPath)), os.path.join('MUBES_SimResults', CaseName)))
-    LogFileName = CaseName + '_Logs.log'
     if not os.path.exists(SimDir):
         os.mkdir(SimDir)
     elif idx == 0 and Refresh:
@@ -117,30 +137,12 @@ def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,LogFile,Refresh = F
     if SepThreads:
         SimDir = os.path.normcase(
             os.path.join(SimDir, 'Build_' + str(nbBuild)))
-        LogFileName = 'Build_' + str(nbBuild) + '_Logs.log'
         if not os.path.exists(SimDir):
             os.mkdir(SimDir)
         elif idx == 0:
             shutil.rmtree(SimDir)
             os.mkdir(SimDir)
-    # creating the log file
-    if idx ==0 or SepThreads:
-        if os.path.exists(os.path.join(SimDir, LogFileName)) and idx==0:
-            os.remove(os.path.join(SimDir, LogFileName))
-        LogFile = open(os.path.join(SimDir, LogFileName), 'w')
-    return SimDir, LogFile
-
-    # if not SepThreads:
-    #     SimDir = os.path.normcase(
-    #             os.path.join(os.path.dirname(os.path.dirname(CurrentPath)), os.path.join('SimResults', CaseName)))
-    # else:
-    #     SimDir = os.path.normcase(
-    #         os.path.join(os.path.dirname(os.path.dirname(CurrentPath)), os.path.join('SimResults', CaseName + '_Build_' + str(nbBuild))))
-    # if not os.path.exists(SimDir):
-    #     os.mkdir(SimDir)
-    # elif SepThreads or idx == 0:
-    #     shutil.rmtree(SimDir)
-    #     os.mkdir(SimDir)
+    return SimDir
 
 def getParamSample(VarName2Change,Bounds,nbruns):
     # Sampling process if someis define int eh function's arguments
@@ -166,6 +168,7 @@ def CreatFMU(idf,building,nbcase,epluspath,SimDir, i,varOut,LogFile):
     Write2LogFile('##############################################################\n',LogFile)
 
 def ReadGeojsonKeyNames(GeojsonProperties):
+    #this is currently ot used....
     file = load_workbook(GeojsonProperties).active
     #get the headers
     BldObjName = {}
@@ -214,6 +217,87 @@ def ReadZoneOfInterest(ZoneOfInterest,keyWord):
         BldIds.append(Vals[idx])
     return BldIds
 
+def CleanUpLogFiles(MainPath):
+    listOfFiles = os.listdir(MainPath)
+    file2pick = []
+    for file in listOfFiles:
+        if file[-8:] in '_Logs.log':
+            file2pick.append(file)
+    MainLogFile = open(os.path.join(MainPath, 'MainFile_Logs.log'), 'w')
+    for file in file2pick:
+        file1 = open(os.path.join(MainPath,file), 'r')
+        Lines = file1.readlines()
+        file1.close()
+        for line in Lines:
+            Write2LogFile(line,MainLogFile)
+        os.remove(os.path.join(MainPath,file))
+    MainLogFile.close()
+
+def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shadingsfile,nbcase,DB_Data,LogFile=[]):
+    #there is a loop file along the variable name to change and if specific ation are required it should be define here
+    # if the variable to change are embedded into several layer of dictionnaries than there is a need to make checks and change accordingly to the correct element
+    # here are examples for InternalMass impact using 'InternalMass' keyword in the VarName2Change list to play with the 'WeightperZoneArea' parameter
+    # and for ExternalMass impact using 'ExtMass' keyword in the VarName2Change list to play with the 'Thickness' of the wall inertia layer
+    roundVal = 3 #this is a more physical based thresehold, so could be 8...."
+    for varnum,var in enumerate(VarName2Change):
+        if 'InternalMass' in var:
+            intmass = building.InternalMass
+            intmass['HeatedZoneIntMass']['WeightperZoneArea'] = round(ParamVal[varnum],roundVal)
+            setattr(building, var, intmass)
+        elif 'ExtMass' in var:
+            exttmass = building.Materials
+            exttmass['Wall Inertia']['Thickness'] = round(ParamVal[varnum],roundVal)
+            setattr(building, var, exttmass)
+        elif 'WindowUval' in var:
+            building.Materials['Window']['UFactor'] = round(ParamVal[varnum],roundVal)
+        elif 'setTempLoL' in var:
+            building.setTempLoL = [round(ParamVal[varnum], 3),round(ParamVal[varnum], roundVal)]
+        elif 'WallInsuThick' in var:
+            exttmass = building.Materials
+            exttmass['Wall Insulation']['Thickness'] = round(ParamVal[varnum], roundVal)
+            setattr(building, var, exttmass)
+        elif 'RoofInsuThick' in var:
+            exttmass = building.Materials
+            exttmass['Roof Insulation']['Thickness'] = round(ParamVal[varnum], roundVal)
+            setattr(building, var, exttmass)
+        elif 'MaxShadingDist' in var:
+            building.MaxShadingDist = round(ParamVal[varnum], roundVal)
+            building.shades = building.getshade(Buildingsfile[nbcase], Shadingsfile, Buildingsfile,DB_Data.GeomElement,LogFile,PlotOnly = False)
+        elif 'IntLoadCurveShape' in var:
+            building.IntLoadCurveShape = round(ParamVal[varnum], roundVal)
+            building.IntLoad = building.getIntLoad(MainPath, LogFile)
+        elif 'AreaBasedFlowRate' in var:
+            building.AreaBasedFlowRate = round(ParamVal[varnum], roundVal)
+            building.AreaBasedFlowRateDefault = round(ParamVal[varnum], roundVal)
+        else:
+            try:
+                setattr(building, var, ParamVal[varnum])     #for all other cases with simple float, this line just change the attribute's value directly
+            except:
+                print('This one needs special care : '+var)
+
+def SetParamSample(SimDir,nbruns,VarName2Change,Bounds,SepThreads):
+    #the parameter are constructed. the oupute gives a matrix ofn parameter to change with nbruns values to simulate
+    if SepThreads:
+        Paramfile = os.path.join(os.path.dirname(SimDir), 'ParamSample.pickle')
+        if os.path.isfile(Paramfile):
+            with open(Paramfile, 'rb') as handle:
+                ParamSample = pickle.load(handle)
+        else:
+            ParamSample = getParamSample(VarName2Change,Bounds,nbruns)
+            if nbruns>1:
+                with open(Paramfile, 'wb') as handle:
+                    pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    else:
+        Paramfile = os.path.join(SimDir,'ParamSample.pickle')
+        if os.path.isfile(Paramfile):
+            with open(Paramfile, 'rb') as handle:
+                ParamSample = pickle.load(handle)
+        else:
+            ParamSample = getParamSample(VarName2Change, Bounds, nbruns)
+            if nbruns > 1:
+                with open(Paramfile, 'wb') as handle:
+                    pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    return ParamSample
 
 if __name__ == '__main__' :
     print('GeneralFunctions.py')

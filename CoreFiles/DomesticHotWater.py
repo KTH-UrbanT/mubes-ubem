@@ -6,7 +6,7 @@ import CoreFiles.Load_and_occupancy as Load_and_occupancy
 def createWaterEqpt(idf,building):
     if not (idf.getobject('SCHEDULETYPELIMITS', 'Any Number')):
         Load_and_occupancy.Schedule_Type(idf)
-    #lets first create the schedul filesfor the water taps and the hot water (even if constant)
+    #lets first create the schedule files for the water taps and the hot water (even if constant)
     Load_and_occupancy.create_ScheduleFile(idf, 'Watertaps', building.DHWInfos['WatertapsFile'])
     Load_and_occupancy.create_ScheduleFile(idf, 'ColdWaterTemp', building.DHWInfos['ColdWaterTempFile'])
     Load_and_occupancy.ScheduleCompact(idf, 'HotWaterTemp', building.DHWInfos['HotWaterSetTemp'])

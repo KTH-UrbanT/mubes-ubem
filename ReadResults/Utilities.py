@@ -7,6 +7,7 @@ from matplotlib import gridspec
 import numpy as np
 
 
+
 def CountAbovethreshold(Data,threshold):
     #give the length of data above a threshold, for hourly Data, it is number of Hrs above the threshold
     return len([i for i in Data if i > threshold])
@@ -197,14 +198,15 @@ def createSimpleFig():
     return {'fig_name' : fig_name, 'ax0': ax0}
 
 #basic plots
-def plotBasicGraph(fig_name,ax0,varx,vary,varxname,varyname,title,sign,markersize = 5):
+def plotBasicGraph(fig_name,ax0,varx,vary,varxname,varyname,title,sign,legend = True, markersize = 5):
     plt.figure(fig_name)
     if len(varyname)>0:
         for nb,var in enumerate(vary):
             ax0.plot(varx,var,sign,label= varyname[nb], mfc='none',markersize=markersize)
         ax0.set_xlabel(varxname)
         ax0.set_ylabel(title)
-        #ax0.legend()
+        if legend:
+            ax0.legend()
     else:
         for nb,var in enumerate(vary):
             ax0.plot(varx,var,sign, mfc='none',markersize=markersize)
@@ -289,6 +291,7 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
     for file in liste:
         if '.pickle' in file:
             try:
+                print(file)
                 SimNumb.append(int(file[file.index(idxF[0]) + len(idxF[0]):file.index(idxF[1])]))
                 with open(file, 'rb') as handle:
                     ResBld[SimNumb[-1]] = pickle.load(handle)
@@ -439,5 +442,4 @@ def gener_Plot(gs,data,i,pos,titre):
             top=False,  # ticks along the top edge are off
             labelbottom=False)  # labels along the bottom edge are off
     else:
-        plt.xlabel('L/min')#data = np.array(data)
-    return max(volFlow)
+        plt.xlabel('L/min')#data = np.array(data)    return max(volFlow)

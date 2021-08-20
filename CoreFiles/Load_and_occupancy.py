@@ -3,18 +3,6 @@
 
 import CoreFiles.ProbGenerator as ProbGenerator
 import os
-import CoreFiles.Envelope_Param as Envelope_Param
-#script to define the loads for each zones
-# import os
-# import numpy as np
-#loads are applied through electric equipments in each zone
-#the equipments are steerds by schedules that are related to a file
-# the file contains the Power that needs to be applied to the zone
-
-#pre-simulated file were generated with StROBe package (Stochastic Residential Occupancy Behavior) for Beatens (2015)
-#the resultats are minute times based results, thus 525601 lines (not 525600 because 0 and 8760th hours of the year) !
-
-
 def Schedule_Type(idf):
     #Schedule type creation to refer to for each associated zone's schedule
     #needs to be done ones for all
@@ -25,6 +13,7 @@ def Schedule_Type(idf):
     return idf
 
 def ScheduleCompact(idf, Name, SetPoint):
+    #compact schedule object, used when no external file are needed for the set points
     idf.newidfobject(
         "SCHEDULE:COMPACT",
         Name=Name,
@@ -37,6 +26,7 @@ def ScheduleCompact(idf, Name, SetPoint):
     return idf
 
 def ScheduleCompactOccup(idf,Name,building,SetPoint):
+    #schedule for occupant in all but residential areas
     idf.newidfobject(
         "SCHEDULE:COMPACT",
         Name=Name,
@@ -54,6 +44,7 @@ def ScheduleCompactOccup(idf,Name,building,SetPoint):
 
 
 def create_ScheduleFile(idf, Name, fileName):
+    #create schedule file, used as soon as specific patterns are required
     idf.newidfobject(
         'SCHEDULE:FILE',
         Name = Name,
@@ -78,11 +69,9 @@ def create_Occupant(idf, zone, OccScheduleName, ActScheduleName,NbPeople):
     return idf
 
 def ZoneLoad(idf, zone, LoadSchedule, building, isfile, ZoningMultiplier):
-    #floors_surf = [s for s in zone.zonesurfaces if s.Surface_Type in 'floor']
-    #floor_area = floors_surf[0].area
-    Multiplier = building.IntLoadMultiplier*ZoningMultiplier
-    #the profil are considered as for 100m2. thus the designlevel is considering this
-    #create the equipement tha will apply the load to the zone
+    # the internal loads are emulated by electric equipment as all consumption is released to heat in the zone
+    Multiplier = building.IntLoadMultiplier*ZoningMultiplier #if one or several heated floors in the zone
+
     idf.newidfobject(
         'ELECTRICEQUIPMENT',
         Name = zone.Name+'Load',
@@ -90,7 +79,7 @@ def ZoneLoad(idf, zone, LoadSchedule, building, isfile, ZoningMultiplier):
         Schedule_Name = LoadSchedule,
         Design_Level_Calculation_Method = 'Watts/Area',
         #Design_Level = floor_area/100 if isfile else building.IntLoad, #is a multiplier. this means that the file value will be the full zone's load in W
-        Watts_per_Zone_Floor_Area = 1/100*Multiplier if isfile else building.IntLoad*Multiplier
+        Watts_per_Zone_Floor_Area = 1/100*Multiplier if isfile else building.IntLoad*Multiplier #the /100 comes from the strobePackage but could be removed now (but see internal load in building class, before)
         )
     return idf
 
@@ -107,20 +96,9 @@ def CreateThermostat(idf,name,setUp, setLo):
         Therm.Constant_Heating_Setpoint = setLo
     return idf
 
-# def CreateThermostatFile(idf,name,namesetUp,namesetLo):
-#     #adding a Thermostat setting
-#     idf.newidfobject(
-#         "HVACTEMPLATE:THERMOSTAT",
-#         Name=name,
-#         Heating_Setpoint_Schedule_Name =namesetLo,
-#         Cooling_Setpoint_Schedule_Name =namesetUp,
-#         )
-#     return idf
-
-
 def ZoneCtrl(idf,zone,building,PeopleDensity,ThermostatName, Multiplier,Correctdeff,FloorArea):
-    #to all zones adding an ideal load element driven by the above thermostat
-    #DCV stands for Demand Controlled Ventilation, the airflow is in m#/s/m2 thus divded by 1000 from DB_Data
+    #add to all zones an ideal load element driven by the above thermostat
+    #DCV stands for Demand Controlled Ventilation, the airflow is in m3/s/m2 thus divded by 1000 from DB_Data
     AreaBasedFlowRate = Correctdeff['AreaBasedFlowRate']
     idf.newidfobject(
         "HVACTEMPLATE:ZONE:IDEALLOADSAIRSYSTEM",
@@ -135,7 +113,7 @@ def ZoneCtrl(idf,zone,building,PeopleDensity,ThermostatName, Multiplier,Correctd
         Outdoor_Air_Flow_Rate_per_Person=building.OccupBasedFlowRate/1000,
         Demand_Controlled_Ventilation_Type = 'OccupancySchedule' if PeopleDensity>0 and building.DemandControlledVentilation else 'None',
         Heating_Limit = building.HVACLimitMode,
-        Maximum_Sensible_Heating_Capacity =  FloorArea*Multiplier*building.HVACPowLimit,
+        Maximum_Sensible_Heating_Capacity =  FloorArea*building.HVACPowLimit, #the floor area already takes into account the zone multiplier
         #Outdoor_Air_Inlet_Node_Name = 'OutdoorAirNode'
         )
     idf.newidfobject(
@@ -145,12 +123,11 @@ def ZoneCtrl(idf,zone,building,PeopleDensity,ThermostatName, Multiplier,Correctd
     return idf
 
 def CreateEnvLeakage(idf, zone, building, ExtWallArea):
-
-    # the envelope leake is modeled using a value from BBR standard in l/s/m2 at 50Pa
+    # the envelope leak is modeled using a value from BBR standard in l/s/m2 at 50Pa
     # the flow coefficient model enable to deal with this by converting it equivalent cm2 at 4Pa
-    # it also take into account the presence of stairwerlles (flue) that enhances leakage thourgh stack effect
-    # enable to precise the flow exponent of 0,67 as well as a wind coeffient and shelter factor ( urban density)
-    #coefficient given in the documentation
+    # it also take into account the presence of stairwells (flue) that enhances leakage through stack effect
+    # enable to precise the flow exponent of 0,67 as well as a wind coefficient and shelter factor ( urban density)
+    #coefficient given in the documentation:
     StackCoef = {'WithFlue': [0.069, 0.089, 0.107],
                      'NoFlue': [0.054, 0.078, 0.098]}  # coef for 1,2 and 3 or more storey
     WindCoef = {'WithFlue': [0.142, 0.156, 0.167],
@@ -181,6 +158,7 @@ def CreateEnvLeakage(idf, zone, building, ExtWallArea):
     return idf
 
 def CreateBasementLeakage(idf, zone, ACH):
+    #the basement leakage, as not linked to outside, has a constant airchange rate of fresh air
     idf.newidfobject(
         "ZONEINFILTRATION:DESIGNFLOWRATE",
         Name=zone.Name+'Leak',
@@ -192,6 +170,7 @@ def CreateBasementLeakage(idf, zone, ACH):
     return idf
 
 def CreateInternalMass(idf,zone,FloorArea,name,Material):
+    #buffering effect of internal mass, taking into account version issues from 9.1.0 and 9.4.0
     surf = 2*Material['WeightperZoneArea']*FloorArea/Material['Density']/Material['Thickness']
     if idf.idd_version[1] == 1:
         idf.newidfobject(
@@ -227,10 +206,10 @@ def ZoneFreeCooling(idf,zone,building,schedule):
     return idf
 
 def getEfficiencyCor(OfficeTypeZone,ZoningMultiplier,building,PeopleDensity):
-    #several assumptions are considered here : if there is two ventilation systems, it means that one if with heatrecovery and not the other one
-    #it also mean that tha heat recoveray is applied to non residential type of areas.
-    #the efficiency of the full zone is thus corrected by the ratio of airflows dedicated to non residential over the total for this floors
-    #this correction factor will be applied to the efficiency of the heat recovery define with th HVAC system aand for wich value by default is given in the DB_Data file : AirRecovEff
+    #several assumptions are considered here : if there is two ventilation systems, it means that one is with heatrecovery and not the other one
+    #it also mean that the heat recoveray is applied to non residential type of areas.
+    #the efficiency of the full zone is thus corrected by the ratio of airflows dedicated to non residential over the total for this floor
+    #this correction factor will be applied to the efficiency of the heat recovery define with the HVAC system and for wich value by default is given in the DB_Data file : AirRecovEff
     nbVentSyst = [idx for idx,key in enumerate(building.VentSyst) if building.VentSyst[key]]
     nbVentSystWithHR = [idx for idx, key in enumerate(building.VentSyst) if building.VentSyst[key]and key[-1] == 'X']
     if len(nbVentSyst)>1 and len(nbVentSystWithHR)==1:
@@ -246,32 +225,46 @@ def getEfficiencyCor(OfficeTypeZone,ZoningMultiplier,building,PeopleDensity):
         ZoneAreaBasedFlowRate = building.AreaBasedFlowRate
     return {'HReff' : Correctdeff, 'AreaBasedFlowRate' : ZoneAreaBasedFlowRate}
 
+def setWindowShaginControl(idf,Name,ZoneName,surfName):
+    #this is to add shadings to window, but not used (used to try things...)
+    Details = {'Name': Name,
+    'Zone_Name' : ZoneName,
+    'Shading_Type' : 'InteriorShade',
+    'Shading_Control_Type' : 'AlwaysOn',
+    'Shading_Device_Material_Name' : 'Interior_Shade',
+               }
+    for id,name in enumerate(surfName):
+        Details['Fenestration_Surface_'+str(id+1)+'_Name'] = name
+    idf.newidfobject('WINDOWSHADINGCONTROL',**Details)
+
 
 def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
+    #this is the main function that call all the above ones !!
     # create the schedule type if not created before
     if not (idf.getobject('SCHEDULETYPELIMITS', 'Any Number')):
         Schedule_Type(idf)
     # create the Schedule with the input file for the Load (same for all zones) as function of zone area afterward
-    #if the building.Intload is a path to a file, then the schedule file needs to be define, but if some constant value
+    #if the building.Intload is a path to a file, then the schedule file needs to be defined, but if some constant value
     # is needed, then there is no need for this schedule and a constant unity schedule instead (let us use the leakcge schedule defined below)
-    # the constant load will be dealed afterward in the ZoneLoad function with isfile variable
+    # the constant load will be dealt afterward in the ZoneLoad function with isfile variable
+    isfile = False
     try:
-        os.path.isfile(building.IntLoad)
-        create_ScheduleFile(idf, 'LoadSchedule', building.IntLoad)
-        isfile = True
+        if os.path.isfile(building.IntLoad):
+            create_ScheduleFile(idf, 'LoadSchedule', building.IntLoad)
+            isfile = True
     except TypeError:
-        isfile = False
+        pass
     # we need a schedule for the infiltration rates in each zone. there will a unique one
     # the set point is 1 (multiplayer)
     ScheduleCompact(idf, 'AlwaysON', 1)
     # we need to define the occupancy activity level in order to avoid a warning and maybe later, compute the heat generated !
     # the set point is defined in DB_data
     ScheduleCompact(idf, 'OccupActivity', building.OccupHeatRate)
-    #for the thermostat ie each zone lets first define if there is a need for external file
+    #for the thermostat of each zone lets first define if there is a need for external file
     if building.setTempLoL[1]-building.setTempLoL[0] == 0:
         HeatSetPoint = building.setTempLoL[0]
     else:
-        #thismeans that weneed to create a file for the set points
+        #this means that weneed to create a file for the set points
         pathfile = os.path.join(os.getcwd(), 'InputFiles')
         HeatSetPoint = idf.idfname + '_LoLTempSetPoints.txt'
         create_ScheduleFile(idf, 'HeatSetPointFile', os.path.join(pathfile,HeatSetPoint))
@@ -280,7 +273,7 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
     if building.setTempUpL[1]-building.setTempUpL[0] == 0:
         CoolSetPoint = building.setTempUpL[0]
     else:
-        #thismeans that weneed to create a file for the set points
+        #this means that weneed to create a file for the set points
         pathfile = os.path.join(os.getcwd(), 'InputFiles')
         CoolSetPoint = idf.idfname + '_UpLTempSetPoints.txt'
         create_ScheduleFile(idf, 'CoolSetPointFile', os.path.join(pathfile,CoolSetPoint))
@@ -289,10 +282,7 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
     # Create a single thermostat set points for all the zone (might need some other if different set points desired)
     CreateThermostat(idf, 'ResidZone', CoolSetPoint, HeatSetPoint)
     # to all zones adding an ideal load element driven by the above thermostat
-
-    #############################################################################################################
-    ##this could be part of the building class
-    ############################################################################################################
+    # but how much of non residential areas is to be considered in each zone, it depends on the overall building values
     OfficeOcc = 1 - building.OccupType['Residential'] #all occupancy but residential are taken for the extra airflow of 7l/s/pers
     # extra variable used below to compute the number of people to be considered in each zone
     PeopleDensity = [0, 0]
@@ -302,8 +292,8 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
                 PeopleDensity[0] += building.OccupType[key] / OfficeOcc * min(
                     building.OccupRate[key])  # this is the mean number of people per m2
                 PeopleDensity[1] += building.OccupType[key] / OfficeOcc * max(building.OccupRate[key])
-    #we need to spread this in all existing blocs based on tha area ratio
-    BlocOfficeOcc = [] #if building.Multipolygon else OfficeOcc
+    #we need to spread this in all existing blocs based on the area ratio
+    BlocOfficeOcc = []
     BlocHeatedArea = []
     BlocOfficechek = []
     BlocPeopleDensity = []
@@ -313,8 +303,8 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
         BlocOfficechek.append(0) #it will be turned to 1 when finished to be considered depending on the occupancy rate
         BlocPeopleDensity.append(PeopleDensity)
 
-    #############################################################################################################
     #let us go through all the zones but we need to sort them from the lowest ones to the highest one....to have different settings for the basement ones
+    # and to put non residential occupation type on the lowest floor.
     zoneStoreylist =[]
     bloclist = []
     AllZone = idf.idfobjects["ZONE"]
@@ -325,19 +315,29 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
     for idx in SortedZoneIdx:
         zone = AllZone[idx]
         bloc = bloclist[idx]
-        # we need to compute the enveloppe area facing outside as well as the floor area (for HVAC)
+
+        # we need to compute the envelop area facing outside as well as the floor area (for HVAC)
         ExtWallArea = 0
-        for s in zone.zonesurfaces:
+        sur2lookat = (s for s in zone.zonesurfaces if s.key not in ['INTERNALMASS'])
+        # fen2append = []               #this is for having shading on the indoor face of each window
+        # fen = idf.idfobjects["FENESTRATIONSURFACE:DETAILED"] #this is for having shading on the indoor face of each window
+        for s in sur2lookat:
             if s.Outside_Boundary_Condition in 'outdoors':
                 ExtWallArea += s.area
             if s.Surface_Type in 'floor':
                 FloorArea = s.area
+            # #lets add interior shadings inside the building for each windows
+            # for nbfen in fen:
+            #     if nbfen.Building_Surface_Name in s.Name:
+            #         fen2append.append(nbfen.Name)
+        # if fen2append:
+        #     setWindowShaginControl(idf, 'ShadingCtrl' + str(idx), zone.Name, fen2append) #this is for having shading on the indoor face of each window
+
         #we need to create envelope infiltration for each zone facing outside and specific ones for the basement
         if zoneStoreylist[idx]<0: #means that we are in the basement
             # Lets modify the floor area depending on the zoning level
             FloorMultiplier = 1 if FloorZoning else building.nbBasefloor
             FloorArea = FloorArea * FloorMultiplier
-
             CreateBasementLeakage(idf, zone, ACH=building.BasementAirLeak)
             #creating the internalMass element if the dict is not empty
             if building.InternalMass['NonHeatedZoneIntMass']:
@@ -367,7 +367,6 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
                     #lets create a beta distribution random file for the number of ccupant
                     pathfile = os.path.join(os.getcwd(),'InputFiles')
                     name = idf.idfname + str(idx)+'_OfficeOccu.txt' #building.name + 'nbUsers.txt'
-                    #from now, random value are taken from 20 to 100% of the people density (the min value id DB_Data is not considered yet)
                     ProbGenerator.BuildOccupancyFile(name,pathfile,round(FloorArea*min(BlocPeopleDensity[bloc]),2),round(FloorArea*max(BlocPeopleDensity[bloc]),2), building)
                     create_ScheduleFile(idf, 'OccuSchedule' + str(idx), os.path.join(pathfile, name))
                     if building.setTempUpL[1] - building.setTempUpL[0] == 0:
@@ -386,11 +385,11 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
                         HeatSetPoint = 'OffTsetLo' + str(idx)
                     CreateThermostat(idf, 'OfficeZone'+ str(idx),CoolSetPoint,HeatSetPoint)
                 else:
-                    ## here is the scedule that define the number of occupant with fixed number of occupants (same all the time but still linked to shedule).
+                    ## here is the schedule that defines the number of occupant with fixed number of occupants (same all the time but still linked to shedule).
                     ScheduleCompactOccup(idf, 'OccuSchedule'+str(idx), building, SetPoint= round(FloorArea*max(BlocPeopleDensity[bloc]),2))
             # computation of the zonning level multiplier
             ZoningMultiplier = 1 if FloorZoning else building.BlocNbFloor[bloc]
-            # Internal load profile could be taken from the number of appartement. see building.IntLoad in DB_Building
+            # Internal load profile could be taken from the number of appartment. see building.IntLoad in DB_Building
             ZoneLoad(idf, zone,'LoadSchedule' if isfile else 'AlwaysON' ,building, isfile, ZoningMultiplier)
             # HVAC equipment for each zone including ventilation systems (exhaust, balanced with or not heat recovery)
             ThermostatType = 'OfficeZone'+ str(idx) if building.OffOccRandom and OfficeTypeZone>0 else 'ResidZone'#  if OfficeTypeZone==0 else

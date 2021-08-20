@@ -4,20 +4,14 @@
 
 #this program laucnhes all the simulation
 import os, sys, stat, platform
-import time
-import multiprocessing as mp
 import pickle
 import shutil
-sys.path.append("..")
 import CoreFiles.Set_Outputs as Set_Outputs
-import CoreFiles.csv2tabdelim as csv2tabdelim
 from subprocess import check_call
-path2addgeom = os.path.join(os.path.dirname(os.getcwd()) ,'geomeppy')
-sys.path.append(path2addgeom)
-from geomeppy import IDF
 
 
 def initiateprocess(MainPath):
+    #return a list of file name to launch with energyplus. If some resultst are already present, the will be removed form the returned list
     listOfFiles = os.listdir(MainPath)
     file2run = []
     for file in listOfFiles:
@@ -26,14 +20,14 @@ def initiateprocess(MainPath):
     return file2run
 
 def runcase(file,filepath, epluspath):
+    #this function runs a case
     ResSimpath = os.path.join(filepath,'Sim_Results')
     if not os.path.exists(ResSimpath):
         os.mkdir(ResSimpath)
     with open(os.path.join(filepath,file[:-4]+'.pickle'), 'rb') as handle:
          loadB = pickle.load(handle)
-    #idf = loadB['BuildIDF'] #currently the idf object losses some required information...don't know why (inheritances of class and classmtehod... to be investigate
-    #the work around is to read the idf.file
-    building = loadB['BuildData']
+
+    building = loadB['BuildData'] #the building object is loaded in order to be saved afterward with the simulation results
     Runfile = os.path.join(filepath,file)
     RunDir = os.path.join(filepath,file[:-4])
     print('Launching :'+file)
@@ -42,6 +36,7 @@ def runcase(file,filepath, epluspath):
     os.chdir(RunDir)
     CaseName = 'Run'
 
+    ##could be run using the idf object method 'run'
     #IDF.setiddname(os.path.join(epluspath,'Energy+.idd'))
     #idf = IDF(Runfile)
     #idf.epw = os.path.join(os.path.join(epluspath ,'WeatherData'),idf.idfobjects['SITE:LOCATION'][0].Name+'.epw') #the weather path is taken from the epluspath
@@ -50,29 +45,31 @@ def runcase(file,filepath, epluspath):
     #idf.run(output_prefix=CaseName, verbose='q')
     #idf.run(readvars=True, output_prefix=CaseName, verbose='q')
 
+    #the process is launche on external terminal window
     if platform.system() == "Windows":
         eplus_exe = os.path.join(epluspath, "energyplus.exe")
     else:
         eplus_exe = os.path.join(epluspath, "energyplus")
     weatherpath = os.path.join(epluspath,building.WeatherDataFile)
     cmd = [eplus_exe, '--weather',os.path.normcase(weatherpath),'--output-directory',RunDir, \
-           '--idd',os.path.join(epluspath,'Energy+.idd'),'--expandobjects','--output-prefix',CaseName,Runfile]
+           '--idd',os.path.join(epluspath,'Energy+.idd'),'--expandobjects','-r','--output-prefix',CaseName,Runfile]
     check_call(cmd, stdout=open(os.devnull, "w"))
+    #once the simulation has ended, the results are saved
     #savecase(CaseName, RunDir, building, ResSimpath,file,idf,filepath)
     savecase(CaseName, RunDir, building, ResSimpath, file, filepath)
     print(file[:-4] + ' is finished')
 
 def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,withFMU = False):
+    #the resultst are read with html table and energyplus eso files. The html could be avoid, but then some information will have to computes in the building object (could be)
     if withFMU:
-        ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir, CaseName + '.eso'), ZoneOutput=False)
         Res = Set_Outputs.Read_Outputhtml(os.path.join(RunDir, CaseName + 'Table.htm'))
-        #Endinfo = Set_Outputs.Read_OutputError(CaseName + '.end')
+        ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir, CaseName + '.eso'), Res['OutdoorSurfacesNames'], ZoneOutput=False)
+
     else:
-        ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir,CaseName+'out.eso'), ZoneOutput=False)
         Res  = Set_Outputs.Read_Outputhtml(os.path.join(RunDir,CaseName+'tbl.htm'))
-        #Endinfo = Set_Outputs.Read_OutputError(CaseName+'out.end')
+        ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir,CaseName+'out.eso'), Res['OutdoorSurfacesNames'], ZoneOutput=False)
+
     Res['BuildDB'] = building
-    #Res['NbZones'] = len(idf.idfobjects['ZONE'])
     for key1 in ResEso:
         # if not 'Environ' in key1:
         Res[key1] = {}
