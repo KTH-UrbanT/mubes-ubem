@@ -4,9 +4,12 @@
  on the number of FMU considered in total."""
 
 import os,sys
-from fmpy import read_model_description, extract
-from fmpy.fmi1 import FMU1Slave
-from fmpy.fmi2 import FMU2Slave
+from fmpy import *
+#from fmpy.fmi1 import FMU1Slave
+from fmpy.fmi1 import fmi1OK
+#from fmpy.fmi2 import FMU2Slave
+from fmpy.fmi2 import fmi2OK
+from fmpy.simulation import instantiate_fmu
 path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 sys.path.append(path2addgeom)
 sys.path.append('..')
@@ -14,6 +17,22 @@ import shutil
 import pickle
 import time as timedelay
 from CoreFiles import LaunchSim as LaunchSim
+
+
+##Callback function required to avoid having the prnted message when everything goes fine with 2.0 !
+def log_message2(componentEnvironment, instanceName, status, category, message):
+    if status == fmi2OK:
+        pass  # do nothing
+    else:
+        print(message.decode('utf-8'))
+
+##Callback function required to avoid having the prnted message when everything goes fine with 1.0 !
+def log_message1(componentEnvironment, instanceName, status, category, message):
+    if status == fmi1OK:
+        pass  # do nothing
+    else:
+        print(message.decode('utf-8'))
+
 
 def InstAndInitiV1(filelist,VarNames,start_time,stop_time) :
     idx1 = ['_', 'v']
@@ -31,11 +50,16 @@ def InstAndInitiV1(filelist,VarNames,start_time,stop_time) :
             for variable in model_description.modelVariables:
                 vrs[variable.name] = variable.valueReference
             FMUElement[FMUKeyName]['Exch_Var'] = vrs
-            FMUElement[FMUKeyName]['fmu'] = FMU1Slave(guid=model_description.guid,
-                            unzipDirectory=FMUElement[FMUKeyName]['unzipdir'],
-                            modelIdentifier=model_description.coSimulation.modelIdentifier,
-                            instanceName=model_name)
-            FMUElement[FMUKeyName]['fmu'].instantiate()
+            FMUElement[FMUKeyName]['fmu'] = instantiate_fmu(FMUElement[FMUKeyName]['unzipdir'], model_description,
+                                                            fmi_type='CoSimulation', visible=False, debug_logging=False,
+                                                            logger=log_message1, fmi_call_logger=None, library_path=None)
+            #old way with a bunch of messages
+            # FMUElement[FMUKeyName]['fmu'] = FMU1Slave(guid=model_description.guid,
+            #                 unzipDirectory=FMUElement[FMUKeyName]['unzipdir'],
+            #                 modelIdentifier=model_description.coSimulation.modelIdentifier,
+            #                 instanceName=model_name, fmiCallLogger = log_message1)
+            # FMUElement[FMUKeyName]['fmu'].instantiate()
+
             FMUElement[FMUKeyName]['fmu'].setReal([vrs[VarNames['Inputs'][0]]],[21])
             FMUElement[FMUKeyName]['fmu'].initialize(tStart=start_time, stopTime=stop_time)
     return  FMUElement
@@ -56,12 +80,19 @@ def InstAndInitiV2(filelist,VarNames,start_time,stop_time) :
             for variable in model_description.modelVariables:
                 vrs[variable.name] = variable.valueReference
             FMUElement[FMUKeyName]['Exch_Var'] = vrs
-            FMUElement[FMUKeyName]['fmu'] = FMU2Slave(guid=model_description.guid,
-                            unzipDirectory=FMUElement[FMUKeyName]['unzipdir'],
-                            modelIdentifier=model_description.coSimulation.modelIdentifier,
-                            instanceName=model_name)
 
-            FMUElement[FMUKeyName]['fmu'].instantiate()
+            FMUElement[FMUKeyName]['fmu'] = instantiate_fmu(FMUElement[FMUKeyName]['unzipdir'], model_description,
+                                                            fmi_type='CoSimulation', visible=False, debug_logging=False,
+                                                            logger=log_message2,
+                                                            fmi_call_logger=None, library_path=None)
+
+            # old way with a bunch of messages
+            # FMUElement[FMUKeyName]['fmu'] = FMU2Slave(guid=model_description.guid,
+            #                 unzipDirectory=FMUElement[FMUKeyName]['unzipdir'],
+            #                 modelIdentifier=model_description.coSimulation.modelIdentifier,
+            #                 instanceName=model_name)
+            # FMUElement[FMUKeyName]['fmu'].instantiate()
+
             FMUElement[FMUKeyName]['fmu'].setupExperiment(startTime=start_time, stopTime=stop_time)
             FMUElement[FMUKeyName]['fmu'].setReal([vrs[VarNames['Inputs'][0]]],[21])
             FMUElement[FMUKeyName]['fmu'].enterInitializationMode()
