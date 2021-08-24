@@ -4,6 +4,8 @@ Several thermal zoning options are proposed from single heated and non heated zo
 It can launch simulations using parallel computing or can automatically creates FMUs of each building in order to make co-simulation afterward (the co-simulation process, using FMPy, is validated in Windows, Mac and Linux (Ubuntu)).  
 The main input file is in a geojson format. It contains the footprint including height (3D vertexes) of each building's surface as well as some propreties taken from several databases (EPCs, and others).  
 
+![Minneberg](Minneberg.png)
+
 ## Environments
 It is a python script based UBEM simulation tool using EnergyPlus (EP) as the core engine.
 It has been developed in Python 3.7 with EP 9.1 on Windows and has been successfully tested with EP 9.4 and python 3.9. on Windows and python 3.8 on Ubuntu 20.04 (tested on Oracle Virtual Machine) and with python 3.9 and EP 9.5 on OS x 11.5.2.
@@ -58,8 +60,6 @@ _python3_ _PlotBuilder.py_ will read all the buildings and make the figure below
 By changing the *createFMU* key in *True*, in SimLauncher, it will automatically create FMUs for each building.  
 
 *python3 FMPySimPlayGroundEx1.py* enable to launch a co-simulation with the above simple temperature's setpoint modulation law for each building.    
-
-![Minneberg](Minneberg.png)
 
 ## Engine structure
 The paradigm of simulation engine is to automate simulation on several different levels :
