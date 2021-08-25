@@ -88,7 +88,9 @@ def ReadGeoJsonFile(keyPath):
 def checkRefCoordinates(GeojsonFile):
     if 'EPSG' in GeojsonFile.crs['properties']['name']:
         return GeojsonFile
-    if "CRS84" in GeojsonFile.crs['properties']['name']:
+    ##The coordinate system depends on the input file, thus, if specific filter or conversion from one to another,
+    # it should be done here
+    else:#if "CRS84" in GeojsonFile.crs['properties']['name']:
         print('Projecting coordinates of Input file,...')
         transformer = pyproj.Transformer.from_crs("CRS84", "epsg:3950") #this transformation if done for the France's reference
         for idx,obj in enumerate(GeojsonFile):
@@ -221,9 +223,9 @@ def CleanUpLogFiles(MainPath):
     listOfFiles = os.listdir(MainPath)
     file2pick = []
     for file in listOfFiles:
-        if file[-8:] in '_Logs.log':
+        if '_Logs.log' in file[-9:] :
             file2pick.append(file)
-    MainLogFile = open(os.path.join(MainPath, 'MainFile_Logs.log'), 'w')
+    MainLogFile = open(os.path.join(MainPath, 'AllLogs.log'), 'a')
     for file in file2pick:
         file1 = open(os.path.join(MainPath,file), 'r')
         Lines = file1.readlines()
