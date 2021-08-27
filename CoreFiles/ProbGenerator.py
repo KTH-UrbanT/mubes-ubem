@@ -14,7 +14,10 @@ def sigmoid(x,coef):
   return 1 / (1 + math.exp(-x*coef))
 
 def NormVar(x):
-    var = [((i-min(x))/(max(x)-min(x))) for i in x]
+    try:
+        var = [((i-min(x))/(max(x)-min(x))) for i in x]
+    except:
+        var = x
     return var
 
 def SigmoFile(Season,width,AnnualLoad,name):
