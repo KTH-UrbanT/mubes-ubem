@@ -141,7 +141,7 @@ def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,Refresh = False):
             os.path.join(SimDir, 'Build_' + str(nbBuild)))
         if not os.path.exists(SimDir):
             os.mkdir(SimDir)
-        elif idx == 0:
+        elif idx == 0 and Refresh:
             shutil.rmtree(SimDir)
             os.mkdir(SimDir)
     return SimDir
@@ -256,17 +256,17 @@ def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shad
             building.setTempLoL = [round(ParamVal[varnum], 3),round(ParamVal[varnum], roundVal)]
         elif 'WallInsuThick' in var:
             exttmass = building.Materials
-            exttmass['Wall Insulation']['Thickness'] = round(ParamVal[varnum], roundVal)
+            exttmass['Wall Insulation']['Thickness'] = max(round(ParamVal[varnum], roundVal),0.005)
             setattr(building, var, exttmass)
         elif 'RoofInsuThick' in var:
             exttmass = building.Materials
-            exttmass['Roof Insulation']['Thickness'] = round(ParamVal[varnum], roundVal)
+            exttmass['Roof Insulation']['Thickness'] = max(round(ParamVal[varnum], roundVal),0.005)
             setattr(building, var, exttmass)
         elif 'MaxShadingDist' in var:
             building.MaxShadingDist = round(ParamVal[varnum], roundVal)
             building.shades = building.getshade(Buildingsfile[nbcase], Shadingsfile, Buildingsfile,DB_Data.GeomElement,LogFile,PlotOnly = False)
         elif 'IntLoadCurveShape' in var:
-            building.IntLoadCurveShape = round(ParamVal[varnum], roundVal)
+            building.IntLoadCurveShape = max(round(ParamVal[varnum], roundVal),1e-6)
             building.IntLoad = building.getIntLoad(MainPath, LogFile)
         elif 'AreaBasedFlowRate' in var:
             building.AreaBasedFlowRate = round(ParamVal[varnum], roundVal)
@@ -280,7 +280,7 @@ def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shad
 def SetParamSample(SimDir,nbruns,VarName2Change,Bounds,SepThreads):
     #the parameter are constructed. the oupute gives a matrix ofn parameter to change with nbruns values to simulate
     if SepThreads:
-        Paramfile = os.path.join(os.path.dirname(SimDir), 'ParamSample.pickle')
+        Paramfile = os.path.join(SimDir, 'ParamSample.pickle')#os.path.join(os.path.dirname(SimDir), 'ParamSample.pickle')
         if os.path.isfile(Paramfile):
             with open(Paramfile, 'rb') as handle:
                 ParamSample = pickle.load(handle)
