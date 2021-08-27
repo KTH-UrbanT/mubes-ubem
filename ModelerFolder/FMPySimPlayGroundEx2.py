@@ -107,6 +107,7 @@ def LaunchFMU_Sim(FMUElement,VarNames, start_time,stop_time,step_size):
     HeatPow = {}
     FlowRate = {}
     DHWPow = {}
+    IntLoad = {}
     bld = 0
     for key in FMUElement.keys():
         HeatPow[key] = [0]
@@ -114,6 +115,7 @@ def LaunchFMU_Sim(FMUElement,VarNames, start_time,stop_time,step_size):
         SetPoints[key] = [21]
         FlowRate[key] = [0]
         DHWPow[key] = [0]
+        IntLoad[key] = [0]
     timeBuffer = [0] * len(FMUElement.keys())
     extraVar = ['nbAppartments']
     Res = Utilities.GetData(work_dir, extraVar)
@@ -143,7 +145,13 @@ def LaunchFMU_Sim(FMUElement,VarNames, start_time,stop_time,step_size):
                 else:
                     SetPoints[key].append(SetPoints[key][-1])
             timeBuffer[i] += step_size
+            IntLoad[key].append(2)  # a base of 2W/m2 is considered
+            if 6 <= time % (24 * 3600) / 3600 <= 10:
+                IntLoad[key][-1] = 10
+            if 16 <= time % (24 * 3600) / 3600 <= 22:
+                IntLoad[key][-1] = 10
             FMUElement[key]['fmu'].setReal([FMUElement[key]['Exch_Var']['TempSetPoint']], [SetPoints[key][-1]])
+            FMUElement[key]['fmu'].setReal([FMUElement[key]['Exch_Var']['IntLoadPow']], [IntLoad[key][-1]])
             FMUElement[key]['fmu'].setReal([FMUElement[key]['Exch_Var']['WaterTap_m3_s']],
                                          [watercurrenttaps * Res['nbAppartments'][Res['SimNum'].index(key)]])
 
@@ -190,10 +198,10 @@ if __name__ == '__main__':
     os.chdir(work_dir)
     filelist = os.listdir(work_dir)
     start_time = 0*24*3600
-    stop_time =  365*24*3600
+    stop_time =  100*24*3600
     step_size = 900
-    VarNames = {'Inputs': ['TempSetPoint','WaterTap_m3_s'],
-                'InitialValue': [21,0],
+    VarNames = {'Inputs': ['TempSetPoint','IntLoadPow','WaterTap_m3_s'],
+                'InitialValue': [21,0,0],
                 'Outputs' : ['MeanBldTemp','HeatingPower','DHWHeat']}
     #to make it work if being either version1.0 or 2.0 or FMU Standards
     try:
