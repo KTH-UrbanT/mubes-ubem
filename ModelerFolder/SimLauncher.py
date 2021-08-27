@@ -112,19 +112,27 @@ if __name__ == '__main__' :
             if idx<len(DataBaseInput['Build']):
                 #lets check if there are several simulation for one building or not
                 if NbRuns > 1:
-                    #there is a need to laucnhe the first one that will also cereate the template for all the others
-                    CB_OAT.LaunchOAT(MainInputs,SimDir,nbBuild,ParamSample[0, :],0,pythonpath)
+                    # lets check if this building is already present in the folder (means Refresh = False in CreateSimDir() above)
+                    if not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + '_template.idf'))):
+                        #there is a need to launch the first one that will also create the template for all the others
+                        CB_OAT.LaunchOAT(MainInputs,SimDir,nbBuild,ParamSample[0, :],0,pythonpath)
+                    # lets check whether all the files are to be run or if there's only some to run again
+                    NewRuns = []
+                    for i in range(1,NbRuns):
+                        if not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + 'v'+str(i)+'.idf'))):
+                            NewRuns.append(i)
                     #now the pool can be created changing the FirstRun key to False for all other runs
                     MainInputs['FirstRun'] = False
                     pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
-                    for i in range(1,len(ParamSample)):
+                    for i in NewRuns:
                         pool.apply_async(CB_OAT.LaunchOAT, args=(MainInputs,SimDir,nbBuild,ParamSample[i, :],i,pythonpath))
                     pool.close()
                     pool.join()
-                else:
+                # lets check if this building is already present in the folder (means Refresh = False in CreateSimDir() above)
+                elif not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + 'v0.idf'))):
                 #if not, then the building number will be appended to alist that will be used afterward
                     File2Launch['nbBuild'].append(nbBuild)
-                #the simulation atre laucnhed below using a pool of the earlier created idf files
+                #the simulation are launched below using a pool of the earlier created idf files
                 if SepThreads and not CreateFMU:
                     file2run = LaunchSim.initiateprocess(SimDir)
                     nbcpu = max(mp.cpu_count()*CPUusage,1)
