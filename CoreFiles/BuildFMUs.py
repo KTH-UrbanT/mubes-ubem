@@ -22,18 +22,24 @@ def setFMUsINOut(idf, building,TotPowerName):
     EPVarName = TotPowerName
     #EPVarName = 'Weighted Average Heated Zone Air Temperature'
     FMUsOutputNames = ['MeanBldTemp','HeatingPower','DHWHeat']
-    FMusInputNames = ['TempSetPoint']
-    ActiveFMusInputNames = ['FMUsActTempSetP']
+    FMusInputNames = ['TempSetPoint','IntLoadPow']
+    ActiveFMusInputNames = ['FMUsActTempSetP','FMUsActIntLoad']
     if building.DHWInfos:
         FMUsOutputNames.append('DHWHeat')
         FMusInputNames.append('WaterTap_m3_s')
         ActiveFMusInputNames.append('FMUsActWaterTaps')
-    FMusInputInitialValues = [21,0]
+    FMusInputInitialValues = [21,0,0]
     #############################
-    ##This is for Temperature set point, the thermostat schedulle or value is raplced by another schedule value that will be controlled by FMU's input
+    ##This is for Temperature set point, the thermostat schedulle or value is replaced by another schedule value that will be controlled by FMU's input
     SetPoints = idf.idfobjects['HVACTEMPLATE:THERMOSTAT']
     SetPoints[0].Heating_Setpoint_Schedule_Name = 'FMUsActTempSetP'
     SetPoints[0].Constant_Heating_Setpoint = ''
+    #############################
+    ##This is for the internal Load powaer per area, the internal load schedulle or value is replaced by another schedule value that will be controlled by FMU's input
+    IntLoadObj = idf.idfobjects['ELECTRICEQUIPMENT']
+    for intloadobj in IntLoadObj:
+        intloadobj.Schedule_Name = 'FMUsActIntLoad'
+        intloadobj.Watts_per_Zone_Floor_Area = 1
     #############################
     ##Same as above but for the masse flow rate of the domestic hoter water taps (in m3/s)
     if building.DHWInfos:
