@@ -14,10 +14,22 @@ def createWaterEqpt(idf,building):
     idf.newidfobject(
         'WATERUSE:EQUIPMENT',
         Name = building.DHWInfos['Name'],
-        Peak_Flow_Rate = building.nbAppartments*building.DHWInfos['WaterTapsMultiplier'],#the flow rate should be in m3/s and we are using schedul file in l/min, thus we need this transformation,
+        Peak_Flow_Rate = building.nbAppartments*building.DHWInfos['WaterTapsMultiplier']*CallCorrectionFactor(building.name),#the flow rate should be in m3/s and we are using schedul file in l/min, thus we need this transformation,
         Flow_Rate_Fraction_Schedule_Name = 'WaterTaps',
         Hot_Water_Supply_Temperature_Schedule_Name = 'HotWaterTemp',
         Cold_Water_Supply_Temperature_Schedule_Name='ColdWaterTemp',
         )
     return idf
 
+def CallCorrectionFactor(BuildName):
+    BuildNumber = int(BuildName[BuildName.index('_')+1:BuildName.index('v')])
+    # Lets read the correction factors
+    import os
+    pth2corfactors  = os.path.normcase('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\ComputedElem4Calibration\\')
+    CorFactPath = os.path.normcase(os.path.join(pth2corfactors, 'DHWCorFact.txt'))
+    with open(CorFactPath, 'r') as handle:
+        FileLines = handle.readlines()
+    CorFact = {}
+    for line in FileLines:
+        CorFact[int(line[:line.index('\t')])] = float(line[line.index('\t')+1:line.index('\n')])
+    return CorFact[BuildNumber]

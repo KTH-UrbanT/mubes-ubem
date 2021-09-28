@@ -42,18 +42,24 @@ if __name__ == '__main__' :
 # PathInputFile = 'String'              #Name of the PathFile containing the paths to the data and to energyplus application (see ReadMe)
 # OutputsFile = 'String'               #Name of the Outfile with the selected outputs wanted and the associated frequency (see file's template)
 # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
+    with open('Ham2Simu4Calib_Last.txt') as f:  # 'Ham2Simu4Calib_Last2complete.txt') as f: #
+        FileLines = f.readlines()
+    Bld2Sim = []
+    for line in FileLines:
+        Bld2Sim.append(int(line))
 
-    CaseName = 'ForTest'
-    BuildNum = [0,1,2]
-    VarName2Change = []
-    Bounds = []
+    CaseName = 'yearlybasis'
+    BuildNum = [30]#Bld2Sim
+    VarName2Change = []#['AirRecovEff', 'IntLoadCurveShape', 'wwr', 'EnvLeak', 'setTempLoL', 'AreaBasedFlowRate', 'WindowUval',
+                  #'WallInsuThick', 'RoofInsuThick']
+    Bounds = []#[[0.5, 0.9], [1, 5], [0.2, 0.4], [0.5, 1.6], [18, 22], [0.35, 1], [0.7, 2], [0.1, 0.3], [0.2, 0.4]]
     NbRuns = 1
     CPUusage = 0.8
     CreateFMU = False
     CorePerim = False
     FloorZoning = True
-    PathInputFile = 'Pathways_Template.txt'
-    OutputsFile = 'Outputs_Template.txt'
+    PathInputFile = 'HammarbyLast.txt'#'Pathways_Template.txt'
+    OutputsFile = 'Outputs.txt'#'Outputs_Template.txt'
     ZoneOfInterest = ''
 
 ######################################################################################################################
@@ -106,7 +112,7 @@ if __name__ == '__main__' :
         for idx,nbBuild in enumerate(BuildNum2Launch):
             MainInputs['FirstRun'] = True
             #First, lets create the folder for the building and simulation processes
-            SimDir = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,Refresh=True)
+            SimDir = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,Refresh=False)
             #a sample of parameter is generated is needed
             ParamSample =  GrlFct.SetParamSample(SimDir, NbRuns, VarName2Change, Bounds,SepThreads)
             if idx<len(DataBaseInput['Build']):
@@ -118,7 +124,7 @@ if __name__ == '__main__' :
                         CB_OAT.LaunchOAT(MainInputs,SimDir,nbBuild,ParamSample[0, :],0,pythonpath)
                     # lets check whether all the files are to be run or if there's only some to run again
                     NewRuns = []
-                    for i in range(1,NbRuns):
+                    for i in range(NbRuns):
                         if not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + 'v'+str(i)+'.idf'))):
                             NewRuns.append(i)
                     #now the pool can be created changing the FirstRun key to False for all other runs

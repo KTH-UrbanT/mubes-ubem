@@ -11,6 +11,7 @@ sys.path.append("..")
 from subprocess import check_call
 from geomeppy import IDF
 import pickle#5 as pickle
+import pickle5
 import CoreFiles.GeneralFunctions as GrlFct
 from BuildObject.DB_Building import BuildingList
 from BuildObject.DB_Filter4Simulations import checkBldFilter
@@ -105,8 +106,12 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
         #for all but the first run, the template file and the building object are loaded (geometry is already done)
         IDF.setiddname(os.path.join(epluspath, "Energy+.idd"))
         idf = IDF(os.path.normcase(os.path.join(SimDir, 'Building_' + str(nbcase) +  '_template.idf')))
-        with open(os.path.join(SimDir,'Building_' + str(nbcase) +  '_template.pickle'), 'rb') as handle:
+        try:
+            with open(os.path.join(SimDir,'Building_' + str(nbcase) +  '_template.pickle'), 'rb') as handle:
                 LoadBld = pickle.load(handle)
+        except:
+            with open(os.path.join(SimDir,'Building_' + str(nbcase) +  '_template.pickle'), 'rb') as handle:
+                LoadBld = pickle5.load(handle)
         building = LoadBld['BuildData']
 
     Case = {}

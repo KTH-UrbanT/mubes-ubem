@@ -138,6 +138,7 @@ class Building:
         if not PlotOnly:
             #the attributres above are needed in all case, the one below are needed only if energy simulation is asked for
             self.VentSyst = self.getVentSyst(DB, LogFile)
+            print(self.VentSyst)
             self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB, DBL, BE)
             self.OccupType = self.getOccupType(DB, LogFile)
             self.nbStairwell = self.getnbStairwell(DB, DBL)
@@ -162,6 +163,7 @@ class Building:
             for key in self.EPCMeters['Cooling']:
                 if self.EPCMeters['Cooling'][key]>0:
                     self.setTempUpL = BE['setTempUpL']
+                    self.intT_freecool = 50
                 else:
                     self.setTempUpL = [50]*len(BE['setTempUpL'])
 

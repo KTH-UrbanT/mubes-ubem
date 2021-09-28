@@ -90,7 +90,7 @@ def CreateThermostat(idf,name,setUp, setLo):
     if type(setUp) == str:
         Therm.Cooling_Setpoint_Schedule_Name=setUp
     else:
-        Therm.Constant_Cooling_Setpoint =setUp
+        Therm.Constant_Cooling_Setpoint = max(setLo+4,setUp)
     if type(setLo) == str:
         Therm.Heating_Setpoint_Schedule_Name = setLo
     else:
@@ -274,7 +274,7 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
     if building.setTempUpL[1]-building.setTempUpL[0] == 0:
         CoolSetPoint = building.setTempUpL[0]
     else:
-        #this means that weneed to create a file for the set points
+        #this means that we need to create a file for the set points
         pathfile = os.path.join(os.getcwd(), 'InputFiles')
         CoolSetPoint = idf.idfname + '_UpLTempSetPoints.txt'
         create_ScheduleFile(idf, 'CoolSetPointFile', os.path.join(pathfile,CoolSetPoint))
@@ -397,7 +397,7 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
             CorrectdEff = getEfficiencyCor(OfficeTypeZone,ZoningMultiplier,building,min(BlocPeopleDensity[bloc]))
             #now the HVAC system is created for this zone
             ZoneCtrl(idf, zone, building, max(BlocPeopleDensity[bloc]),ThermostatType, ZoningMultiplier,CorrectdEff,FloorArea)
-            #lets add freecooling to consider that peaopl just open windows when there're too hot !
+            #lets add freecooling to consider that people just open windows when there're too hot !
             ZoneFreeCooling(idf,zone,building,'AlwaysON')
 
 if __name__ == '__main__' :
