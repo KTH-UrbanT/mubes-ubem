@@ -47,8 +47,8 @@ def BuildTempSetPoints(name,path,Values,Hours):
     FirstDayofWeek = 0 #the first day is a Monday
     for i in range(8760):
         HrperDay = i%24                 #this will gives us values between 0 and 24hours
-        DayofWeek = int(i % (24 * 7) / 24) + FirstDayofWeek # this will give the day of the week (0 is for Mondays)
-        WE = False if DayofWeek < 6 else True  #this will gove a 1 when we are on weekends
+        DayofWeek = (int(i % (24 * 7) / 24) + FirstDayofWeek)%7 # this will give the day of the week (0 is for Mondays)
+        WE = False if DayofWeek < 5 else True  #this will gove a 1 when we are on weekends
         if HrperDay<int(Hours[0][:Hours[0].find(':')]) or HrperDay>int(Hours[1][:Hours[1].find(':')]):# or WE:
             SetPoint.append(float(Values[1]))
         else:
