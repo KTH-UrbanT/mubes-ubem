@@ -138,7 +138,6 @@ class Building:
         if not PlotOnly:
             #the attributres above are needed in all case, the one below are needed only if energy simulation is asked for
             self.VentSyst = self.getVentSyst(DB, LogFile)
-            print(self.VentSyst)
             self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB, DBL, BE)
             self.OccupType = self.getOccupType(DB, LogFile)
             self.nbStairwell = self.getnbStairwell(DB, DBL)

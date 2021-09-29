@@ -48,7 +48,7 @@ if __name__ == '__main__' :
     for line in FileLines:
         Bld2Sim.append(int(line))
 
-    CaseName = 'yearlybasis'
+    CaseName = 'Test'
     BuildNum = [30]#Bld2Sim
     VarName2Change = []#['AirRecovEff', 'IntLoadCurveShape', 'wwr', 'EnvLeak', 'setTempLoL', 'AreaBasedFlowRate', 'WindowUval',
                   #'WallInsuThick', 'RoofInsuThick']
@@ -59,7 +59,7 @@ if __name__ == '__main__' :
     CorePerim = False
     FloorZoning = True
     PathInputFile = 'HammarbyLast.txt'#'Pathways_Template.txt'
-    OutputsFile = 'Outputs.txt'#'Outputs_Template.txt'
+    OutputsFile = 'Outputs.txt'#_withlosses.txt'#'Outputs_Template.txt'
     ZoneOfInterest = ''
 
 ######################################################################################################################
@@ -112,7 +112,7 @@ if __name__ == '__main__' :
         for idx,nbBuild in enumerate(BuildNum2Launch):
             MainInputs['FirstRun'] = True
             #First, lets create the folder for the building and simulation processes
-            SimDir = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,Refresh=False)
+            SimDir = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,Refresh=True)
             #a sample of parameter is generated is needed
             ParamSample =  GrlFct.SetParamSample(SimDir, NbRuns, VarName2Change, Bounds,SepThreads)
             if idx<len(DataBaseInput['Build']):
