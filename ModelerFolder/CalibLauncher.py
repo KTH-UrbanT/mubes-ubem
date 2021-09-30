@@ -13,6 +13,10 @@ import CoreFiles.GeneralFunctions as GrlFct
 import CoreFiles.LaunchSim as LaunchSim
 import CoreFiles.CaseBuilder_OAT as CB_OAT
 import multiprocessing as mp
+from ReadResults import Utilities
+import CoreFiles.CalibUtilities as CalibUtil
+import pickle
+import numpy as np
 
 if __name__ == '__main__' :
 
@@ -27,6 +31,8 @@ if __name__ == '__main__' :
 # VarName2Change = ['String','String']  #list of strings: Variable names (same as Class Building attribute, if different
 #                                       see LaunchProcess 'for' loop for examples)
 # Bounds = [[x1,y1],[x2,y2]]            #list of list of 2 values  :bounds in which the above variable will be allowed to change
+# BoundLim                              #same as bound. as the process enlarge to boudnaries in order to enalrge chances to catches
+                                        #combitions, some other limits or to be defined in order to avoid unrealistics parameters.
 # NbRuns = 1000                         #number of run to launch for each building (all VarName2Change will have automotaic
 #                                       allocated value (see sampling in LaunchProcess)
 # CPUusage = 0.7                        #factor of possible use of total CPU for multiprocessing. If only one core is available,
@@ -42,25 +48,27 @@ if __name__ == '__main__' :
 # PathInputFile = 'String'              #Name of the PathFile containing the paths to the data and to energyplus application (see ReadMe)
 # OutputsFile = 'String'               #Name of the Outfile with the selected outputs wanted and the associated frequency (see file's template)
 # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
-    with open('Ham2Simu4Calib_Last.txt') as f:  # 'Ham2Simu4Calib_Last2complete.txt') as f: #
+
+    with open('Ham2Simu4Calib_Last.txt') as f: #'Ham2Simu4Calib_Last2complete.txt') as f: #
         FileLines = f.readlines()
     Bld2Sim = []
     for line in FileLines:
         Bld2Sim.append(int(line))
 
-    CaseName = 'Test'
-    BuildNum = [30]#Bld2Sim
-    VarName2Change = []#['AirRecovEff', 'IntLoadCurveShape', 'wwr', 'EnvLeak', 'setTempLoL', 'AreaBasedFlowRate', 'WindowUval',
-                  #'WallInsuThick', 'RoofInsuThick']
-    Bounds = []#[[0.5, 0.9], [1, 5], [0.2, 0.4], [0.5, 1.6], [18, 22], [0.35, 1], [0.7, 2], [0.1, 0.3], [0.2, 0.4]]
-    NbRuns = 1
+    CaseName = 'weeklybasis'
+    BuildNum = [23]#Bld2Sim
+    VarName2Change = ['AirRecovEff','IntLoadCurveShape','wwr','EnvLeak','setTempLoL','AreaBasedFlowRate','WindowUval','WallInsuThick','RoofInsuThick']
+    Bounds = [[0.5,0.9],[1,5],[0.2,0.4],[0.5,1.6],[18,22],[0.35,1],[0.7,2],[0.1,0.3],[0.2,0.4]]
+    BoundLim = [[0,1],[0.9,9],[0.05,0.7],[0.2,4],[15,25],[0.2,2],[0.5,4],[0.05,0.9],[0.05,0.9]]
+    NbRuns = 200    #this is the number of runs for the frist step, it will be repeated so should not be to large, neither too small
     CPUusage = 0.8
     CreateFMU = False
     CorePerim = False
     FloorZoning = True
-    PathInputFile = 'HammarbyLast.txt'#'Pathways_Template.txt'
-    OutputsFile = 'Outputs_NewTemplate.txt'#_withlosses.txt'#'Outputs_Template.txt'
+    PathInputFile = 'HammarbyLast.txt'
+    OutputsFile = 'Outputs.txt'
     ZoneOfInterest = ''
+    CalibBasis = 'WeeklyBasis'#'MonthlyBasis' #'WeeklyBasis'#'MonthlyBasis'
 
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART  (nothing should be changed hereafter)   ############################
@@ -110,68 +118,90 @@ if __name__ == '__main__' :
         MainInputs['DataBaseInput'] = DataBaseInput
         File2Launch = {'nbBuild' : []}
         for idx,nbBuild in enumerate(BuildNum2Launch):
-            MainInputs['FirstRun'] = True
             #First, lets create the folder for the building and simulation processes
-            SimDir = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,Refresh=True)
+            SimDir = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,Refresh=False)
             #a sample of parameter is generated is needed
             ParamSample =  GrlFct.SetParamSample(SimDir, NbRuns, VarName2Change, Bounds,SepThreads)
             if idx<len(DataBaseInput['Build']):
-                #lets check if there are several simulation for one building or not
-                if NbRuns > 1:
+                Finished = False
+                idx_offset = 0
+                while not Finished:
                     # lets check if this building is already present in the folder (means Refresh = False in CreateSimDir() above)
                     if not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + '_template.idf'))):
-                        #there is a need to launch the first one that will also create the template for all the others
-                        CB_OAT.LaunchOAT(MainInputs,SimDir,nbBuild,ParamSample[0, :],0,pythonpath)
+                        # there is a need to launch the first one that will also create the template for all the others
+                        MainInputs['FirstRun'] = True
+                        CB_OAT.LaunchOAT(MainInputs, SimDir, nbBuild, ParamSample[0, :], 0, pythonpath)
                     # lets check whether all the files are to be run or if there's only some to run again
                     NewRuns = []
                     for i in range(NbRuns):
-                        if not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + 'v'+str(i)+'.idf'))):
+                        if not os.path.isfile(
+                                os.path.join(SimDir, ('Building_' + str(nbBuild) + 'v' + str(i+idx_offset) + '.idf'))):
                             NewRuns.append(i)
-                    #now the pool can be created changing the FirstRun key to False for all other runs
                     MainInputs['FirstRun'] = False
                     pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
-                    for i in NewRuns:
-                        pool.apply_async(CB_OAT.LaunchOAT, args=(MainInputs,SimDir,nbBuild,ParamSample[i, :],i,pythonpath))
+                    for i in NewRuns:#range(1,NbRuns):
+                        pool.apply_async(CB_OAT.LaunchOAT, args=(MainInputs,SimDir,nbBuild,ParamSample[i+idx_offset, :],i+idx_offset,pythonpath))
                     pool.close()
                     pool.join()
-                # lets check if this building is already present in the folder (means Refresh = False in CreateSimDir() above)
-                elif not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + 'v0.idf'))):
-                #if not, then the building number will be appended to alist that will be used afterward
-                    File2Launch['nbBuild'].append(nbBuild)
-                #the simulation are launched below using a pool of the earlier created idf files
-                if SepThreads and not CreateFMU:
+
                     file2run = LaunchSim.initiateprocess(SimDir)
-                    nbcpu = max(mp.cpu_count()*CPUusage,1)
                     pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
                     for i in range(len(file2run)):
                         pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath))
                     pool.close()
                     pool.join()
+                    # once every run has been computed, lets get the matche and compute the covariance depending on the number of matches
+                    extraVar = ['nbAppartments', 'ATempOr', 'SharedBld', 'height', 'StoreyHeigth', 'nbfloor',
+                                'BlocHeight',
+                                'BlocFootprintArea', 'BlocNbFloor',
+                                'HeatedArea', 'AreaBasedFlowRate',
+                                'NonHeatedArea', 'Other']
+                    Res = Utilities.GetData(os.path.join(SimDir, 'Sim_Results'), extraVar)
+                    os.chdir(CurrentPath)
+                    ComputfFilePath = os.path.normcase(
+                        'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\ComputedElem4Calibration')
+                    with open(os.path.join(ComputfFilePath, 'Building_' + str(nbBuild) + '_Meas.pickle'),
+                              'rb') as handle:
+                        Meas = pickle.load(handle)
+                    Matches = CalibUtil.getMatches(Res, Meas, VarName2Change, CalibBasis,ParamSample)
+                    try:
+                        print(len(Matches[CalibBasis][VarName2Change[0]]))
+                        if len(Matches[CalibBasis][VarName2Change[0]]) > 100 or len(ParamSample[:, 0]) >= 2000:
+                            Finished = True
+                        else:
+                            print('New runs loop')
+                            if len(Matches[CalibBasis][VarName2Change[0]]) > 10:
+                                try:
+                                    NewSample = CalibUtil.getCovarCalibratedParam(Matches[CalibBasis], VarName2Change, NbRuns,
+                                                                        BoundLim)
+                                    print('Covariance worked !')
+                                except:
+                                    Bounds = CalibUtil.getNewBounds(Bounds, BoundLim)
+                                    NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRuns)
+                            else:
+                                Bounds = CalibUtil.getNewBounds(Bounds, BoundLim)
+                                NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRuns)
+                            idx_offset = len(ParamSample[:, 0])
+                            ParamSample = np.concatenate((ParamSample, NewSample))
+                            Paramfile = os.path.join(SimDir, 'ParamSample.pickle')
+                            with open(Paramfile, 'wb') as handle:
+                                pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                    except:
+                        print('No matches at all from now...')
+                        if len(ParamSample[:, 0]) >= 2000:
+                            Finished = True
+                        else:
+                            Bounds = CalibUtil.getNewBounds(Bounds, BoundLim)
+                            NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRuns)
+                            idx_offset = len(ParamSample[:, 0])
+                            ParamSample = np.concatenate((ParamSample, NewSample))
+                            Paramfile = os.path.join(SimDir, 'ParamSample.pickle')
+                            with open(Paramfile, 'wb') as handle:
+                                pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-            else:
-                print('All buildings in the input file have been treated.')
-                print('###################################################')
-                break
-        if not SepThreads and not CreateFMU:
-            #lets launch the idf file creation process using the listed created above
-            pool = mp.Pool(processes=int(nbcpu))
-            for nbBuild in File2Launch['nbBuild']:
-                pool.apply_async(CB_OAT.LaunchOAT, args=(MainInputs,SimDir,nbBuild,[1],0,pythonpath))
-            pool.close()
-            pool.join()
-            # now that all the files are created, we can aggregate all the log files into a single one.
-            GrlFct.CleanUpLogFiles(SimDir)
-            # lest create the pool and launch the simulations
-            file2run = LaunchSim.initiateprocess(SimDir)
-            pool = mp.Pool(processes=int(nbcpu))
-            for i in range(len(file2run)):
-                pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath))
-            pool.close()
-            pool.join()
-        elif CreateFMU:
-            # now that all the files are created, we can aggregate all the log files into a single one.
-            GrlFct.CleanUpLogFiles(SimDir)
-            #the FMU are not taking advantage of the parallel computing option yet
-            for nbBuild in File2Launch['nbBuild']:
-                CB_OAT.LaunchOAT(MainInputs,SimDir,nbBuild,[1],0,pythonpath)
+        Paramfile = os.path.join(SimDir, 'ParamSample.pickle')
+        with open(Paramfile, 'wb') as handle:
+            pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
 

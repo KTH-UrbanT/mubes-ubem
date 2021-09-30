@@ -42,24 +42,18 @@ if __name__ == '__main__' :
 # PathInputFile = 'String'              #Name of the PathFile containing the paths to the data and to energyplus application (see ReadMe)
 # OutputsFile = 'String'               #Name of the Outfile with the selected outputs wanted and the associated frequency (see file's template)
 # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
-    with open('Ham2Simu4Calib_Last.txt') as f:  # 'Ham2Simu4Calib_Last2complete.txt') as f: #
-        FileLines = f.readlines()
-    Bld2Sim = []
-    for line in FileLines:
-        Bld2Sim.append(int(line))
 
-    CaseName = 'Test'
-    BuildNum = [30]#Bld2Sim
-    VarName2Change = []#['AirRecovEff', 'IntLoadCurveShape', 'wwr', 'EnvLeak', 'setTempLoL', 'AreaBasedFlowRate', 'WindowUval',
-                  #'WallInsuThick', 'RoofInsuThick']
-    Bounds = []#[[0.5, 0.9], [1, 5], [0.2, 0.4], [0.5, 1.6], [18, 22], [0.35, 1], [0.7, 2], [0.1, 0.3], [0.2, 0.4]]
-    NbRuns = 1
+    CaseName = 'ecmscalibmonthlynew2'
+    BuildNum = []
+    VarName2Change = ['AirRecovEff','IntLoadCurveShape','wwr','EnvLeak','setTempLoL','AreaBasedFlowRate','WindowUval','WallInsuThick','RoofInsuThick']
+    Bounds = [[0.5,0.9],[1,5],[0.2,0.4],[0.5,1.6],[18,22],[0.35,1],[0.7,2],[0.1,0.3],[0.2,0.4]]
+    NbRuns = 100
     CPUusage = 0.8
     CreateFMU = False
     CorePerim = False
     FloorZoning = True
     PathInputFile = 'HammarbyLast.txt'#'Pathways_Template.txt'
-    OutputsFile = 'Outputs_NewTemplate.txt'#_withlosses.txt'#'Outputs_Template.txt'
+    OutputsFile = 'Outputs.txt' #'Outputs_Template.txt'
     ZoneOfInterest = ''
 
 ######################################################################################################################
@@ -109,12 +103,43 @@ if __name__ == '__main__' :
         MainInputs['PathInputFiles'] = PathInputFile
         MainInputs['DataBaseInput'] = DataBaseInput
         File2Launch = {'nbBuild' : []}
+        #to get to matched joint distribution'
+        import pickle5
+        import numpy as np
+        with open(os.path.join(os.path.dirname(os.path.dirname(CurrentPath)),'MUBES_SimResults','calibmonthly', 'GlobalMatchedParam.pickle'), 'rb') as handle:
+            GlobalMatch = pickle5.load(handle)
+        #lets simulation the building only if we have a complete joint distribution of 100 matches
         for idx,nbBuild in enumerate(BuildNum2Launch):
+            if nbBuild not in GlobalMatch['MonthlyBasis'].keys():
+                continue
             MainInputs['FirstRun'] = True
             #First, lets create the folder for the building and simulation processes
             SimDir = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,Refresh=True)
-            #a sample of parameter is generated is needed
-            ParamSample =  GrlFct.SetParamSample(SimDir, NbRuns, VarName2Change, Bounds,SepThreads)
+            # here I am applying the renovation action
+            GlobalMatch['MonthlyBasis'][nbBuild]['WindowUval'] = [val / 2 for val in
+                                                                 GlobalMatch['MonthlyBasis'][nbBuild]['WindowUval']]
+
+            ParamSample = []
+            for line in range(len(GlobalMatch['MonthlyBasis'][nbBuild]['AirRecovEff'])):
+                ParamSample.append([GlobalMatch['MonthlyBasis'][nbBuild][name][line] for name in VarName2Change])
+
+            FilteredSample = []
+            for i in ParamSample:
+                FilteredSample.append([round(val, 3) for val in i])
+            ParamSample = np.array(FilteredSample)
+            NbRuns2run = [i for i in range(min(100, len(ParamSample[:, 0])))]
+            NbRuns = len(NbRuns2run)
+            import random
+
+            random.shuffle(NbRuns2run)
+            ParamSample = ParamSample[NbRuns2run, :]
+            Finished = False
+            idx_offset = 0
+            Paramfile = os.path.join(SimDir, 'ParamSample.pickle')
+            with open(Paramfile, 'wb') as handle:
+                pickle5.dump(ParamSample, handle, protocol=pickle5.HIGHEST_PROTOCOL)
+
+
             if idx<len(DataBaseInput['Build']):
                 #lets check if there are several simulation for one building or not
                 if NbRuns > 1:
@@ -124,7 +149,7 @@ if __name__ == '__main__' :
                         CB_OAT.LaunchOAT(MainInputs,SimDir,nbBuild,ParamSample[0, :],0,pythonpath)
                     # lets check whether all the files are to be run or if there's only some to run again
                     NewRuns = []
-                    for i in range(NbRuns):
+                    for i in range(1,NbRuns):
                         if not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + 'v'+str(i)+'.idf'))):
                             NewRuns.append(i)
                     #now the pool can be created changing the FirstRun key to False for all other runs
@@ -138,7 +163,7 @@ if __name__ == '__main__' :
                 elif not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + 'v0.idf'))):
                 #if not, then the building number will be appended to alist that will be used afterward
                     File2Launch['nbBuild'].append(nbBuild)
-                #the simulation are launched below using a pool of the earlier created idf files
+                #the simulation atre launched below using a pool of the earlier created idf files
                 if SepThreads and not CreateFMU:
                     file2run = LaunchSim.initiateprocess(SimDir)
                     nbcpu = max(mp.cpu_count()*CPUusage,1)
