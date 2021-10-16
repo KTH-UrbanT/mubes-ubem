@@ -45,8 +45,8 @@ def plotAreaVal(GlobRes,FigName,name):
         #vary = [(varyref[idx]-vary[idx])/varyref[idx] for idx in range(len(vary))]
         Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][1],varyref, [vary], 'ATemp (m2)', [name[nb]],
                                  'EP Area (m2)', signe[nb])
-    Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][1],[0,max(varyref)], [[0,max(varyref)]], 'ATemp (m2)', ['1:1'],
-                                'EP Area (m2)', '--')
+    # Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][1],[0,max(varyref)], [[0,max(varyref)]], 'ATemp (m2)', ['1:1'],
+    #                             'EP Area (m2)', '--')
 
 
 def plotErrorFile(GlobRes,FigName,name):
@@ -126,9 +126,9 @@ def plotEnergy(GlobRes,FigName,name):
         Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][1], varyref, [vary], 'EP Sim',
                                  [name[nb]],
                                  'EP Sim', signe[nb])
-    Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][1], [0, max(varyref)], [[0, max(varyref)]],
-                             'EPCs', ['1:1'],
-                             'Heat Needs (kWh/m2)', 'k-')
+    # Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][1], [0, max(varyref)], [[0, max(varyref)]],
+    #                          'EPCs', ['1:1'],
+    #                          'Heat Needs (kWh/m2)', 'k-')
 
 
 def plotTimeSeries(GlobRes,FigName,name,Location,TimeSerieList,SimNum=0):
@@ -175,11 +175,20 @@ if __name__ == '__main__' :
     extraVar=['height','StoreyHeigth','nbfloor','BlocHeight','BlocFootprintArea','BlocNbFloor','HeatedArea','NonHeatedArea','OutdoorSite']
     Names4Plots = [CaseName] #because we can have several path for several studies we want to overplot.
     mainpath = os.path.dirname(os.path.dirname(os.getcwd()))
-    path = [mainpath + os.path.normcase('/MUBES_SimResults/'+CaseName+'/Sim_Results')]
+    if os.path.exists(mainpath + os.path.normcase('/MUBES_SimResults/'+CaseName+'/Sim_Results')):
+        path = [mainpath + os.path.normcase('/MUBES_SimResults/'+CaseName+'/Sim_Results')]
+    else:
+        path = []
+        Names4Plots = []
+        liste = os.listdir(mainpath + os.path.normcase('/MUBES_SimResults/'+CaseName))
+        for folder in liste:
+            path.append(mainpath + os.path.normcase('/MUBES_SimResults/'+CaseName+'/'+folder+'/Sim_Results'))
+            Names4Plots.append(CaseName+'/'+folder)
 
     Res = {}
     TimeSerieList=[]
-    for id, curPath in enumerate(path):
+    id =0
+    for idx, curPath in enumerate(path):
         Res[id] = Utilities.GetData(curPath,extraVar)
         #lets grab the time series name (the chossen ouputs from EP).
         # /!\ the data are taken from the building number 0, thus if for example not an office type, the will be no occupant. Choose another building if needed
@@ -188,6 +197,7 @@ if __name__ == '__main__' :
             for key in Res[id]['HeatedArea'][blfRef].keys():
                 if type(Res[id]['HeatedArea'][blfRef][key])==list:
                     TimeSerieList.append(key)
+        id += 1
 
     #The opening order does not follows the building simulation number while opening the data. Thus, this first graphs provides the correspondance between the other plots, building number and their simulation number
     IndexFig = Utilities.createSimpleFig()

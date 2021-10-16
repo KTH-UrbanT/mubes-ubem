@@ -173,6 +173,7 @@ def CreateBasementLeakage(idf, zone, ACH):
 def CreateInternalMass(idf,zone,FloorArea,name,Material):
     #buffering effect of internal mass, taking into account version issues from 9.1.0 and 9.4.0
     surf = 2*Material['WeightperZoneArea']*FloorArea/Material['Density']/Material['Thickness']
+    surf = 2 *  FloorArea #as used in https://www.sciencedirect.com/science/article/pii/S036013231930160X?via%3Dihub
     if idf.idd_version[1] == 1:
         idf.newidfobject(
             "INTERNALMASS",

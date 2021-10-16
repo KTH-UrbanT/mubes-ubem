@@ -85,6 +85,22 @@ def ReadGeoJsonFile(keyPath):
         Shadingsfile = checkRefCoordinates(Shadingsfile)
         return {'Build': Buildingsfile, 'Shades': Shadingsfile}
 
+def ReadGeoJsonDir(keyPath):
+    print('Reading Input dir,...')
+    BuildingFiles = []
+    ShadingWallFiles = []
+    if os.path.isdir(keyPath['Buildingsfile']):
+        FileList = os.listdir(keyPath['Buildingsfile'])
+        for nb,file in enumerate(FileList):
+            if 'Buildings' in file:
+                print('Building main input file with file nb: ' + str(nb))
+                BuildingFiles.append(file)
+                ShadingWallFiles.append(file.replace('Buildings', 'Walls'))
+
+    return BuildingFiles,ShadingWallFiles
+
+
+
 def checkRefCoordinates(GeojsonFile):
     if 'EPSG' in GeojsonFile.crs['properties']['name']:
         return GeojsonFile
@@ -106,6 +122,37 @@ def checkRefCoordinates(GeojsonFile):
 def ComputeDistance(v1,v2):
     return ((v2[0]-v1[0])**2+(v2[1]-v1[1])**2)**0.5
 
+def MakeAbsoluteCoord(idf,building):
+    # we need to convert change the reference coordinate because precision is needed for boundary conditions definition:
+    newfoot = []
+    for foot in building.footprint:
+        newfoot.append([(node[0] + building.RefCoord[0], node[1] + building.RefCoord[1]) for node in foot])
+    building.footprint = newfoot
+    for shade in building.shades.keys():
+        newcoord = [(node[0] + building.RefCoord[0], node[1] + building.RefCoord[1]) for node in
+                    building.shades[shade]['Vertex']]
+        building.shades[shade]['Vertex'] = newcoord
+    newwalls = []
+    for Wall in building.AdjacentWalls:
+        newcoord = [(node[0] - building.RefCoord[0], node[1] - building.RefCoord[1]) for node in Wall['geometries']]
+        Wall['geometries'] = newcoord
+    surfaces = idf.getsurfaces() + idf.getshadingsurfaces() + idf.getsubsurfaces()
+    for surf in surfaces:
+        for i,node in enumerate(surf.coords):
+            try:
+                x,y,z = node[0], node[1], node[2]
+                varx = 'Vertex_' + str(i+1) + '_Xcoordinate'
+                vary = 'Vertex_' + str(i+1) + '_Ycoordinate'
+                varz = 'Vertex_' + str(i+1) + '_Zcoordinate'
+                setattr(surf, varx, x + building.RefCoord[0])
+                setattr(surf, vary, y + building.RefCoord[1])
+                setattr(surf, varz, z)
+            except:
+                a=1
+    return idf,building
+
+
+
 def SaveCase(MainPath,SepThreads,CaseName,nbBuild):
     SaveDir = os.path.join(os.path.dirname(os.path.dirname(MainPath)), 'SimResults')
     if not os.path.exists(SaveDir):
@@ -126,7 +173,7 @@ def SaveCase(MainPath,SepThreads,CaseName,nbBuild):
         except:
             pass
 
-def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,Refresh = False):
+def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,MultipleFile = '',Refresh = False):
     if not os.path.exists(os.path.join(os.path.dirname(os.path.dirname(CurrentPath)),'MUBES_SimResults')):
         os.mkdir(os.path.join(os.path.dirname(os.path.dirname(CurrentPath)),'MUBES_SimResults'))
     SimDir = os.path.normcase(
@@ -139,6 +186,14 @@ def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,Refresh = False):
     if SepThreads:
         SimDir = os.path.normcase(
             os.path.join(SimDir, 'Build_' + str(nbBuild)))
+        if not os.path.exists(SimDir):
+            os.mkdir(SimDir)
+        elif idx == 0 and Refresh:
+            shutil.rmtree(SimDir)
+            os.mkdir(SimDir)
+    if len(MultipleFile)> 0 :
+        SimDir = os.path.normcase(
+            os.path.join(SimDir, MultipleFile))
         if not os.path.exists(SimDir):
             os.mkdir(SimDir)
         elif idx == 0 and Refresh:

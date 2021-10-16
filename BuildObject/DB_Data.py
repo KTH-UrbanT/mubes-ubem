@@ -5,7 +5,7 @@ SimuData = \
     'Begin_Month' : 1,
     'End_Day_of_Month' : 31,
     'End_Month' : 12,
-    'SaveLogFiles' : True, #if True, computing folder is not removed thus all energyplus outpus files are preserved
+    'SaveLogFiles' : False, #if True, computing folder is not removed thus all energyplus outpus files are preserved
     #'FloorZoningLevel' : True,  #1 zone per floor, if False --> 1 zone per building bloc
  }
 
@@ -81,16 +81,16 @@ BaseMaterial = \
 #the mass gives a volume thanks to the density that gives a surface thanks to the average thickness
 InternalMass = \
  {'HeatedZoneIntMass' : {
-        'Thickness' : 0.1, #m this will define the surface in contact with the zone
-        'Conductivity' : 0.3,
+        'Thickness' : 0.15, #m this will define the surface in contact with the zone
+        'Conductivity' : 0.12,
         'Roughness' : "Rough",
         'Density' : 600,
         'Specific_Heat' : 1400,
         'WeightperZoneArea' : 40, #kg/m2
     },
 'NonHeatedZoneIntMass' : {
-        'Thickness' : 0.1, #m this will define the surface in contact with the zone
-        'Conductivity' : 0.3,
+        'Thickness' : 0.15, #m this will define the surface in contact with the zone
+        'Conductivity' : 0.12,
         'Roughness' : "Rough",
         'Density' : 600,
         'Specific_Heat' : 1400,
@@ -100,15 +100,15 @@ InternalMass = \
 
 #this dict give element for the Domestic Hot water. it gives the externail file for the water taps and the inlet cold water temp.
 #if empty it is no longer taken into account. if new file are given, thses should be present in the Externael file folder
-# ExtraEnergy = \
-#         {}          #if no DomesticHot Water is to be consdered, it still needs an empty dict
 ExtraEnergy = \
-    {'Name' : 'DHW',
-            'WatertapsFile':'ExternalFiles/mDHW_Sum_over_40.txt', #this file is in l/mnin and will be converted into m3/s afertward. it needs to have hourly values
-            'ColdWaterTempFile' :'ExternalFiles/ColdWaterTemp.txt',
-            'HotWaterSetTemp': 55,
-            'WaterTapsMultiplier':1e-4/6/40, #this is because the file given above is for 40 apartment and is in l/min where we need m3/s. in the code in is afterward multiplied by the number of apartement in the building
-            }
+        {}          #if no DomesticHot Water is to be consdered, it still needs an empty dict
+# ExtraEnergy = \
+#     {'Name' : 'DHW',
+#             'WatertapsFile':'ExternalFiles/mDHW_Sum_over_40.txt', #this file is in l/mnin and will be converted into m3/s afertward. it needs to have hourly values
+#             'ColdWaterTempFile' :'ExternalFiles/ColdWaterTemp.txt',
+#             'HotWaterSetTemp': 55,
+#             'WaterTapsMultiplier':1e-4/6/40, #this is because the file given above is for 40 apartment and is in l/min where we need m3/s. in the code in is afterward multiplied by the number of apartement in the building
+#             }
 
 #this dict is for the shading paradigm. There are two files that we need. the firt one is the main geojson that contains all buildings and their propreties
 #the other one contains for each shading surface id the vertex point and the building Id in order to catch the height of it.
@@ -118,7 +118,7 @@ GeomElement = \
   'ShadingIdKey' : 'vaggid',
   'BuildingIdKey' : 'byggnadsid',
   'VertexKey':'geometries',
-  'MaxShadingDist': 200,
+  'MaxShadingDist': 10,
   }
 #this dict gives information on occupancy times each day. If DCV = True, the airflow will follow the number of person
 # and the schedule. if not it will be based only on the extra airflow rate but without schedule (all the time)
@@ -141,11 +141,11 @@ BasisElement = \
  'OffOccRandom' : False,
  'AreaBasedFlowRate' : 0.35,    #l/s/m2
  'AreaBasedFlowRateDefault' : 0.35, #l/s/m2 This will not be changed by EPCs and is needed if EPCs report only the balcned ventilation flow with HR for building that have 2 system and one wihtout recovery.
- 'setTempUpL' : [25,25],        #only one have to be defined for none temperature modulation
- 'setTempLoL' : [21,21],        #only one have to be defined for none temperature modulation
+ 'setTempUpL' : [30,30],        #only one have to be defined for none temperature modulation
+ 'setTempLoL' : [20,20],        #only one have to be defined for none temperature modulation
  'ComfortTempOff' :'23:00',     #hours at wich the first temperature set point is considered
  'ComfortTempOn': '06:00',      #hours at wich the second temperature set point is considered
- 'ACH_freecool' :4,             #this the the vol/hr of extra ventilation when free cooling is on
+ 'ACH_freecool' :0,             #this the the vol/hr of extra ventilation when free cooling is on
  'intT_freecool' : 26,          #internal temperature threshold for free coolong (opening windows with fixed ACH)
  'dT_freeCool': 1,              #Tint-Text to authorize free cooling to be turned on
  'AirRecovEff' : 0.65,          #efficiency if heat is recovered from ventilation

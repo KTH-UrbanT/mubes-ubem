@@ -66,8 +66,18 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
                     pass
                 return print('Sorry, but this building cannot have Perim/Core option..it failed with perim below 0.75m')
 
+    # the shading walls around the building are created with the function below
+    # these are used in the function that defines the boundary conditions
+    createShadings(building, idf)
     #this function enable to create all the boundary conditions for all surfaces
-    idf.intersect_match()
+    try:
+        idf.intersect_match()
+        #defineAdjacencies(idf,building)
+    except:
+        LogFile.write('[ERROR - Boundary] function intersect_match() failed....\n')
+        print('[ERROR - Boundary] function intersect_match() failed....')
+        #this is to generate an erro as it'shandles elswhere
+        int('process failded')
 
     # this last function on the Geometry is here to split the non convex surfaces
     # if not, some warning are appended because of shading computation.
@@ -83,6 +93,32 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
         print('The Split2convex function failed for this building....')
         pass
 
+def defineAdjacencies(idf,building):
+    # this function was suppose to deal with adiabatic conditions in case of adjacent shadowing element, buyt finaly
+    # this paradigm is already embedded in geomeppy and int intersect_match() function
+    surfaces = idf.getsurfaces()
+    for surf in surfaces:
+        if surf.Surface_Type == 'wall' and surf.Outside_Boundary_Condition =='outdoors':
+            # fig = plt.figure()
+            # ax = plt.axes(projection="3d")
+            # x,y,z = zip(*surf.coords)
+            # plt.plot(x,y,z)
+            if surf.Name == 'Block Build0 Storey 0 Wall 0005':
+                a=1
+            for wall in building.AdjacentWalls:
+                surfshade = [(wall['geometries'][0][0], wall['geometries'][0][1], 0.0), (wall['geometries'][1][0], wall['geometries'][1][1], 0.0),
+                             (wall['geometries'][1][0], wall['geometries'][1][1], wall['height']), (wall['geometries'][0][0], wall['geometries'][0][1], wall['height'])]
+                # x, y, z = zip(*surfshade)
+                # plt.plot(x, y, z)
+                #Block Build0 Storey 1 Wall 0001'
+                if Polygon(surfshade).intersects(Polygon(surf.coords)) or Polygon(surf.coords).intersects(Polygon(surfshade)):
+                    a=1
+                # if wall[0][0] in x and wall[1][0] in x and wall[0][1] in y and wall[1][1] in y:
+                #     surf.Outside_Boundary_Condition = 'Adiabatic'
+                #     surf.Sun_Exposure = 'NoSun'
+                #     surf.Wind_Exposure = 'NoWind'
+
+
 def createRapidGeomElem(idf,building):
     #envelop can be created now and allocated to the correct surfaces
     createEnvelope(idf, building)
@@ -95,21 +131,21 @@ def createRapidGeomElem(idf,building):
     createAirwallsCstr(idf)
 
     #the shading walls around the building are created with the function below
-    createShadings(building, idf)
+    #createShadings(building, idf)
 
     return idf
 
 def createShadings(building,idf):
     for ii,sh in enumerate(building.shades):
             idf.add_shading_block(
-                name='Shading'+str(ii),
+                name='Shading_'+sh,
                 coordinates=building.shades[sh]['Vertex'], #[GeomElement['VertexKey']],
                 height=building.shades[sh]['height'],
                 )
             #Because adding a shading bloc creates two identical surfaces, lets remove one to avoid too big input files
             newshade = idf.idfobjects["SHADING:SITE:DETAILED"]
             for i in newshade:
-                if i.Name in ('Shading'+str(ii)+'_2'):
+                if i.Name in ('Shading_'+sh+'_2'):
                     idf.removeidfobject(i)
     return idf
 
