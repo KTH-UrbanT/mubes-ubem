@@ -127,7 +127,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
     GrlFct.setEnvelopeLevel(idf, building)
 
     #uncomment only to have a look at the splitting surfaces function effect. it will make a figure for each building created
-    idf.view_model(test=True, FigCenter=(0,0))
+    #idf.view_model(test=True, FigCenter=(0,0))
 
     # lets define the zone level now
     GrlFct.setZoneLevel(idf, building,FloorZoning)

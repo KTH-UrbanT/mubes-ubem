@@ -50,8 +50,8 @@ def LaunchProcess(SimDir, DataBaseInput, LogFile, bldidx, keyPath, nbcase, CoreP
 
     if not PlotBuilding:
         building_ref.MaxShadingDist = 0
-        building_ref.shades = building_ref.getshade(DataBaseInput['Build'][nbcase], DataBaseInput['Shades'],
-                                                    DataBaseInput['Build'], DB_Data.GeomElement, [])#LogFile)
+        # building_ref.shades = building_ref.getshade(DataBaseInput['Build'][nbcase], DataBaseInput['Shades'],
+        #                                             DataBaseInput['Build'], DB_Data.GeomElement, [])#LogFile)
     GrlFct.setBuildingLevel(idf_ref, building_ref, LogFile, CorePerim, FloorZoning, ForPlots=True)
     GrlFct.setEnvelopeLevel(idf_ref, building_ref)
     FigCentroid = building_ref.RefCoord if PlotBuilding else (refx, refy)
@@ -116,10 +116,10 @@ if __name__ == '__main__':
             GlobKey[-1]['Buildingsfile'] = os.path.join(MainRootPath, file)
             GlobKey[-1]['Shadingsfile'] = os.path.join(MainRootPath, WallFiles[nb+1])
 
-    GlobKey = [GlobKey[9]]
+    #GlobKey = [GlobKey[10]]
     for nbfile, keyPath in enumerate(GlobKey):
         nb = len(GlobKey)
-        print('File number : '+str(nbfile) + 'which correspond to Area Ref : '+BuildingFiles[nbfile][:-18])
+        print('File number : '+str(nbfile) + ' which correspond to Area Ref : '+BuildingFiles[nbfile][:-18])
         DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
         BuildNum2Launch = [i for i in range(len(DataBaseInput['Build']))]
         if BuildNum:
@@ -140,7 +140,10 @@ if __name__ == '__main__':
                 CurrentPath = os.getcwd()
                 WindSize = 50
                 SimDir = CurrentPath
-                LogFile = open(os.path.join(SimDir, 'PlotBuilder_Logs' + str(nb) + '.log'), 'w')
+                LogFile = open(os.path.join(SimDir, CaseName+'_Logs' + str(nb) + '.log'), 'w')
+            msg = '[New AREA] A new goejson file is open, Area Id : '+BuildingFiles[nbfile][:-18]+'\n'
+            print(msg[:-1])
+            GrlFct.Write2LogFile(msg, LogFile)
             for idx, nbBuild in enumerate(BuildNum2Launch):
                 if idx < len(DataBaseInput['Build']):
                     # getting through the mainfunction above :LaunchProcess() each building sees its idf done in a row within this function
@@ -161,7 +164,7 @@ if __name__ == '__main__':
                     break
             if not multipleFiles:
                 LogFile.close()
-        plt.show()
+    plt.show()
     if multipleFiles:
         LogFile.close()
     sys.path.remove(path2addgeom)

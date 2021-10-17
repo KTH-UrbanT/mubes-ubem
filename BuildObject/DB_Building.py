@@ -545,39 +545,48 @@ class Building:
             ShadeWall = findWallId(wallId, Shadingsfile, ref, GE)
             if not 'height' in ShadeWall.keys():
                 ShadeWall['height'] = findBuildId(ShadeWall[GE['BuildingIdKey']], Buildingsfile,GE)
-            meanPx = (ShadeWall[GE['VertexKey']][0][0] + ShadeWall[GE['VertexKey']][1][0])/2
-            meanPy = (ShadeWall[GE['VertexKey']][0][1] + ShadeWall[GE['VertexKey']][1][1])/2
             coordx = []
             coordy = []
             for j in self.footprint:
                 for i in j:
-                    coordx.append(i[0])
-                    coordy.append(i[1])
+                    coordx.append(i[0]-self.RefCoord[0])
+                    coordy.append(i[1]-self.RefCoord[1])
             AgregFootprint= []
             for i in range(len(coordx)):
                 AgregFootprint.append((coordx[i],coordy[i]))
-
+            currentShadingElement = [(node[0]-self.RefCoord[0],node[1]-self.RefCoord[1]) for node in ShadeWall[GE['VertexKey']]]
+            meanPx = (currentShadingElement[0][0] + currentShadingElement[1][0]) / 2
+            meanPy = (currentShadingElement[0][1] + currentShadingElement[1][1]) / 2
+            edgelength = LineString(currentShadingElement).length
+            if edgelength<2:
+                msg = '[Shading Info] This one is dropped, less than 2m wide ('+str(edgelength)+'m), shading Id : '+ ShadeWall[GE['ShadingIdKey']] +'\n'
+                GrlFct.Write2LogFile(msg, LogFile)
+                print(msg[:-1])
+                continue
             if ShadeWall[GE['ShadingIdKey']] =='V59899-1':
                 a=1
-            confirmed,ShadeWall[GE['VertexKey']],OverlapCode = checkShadeWithFootprint(AgregFootprint,ShadeWall[GE['VertexKey']])
+            confirmed,currentShadingElement,OverlapCode = checkShadeWithFootprint(AgregFootprint,currentShadingElement)
             if confirmed:
-                print(OverlapCode)
-                if OverlapCode in [3]:
-                    import matplotlib.pyplot as plt
-                    plt.figure()
-                    x, y = zip(*AgregFootprint)
-                    plt.plot(x, y,'x-')
-                    plt.plot(ShadeWall[GE['VertexKey']][0][0],ShadeWall[GE['VertexKey']][0][1],'s')
-                    plt.plot(ShadeWall[GE['VertexKey']][1][0], ShadeWall[GE['VertexKey']][1][1], 's')
-                print('[Adjacent Wall] This Shading wall is an adjacent building wall, shading Id : '+ ShadeWall[GE['ShadingIdKey']])
+                #print(OverlapCode)
                 if ShadeWall['height']<max(self.BlocHeight):
                     ShadeWall['height'] = 3*round(ShadeWall['height'] / 3) #max(self.BlocHeight)#
                 self.AdjacentWalls.append(ShadeWall)
                 shades[wallId] = {}
-                shades[wallId]['Vertex'] = ShadeWall[GE['VertexKey']]
+                shades[wallId]['Vertex'] = [(node[0]+self.RefCoord[0],node[1]+self.RefCoord[1]) for node in currentShadingElement]
                 shades[wallId]['height'] = ShadeWall['height']
-                msg = '[Adjacent Wall] This Shading wall is considered as adjacent, shading Id : ' + ShadeWall[
+                shades[wallId]['distance'] = 0
+                if OverlapCode == 3:
+                    shades[wallId]['height'] = max(self.BlocHeight)
+                    msg = '[Adjacent Wall Warning] This Shading wall is of overlap code 3, its height is raised to the building height, shading Id : ' + \
+                          ShadeWall[GE['ShadingIdKey']] + '\n'
+                elif OverlapCode in [1,2]:
+                    shades[wallId]['height'] = max(self.BlocHeight)
+                    msg = '[Adjacent Wall Warning] This Shading wall is of overlap code 1 or 2, partial overlap with one common vertex, currently corrected by raising its height, shading Id : ' + \
+                          ShadeWall[GE['ShadingIdKey']] + '\n'
+                else:
+                    msg = '[Adjacent Wall] This Shading wall is considered as adjacent, shading Id : ' + ShadeWall[
                     GE['ShadingIdKey']] + '\n'
+                print(msg[:-1])
                 GrlFct.Write2LogFile(msg, LogFile)
                 continue
                 # if not pt1 or not pt2:
@@ -594,25 +603,30 @@ class Building:
             Meancoordx = sum(coordx) / len(coordx)
             Meancoordy = sum(coordy) / len(coordx)
             dist = (abs(meanPx - Meancoordx) ** 2 + abs(meanPy - Meancoordy) ** 2) ** 0.5
-            # # shading facade are taken into account only of closer than MaxShadingDist
-            if dist <= self.MaxShadingDist:
-            # new methods using the point distance to the polygon
-            #if Point(ShadeMidCoord).distance(Polygon(AgregFootprint))  <= self.MaxShadingDist:
-                try:
-                    float(ShadeWall['height'])
-                except:
-                    ShadeWall['height'] = max(self.BlocHeight)#self.height
-                keepit = True
-                test = Polygon2D(ShadeWall[GE['VertexKey']]).edges_length
-                # if test[0]<0.1:
-                #     keepit = False
-                #     msg = '[Shading Removed] This Shading wall is shorter than 0.1m, shading Id : ' +ShadeWall[GE['ShadingIdKey']] + '\n'
-                #     GrlFct.Write2LogFile(msg, LogFile)
-                #     print('Avoid one shade : '+ ShadeWall[GE['ShadingIdKey']])
-                if keepit:
-                    shades[wallId] = {}
-                    shades[wallId]['Vertex'] = ShadeWall[GE['VertexKey']]
-                    shades[wallId]['height'] = ShadeWall['height']
+            shades[wallId] = {}
+            shades[wallId]['Vertex'] = ShadeWall[GE['VertexKey']]
+            shades[wallId]['height'] = ShadeWall['height']
+            shades[wallId]['distance'] = dist
+            # # # shading facade are taken into account only of closer than MaxShadingDist
+            # if dist <= 10000000:#self.MaxShadingDist:
+            # # new methods using the point distance to the polygon
+            # #if Point(ShadeMidCoord).distance(Polygon(AgregFootprint))  <= self.MaxShadingDist:
+            #     try:
+            #         float(ShadeWall['height'])
+            #     except:
+            #         ShadeWall['height'] = max(self.BlocHeight)#self.height
+            #     keepit = True
+            #     test = Polygon2D(ShadeWall[GE['VertexKey']]).edges_length
+            #     # if test[0]<0.1:
+            #     #     keepit = False
+            #     #     msg = '[Shading Removed] This Shading wall is shorter than 0.1m, shading Id : ' +ShadeWall[GE['ShadingIdKey']] + '\n'
+            #     #     GrlFct.Write2LogFile(msg, LogFile)
+            #     #     print('Avoid one shade : '+ ShadeWall[GE['ShadingIdKey']])
+            #     if keepit:
+            #         shades[wallId] = {}
+            #         shades[wallId]['Vertex'] = ShadeWall[GE['VertexKey']]
+            #         shades[wallId]['height'] = ShadeWall['height']
+            #         shades[wallId]['distance'] = dist
         return shades
 
 
@@ -722,8 +736,12 @@ def is_parallel(line1, line2):
     vector_b_y = line2[1][1] - line2[0][1]
     slope1 = vector_a_y/vector_a_x
     slope2 = vector_b_y/vector_b_x
+    import numpy as np
+    v = np.array([vector_a_x,vector_a_y])
+    w = np.array([vector_b_x,vector_b_y])
+    angledeg = abs(np.rad2deg(np.arccos(round(v.dot(w) / (np.linalg.norm(v) * np.linalg.norm(w)),4))))
     slopediff = abs((slope1 - slope2) / (slope1))
-    if slopediff < 0.05:# and slope1*slope2>0: #5%of tolerance in the slope difference
+    if angledeg <5 or abs(angledeg-180) < 5:# >slopediff < 0.05:# and slope1*slope2>0: #5%of tolerance in the slope difference
         return True
     else:
         return False
@@ -738,6 +756,19 @@ def CoordAdjustement(edge,pt):
         coormade = True
         pt = edge[1]
     return pt,coormade
+
+def confirmShading(Edge, ShadeWall):
+    #both shade vertex are on the edge
+    dist1 = LineString(Edge).distance(Point(ShadeWall[0]))
+    dist2 = LineString(Edge).distance(Point(ShadeWall[1]))
+    if dist1 <0.1 and dist2 < 0.1:
+        return True
+    # both shade vertex are on the edge
+    dist1 = LineString(ShadeWall).distance(Point(Edge[0]))
+    dist2 = LineString(ShadeWall).distance(Point(Edge[1]))
+    if dist1 < 0.1 and dist2 < 0.1:
+        return True
+    return False
 
 
 def checkShadeWithFootprint(AgregFootprint, ShadeWall):
@@ -756,8 +787,8 @@ def checkShadeWithFootprint(AgregFootprint, ShadeWall):
     # 3 for partial overlap with no commun edge,
     if Point(ShadeMidCoord).distance(Polygon(AgregFootprint)) < 10:
         for idx, node in enumerate(AgregFootprint[:-1]):
-            dist1 = LineString([AgregFootprint[idx], AgregFootprint[idx + 1]]).distance(LineString(ShadeWall))
-            if dist1 < 0.1:
+            #dist1 = LineString([AgregFootprint[idx], AgregFootprint[idx + 1]]).distance(LineString(ShadeWall))
+            if is_parallel([AgregFootprint[idx], AgregFootprint[idx + 1]], ShadeWall):#if dist1 < 0.1:
                 #first the segment direction shall be compute for the closest point if not equal
                 Edge = [AgregFootprint[idx], AgregFootprint[idx + 1]]
                 # if LineString(Edge).distance(Point(ShadeWall[0])) < LineString(Edge).distance(Point(ShadeWall[1])):
@@ -766,7 +797,7 @@ def checkShadeWithFootprint(AgregFootprint, ShadeWall):
                 # else:
                 #     if Point(ShadeWall[1]).distance(Point(Edge[1])) > Point(ShadeWall[1]).distance(Point(Edge[0])):
                 #         ShadeWall.reverse()
-                if is_parallel(Edge, ShadeWall):
+                if confirmShading(Edge, ShadeWall):
                     OverlapCode = 3
                     confirmed = True
                     ShadeWall[0] = ComputeProjection(

@@ -137,6 +137,7 @@ def createRapidGeomElem(idf,building):
 
 def createShadings(building,idf):
     for ii,sh in enumerate(building.shades):
+        if building.shades[sh]['distance'] <= building.MaxShadingDist:
             idf.add_shading_block(
                 name='Shading_'+sh,
                 coordinates=building.shades[sh]['Vertex'], #[GeomElement['VertexKey']],

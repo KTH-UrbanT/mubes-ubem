@@ -48,7 +48,7 @@ if __name__ == '__main__' :
     for line in FileLines:
         Bld2Sim.append(int(line))
     CaseName = 'test'
-    BuildNum = [6]#Bld2Sim
+    BuildNum = []#Bld2Sim
     VarName2Change = []#['AirRecovEff', 'IntLoadCurveShape', 'wwr', 'EnvLeak', 'setTempLoL', 'AreaBasedFlowRate', 'WindowUval',
                   #'WallInsuThick', 'RoofInsuThick']
     Bounds = []#[[0.5, 0.9], [1, 5], [0.2, 0.4], [0.5, 1.6], [18, 22], [0.35, 1], [0.7, 2], [0.1, 0.3], [0.2, 0.4]]
@@ -91,7 +91,7 @@ if __name__ == '__main__' :
             GlobKey[-1]['Shadingsfile'] = os.path.join(MainRootPath, WallFiles[nb + 1])
     nbBuild = 0
     idx = 0
-    for nbfile,keyPath in enumerate([GlobKey[6]]):
+    for nbfile,keyPath in enumerate(GlobKey):
         epluspath = keyPath['epluspath']
         pythonpath = keyPath['pythonpath'] #this is needed only if processes are launch in terminal as it could be an options instead of staying in python environnement
         DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
