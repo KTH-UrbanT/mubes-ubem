@@ -61,7 +61,14 @@ def LaunchProcess(SimDir, DataBaseInput, LogFile, bldidx, keyPath, nbcase, CoreP
     for poly in building_ref.footprint:
         for vertex in poly:
             WindSize = max(GrlFct.ComputeDistance(FigCentroid, vertex), WindSize)
-    idf_ref.view_model(test=PlotBuilding, FigCenter=FigCentroid, WindSize=2 * WindSize)
+
+    surf = idf_ref.getsurfaces()
+    ok2plot = False
+    for s in surf:
+        if s.Outside_Boundary_Condition == 'adiabatic':
+            ok2plot = True
+    if ok2plot:
+        idf_ref.view_model(test=PlotBuilding, FigCenter=FigCentroid, WindSize=2 * WindSize)
 
     GrlFct.Write2LogFile('##############################################################\n', LogFile)
 
@@ -90,11 +97,11 @@ if __name__ == '__main__':
     # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
     import numpy as np
-    BuildNum = []#[int(i) for i in np.linspace(5,10,6)]#[int(i) for i in np.linspace(0,3,4)]#[40,41,42,43,44,45,46,47,48,49]##[52]#,51,52,53]#[40,41,42,43,44,45,46,47,48,49]#[30,31,32,33,34,35,36,37,38,39]#[20,21,22,23,24,25,26,27,28,29]#[10,11,12,13,14,15,16,17,18,19]#[0,1,2,3,4,5,6,7,8,9]#[50,51,52,53]#
+    BuildNum = [10]#[int(i) for i in np.linspace(5,10,6)]#[int(i) for i in np.linspace(0,3,4)]#[40,41,42,43,44,45,46,47,48,49]##[52]#,51,52,53]#[40,41,42,43,44,45,46,47,48,49]#[30,31,32,33,34,35,36,37,38,39]#[20,21,22,23,24,25,26,27,28,29]#[10,11,12,13,14,15,16,17,18,19]#[0,1,2,3,4,5,6,7,8,9]#[50,51,52,53]#
     PathInputFile = 'Sodermalm4.txt'  # 'Pathways_Template.txt'
     CorePerim = False
     FloorZoning = False
-    PlotBuilding = False
+    PlotBuilding = True
     ZoneOfInterest = ''
 
     ######################################################################################################################
@@ -116,7 +123,7 @@ if __name__ == '__main__':
             GlobKey[-1]['Buildingsfile'] = os.path.join(MainRootPath, file)
             GlobKey[-1]['Shadingsfile'] = os.path.join(MainRootPath, WallFiles[nb+1])
 
-    #GlobKey = [GlobKey[10]]
+    GlobKey = GlobKey[6:7]
     for nbfile, keyPath in enumerate(GlobKey):
         nb = len(GlobKey)
         print('File number : '+str(nbfile) + ' which correspond to Area Ref : '+BuildingFiles[nbfile][:-18])
@@ -164,7 +171,7 @@ if __name__ == '__main__':
                     break
             if not multipleFiles:
                 LogFile.close()
-    plt.show()
+        plt.show()
     if multipleFiles:
         LogFile.close()
     sys.path.remove(path2addgeom)
