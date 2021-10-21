@@ -189,15 +189,15 @@ if __name__ == '__main__' :
     TimeSerieList=[]
     id =0
     for idx, curPath in enumerate(path):
-        Res[id] = Utilities.GetData(curPath,extraVar)
+        Res[idx] = Utilities.GetData(curPath,extraVar)
         #lets grab the time series name (the chossen ouputs from EP).
         # /!\ the data are taken from the building number 0, thus if for example not an office type, the will be no occupant. Choose another building if needed
         blfRef=0
-        if id==0:
-            for key in Res[id]['HeatedArea'][blfRef].keys():
-                if type(Res[id]['HeatedArea'][blfRef][key])==list:
+        if idx==0:
+            for key in Res[idx]['HeatedArea'][blfRef].keys():
+                if type(Res[idx]['HeatedArea'][blfRef][key])==list:
                     TimeSerieList.append(key)
-        id += 1
+
 
     #The opening order does not follows the building simulation number while opening the data. Thus, this first graphs provides the correspondance between the other plots, building number and their simulation number
     IndexFig = Utilities.createSimpleFig()

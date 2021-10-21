@@ -57,18 +57,21 @@ def LaunchProcess(SimDir, DataBaseInput, LogFile, bldidx, keyPath, nbcase, CoreP
     FigCentroid = building_ref.RefCoord if PlotBuilding else (refx, refy)
     #we need to transform the prvious relatve coordinates into absolute one in order to make plot of several building keeping their location
     idf_ref, building_ref = GrlFct.MakeAbsoluteCoord(idf_ref,building_ref)
+
     # compåuting the window size for visualization
     for poly in building_ref.footprint:
         for vertex in poly:
             WindSize = max(GrlFct.ComputeDistance(FigCentroid, vertex), WindSize)
+    #
+    # surf = idf_ref.getsurfaces()
+    # ok2plot = False
+    # for s in surf:
+    #     if s.Outside_Boundary_Condition == 'adiabatic':
+    #         ok2plot = True
+    # if ok2plot:
 
-    surf = idf_ref.getsurfaces()
-    ok2plot = False
-    for s in surf:
-        if s.Outside_Boundary_Condition == 'adiabatic':
-            ok2plot = True
-    if ok2plot:
-        idf_ref.view_model(test=PlotBuilding, FigCenter=FigCentroid, WindSize=2 * WindSize)
+    print(building_ref.EPHeatedArea)
+    idf_ref.view_model(test=PlotBuilding, FigCenter=FigCentroid, WindSize=2 * WindSize)
 
     GrlFct.Write2LogFile('##############################################################\n', LogFile)
 
@@ -97,10 +100,10 @@ if __name__ == '__main__':
     # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
     import numpy as np
-    BuildNum = [10]#[int(i) for i in np.linspace(5,10,6)]#[int(i) for i in np.linspace(0,3,4)]#[40,41,42,43,44,45,46,47,48,49]##[52]#,51,52,53]#[40,41,42,43,44,45,46,47,48,49]#[30,31,32,33,34,35,36,37,38,39]#[20,21,22,23,24,25,26,27,28,29]#[10,11,12,13,14,15,16,17,18,19]#[0,1,2,3,4,5,6,7,8,9]#[50,51,52,53]#
+    BuildNum = [72]#[int(i) for i in np.linspace(5,10,6)]#[int(i) for i in np.linspace(0,3,4)]#[40,41,42,43,44,45,46,47,48,49]##[52]#,51,52,53]#[40,41,42,43,44,45,46,47,48,49]#[30,31,32,33,34,35,36,37,38,39]#[20,21,22,23,24,25,26,27,28,29]#[10,11,12,13,14,15,16,17,18,19]#[0,1,2,3,4,5,6,7,8,9]#[50,51,52,53]#
     PathInputFile = 'Sodermalm4.txt'  # 'Pathways_Template.txt'
     CorePerim = False
-    FloorZoning = False
+    FloorZoning = True
     PlotBuilding = True
     ZoneOfInterest = ''
 
@@ -123,8 +126,9 @@ if __name__ == '__main__':
             GlobKey[-1]['Buildingsfile'] = os.path.join(MainRootPath, file)
             GlobKey[-1]['Shadingsfile'] = os.path.join(MainRootPath, WallFiles[nb+1])
 
-    GlobKey = GlobKey[6:7]
     for nbfile, keyPath in enumerate(GlobKey):
+        if nbfile not in [64]:
+            continue
         nb = len(GlobKey)
         print('File number : '+str(nbfile) + ' which correspond to Area Ref : '+BuildingFiles[nbfile][:-18])
         DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
@@ -147,8 +151,8 @@ if __name__ == '__main__':
                 CurrentPath = os.getcwd()
                 WindSize = 50
                 SimDir = CurrentPath
-                LogFile = open(os.path.join(SimDir, CaseName+'_Logs' + str(nb) + '.log'), 'w')
-            msg = '[New AREA] A new goejson file is open, Area Id : '+BuildingFiles[nbfile][:-18]+'\n'
+                LogFile = open(os.path.join(SimDir, CaseName+'_Logs.log'), 'w')
+            msg = '[New AREA] A new goejson file is open (num '+str(nbfile)+'), Area Id : '+BuildingFiles[nbfile][:-18]+'\n'
             print(msg[:-1])
             GrlFct.Write2LogFile(msg, LogFile)
             for idx, nbBuild in enumerate(BuildNum2Launch):
@@ -159,7 +163,7 @@ if __name__ == '__main__':
                                                               CorePerim, FloorZoning,
                                                               FigCenter, WindSize, PlotBuilding)
                     except:
-                        msg = '[ERROR] There was an error on this building, process aborted\n'
+                        msg = '[Error] There was an error on this building, process aborted\n'
                         print(msg[:-1])
                         GrlFct.Write2LogFile(msg, LogFile)
                         GrlFct.Write2LogFile('##############################################################\n', LogFile)
@@ -171,7 +175,7 @@ if __name__ == '__main__':
                     break
             if not multipleFiles:
                 LogFile.close()
-        plt.show()
+    plt.show()
     if multipleFiles:
         LogFile.close()
     sys.path.remove(path2addgeom)

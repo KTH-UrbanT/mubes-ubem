@@ -74,8 +74,8 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
         idf.intersect_match()
         #defineAdjacencies(idf,building)
     except:
-        LogFile.write('[ERROR - Boundary] function intersect_match() failed....\n')
-        print('[ERROR - Boundary] function intersect_match() failed....')
+        LogFile.write('[Error - Boundary] function intersect_match() failed....\n')
+        print('[Error - Boundary] function intersect_match() failed....')
         #this is to generate an erro as it'shandles elswhere
         int('process failded')
 

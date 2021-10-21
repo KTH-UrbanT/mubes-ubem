@@ -94,7 +94,16 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
         # The simulation parameters are assigned here
         GrlFct.setSimLevel(idf, building)
         # The geometry is assigned here
-        GrlFct.setBuildingLevel(idf, building,LogFile,CorePerim,FloorZoning)
+        try:
+            GrlFct.setBuildingLevel(idf, building,LogFile,CorePerim,FloorZoning)
+        except:
+            msg = '[Error] The setBuildingLevel failed...\n'
+            print(msg[:-1])
+            os.chdir(MainPath)
+            if FirstRun:
+                GrlFct.Write2LogFile(msg, LogFile)
+                GrlFct.Write2LogFile('##############################################################\n', LogFile)
+                return
         # if the number of run for one building is greater than 1 it means parametric simulation, a template file will be saved
         if TotNbRun>1:
             Case = {}
@@ -124,50 +133,76 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
     GrlFct.setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shadingsfile,nbcase,DB_Data)
 
     # lets assign the material and finalize the envelope definition
-    GrlFct.setEnvelopeLevel(idf, building)
-
+    try:
+        GrlFct.setEnvelopeLevel(idf, building)
+    except:
+        msg = '[Error] The setEnvelopeLevel failed...\n'
+        print(msg[:-1])
+        os.chdir(MainPath)
+        if FirstRun:
+            GrlFct.Write2LogFile(msg, LogFile)
+            GrlFct.Write2LogFile('##############################################################\n', LogFile)
+            return
     #uncomment only to have a look at the splitting surfaces function effect. it will make a figure for each building created
     idf.view_model(test=True, FigCenter=(0,0))
 
     # lets define the zone level now
-    GrlFct.setZoneLevel(idf, building,FloorZoning)
+    try:
+        GrlFct.setZoneLevel(idf, building,FloorZoning)
+    except:
+        msg = '[Error] The setZoneLevel failed...\n'
+        print(msg[:-1])
+        os.chdir(MainPath)
+        if FirstRun:
+            GrlFct.Write2LogFile(msg, LogFile)
+            GrlFct.Write2LogFile('##############################################################\n', LogFile)
+            return
 
-    # add some extra energy loads like domestic Hot water
-    GrlFct.setExtraEnergyLoad(idf,building)
+    try:
+        # add some extra energy loads like domestic Hot water
+        GrlFct.setExtraEnergyLoad(idf,building)
 
-    #lets add the main gloval variable : Mean temperautre over the heated areas and the total building power consumption
-    #and if present, the heating needs for DHW production as heated by direct heating
-    #these are added using EMS option of EnergyPlus, and used for the FMU option
-    # but if the building has more than 50 zones, than these are not computed as is will wrtie function in the idf file
-    #could work with more than 50 zone though
-    EMSOutputs = []
-    if len(idf.idfobjects["ZONE"])<50:
-        EMSOutputs.append('Mean Heated Zones Air Temperature')
-        EMSOutputs.append('Total Building Heating Power')
-        if building.DHWInfos:
-            EMSOutputs.append('Total DHW Heating Power')
+        #lets add the main gloval variable : Mean temperautre over the heated areas and the total building power consumption
+        #and if present, the heating needs for DHW production as heated by direct heating
+        #these are added using EMS option of EnergyPlus, and used for the FMU option
+        # but if the building has more than 50 zones, than these are not computed as is will wrtie function in the idf file
+        #could work with more than 50 zone though
+        EMSOutputs = []
+        if len(idf.idfobjects["ZONE"])<50:
+            EMSOutputs.append('Mean Heated Zones Air Temperature')
+            EMSOutputs.append('Total Building Heating Power')
+            if building.DHWInfos:
+                EMSOutputs.append('Total DHW Heating Power')
 
-    # the outputs are set using the Output file
-    GrlFct.setOutputLevel(idf,building,MainPath,EMSOutputs,OutputsFile)
+        # the outputs are set using the Output file
+        GrlFct.setOutputLevel(idf,building,MainPath,EMSOutputs,OutputsFile)
 
-    #special ending process if FMU is wanted
-    if CreateFMU:
-        GrlFct.CreatFMU(idf,building,nbcase,epluspath,SimDir, currentRun,EMSOutputs,LogFile)
-    else:
-         # saving files and objects
-        idf.saveas('Building_' + str(nbcase) +  'v'+str(currentRun)+'.idf')
+        #special ending process if FMU is wanted
+        if CreateFMU:
+            GrlFct.CreatFMU(idf,building,nbcase,epluspath,SimDir, currentRun,EMSOutputs,LogFile)
+        else:
+             # saving files and objects
+            idf.saveas('Building_' + str(nbcase) +  'v'+str(currentRun)+'.idf')
 
-    #the data object is saved as needed afterward aside the Eplus results (might be not needed, to be checked)
-    with open('Building_' + str(nbcase) +  'v'+str(currentRun)+ '.pickle', 'wb') as handle:
-        pickle.dump(Case, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        #the data object is saved as needed afterward aside the Eplus results (might be not needed, to be checked)
+        with open('Building_' + str(nbcase) +  'v'+str(currentRun)+ '.pickle', 'wb') as handle:
+            pickle.dump(Case, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    msg = 'Building_' + str(nbcase)+' IDF file ' + str(currentRun+1)+ '/'  + str(TotNbRun)+ ' is done\n'
-    print(msg[:-1])
-    GrlFct.Write2LogFile('##############################################################\n', LogFile)
-    if FirstRun:
-        LogFile.close()
-    # lets get back to the Main Folder we were at the very beginning
-    os.chdir(MainPath)
+        msg = 'Building_' + str(nbcase)+' IDF file ' + str(currentRun+1)+ '/'  + str(TotNbRun)+ ' is done\n'
+        print(msg[:-1])
+        GrlFct.Write2LogFile('##############################################################\n', LogFile)
+        if FirstRun:
+            LogFile.close()
+        # lets get back to the Main Folder we were at the very beginning
+        os.chdir(MainPath)
+    except:
+        msg = '[Error] The process after the Zonelevel definition failed...\n'
+        print(msg[:-1])
+        os.chdir(MainPath)
+        if FirstRun:
+            GrlFct.Write2LogFile(msg, LogFile)
+            GrlFct.Write2LogFile('##############################################################\n', LogFile)
+            return
 
 
 if __name__ == '__main__' :

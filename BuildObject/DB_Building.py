@@ -126,6 +126,7 @@ class Building:
         self.nbBasefloor = self.getnbBasefloor(DB, DBL)
         self.height = self.getheight(DB, DBL)
         self.footprint,  self.BlocHeight, self.BlocNbFloor = self.getfootprint(DB,LogFile,self.nbfloor)
+        self.AgregFootprint = self.getAgreggatedFootprint()
         self.RefCoord = self.getRefCoord()
         self.ATemp = self.getsurface(DB, DBL,LogFile)
         self.SharedBld, self.VolumeCorRatio = self.IsSameFormularIdBuilding(Buildingsfile, nbcase, LogFile, DBL)
@@ -308,7 +309,8 @@ class Building:
             x = centroide[0][0]
             y = centroide[0][1]
         #ref = (round(x,8), round(y,8))
-        ref = (x, y) #there might be not a true need for suche precision....
+        offset = ((2*Polygon(self.AgregFootprint).area)**0.5)/8
+        ref = (x-offset, y-offset) #there might be not a true need for suche precision....
         return ref
 
     def getfootprint(self,DB,LogFile=[],nbfloor=0):
@@ -398,6 +400,15 @@ class Building:
             BlocNbFloor.append(nbfloor)
             BlocHeight.append(self.height)
             coord= [coord]
+        #before submitting the full coordinates, we need to check correspondance in case of multibloc
+        coord, validFootprint = CheckMultiBlocFootprint(coord,tol = 0.5)
+        if not validFootprint:
+            msg = '[Poly Error] The different bloc are not adjacent...\n'
+            print(msg[:-1])
+            GrlFct.Write2LogFile(msg, LogFile)
+            return
+        # multiblocshould share at least one edge and not a polygon as bld:a3848e24-d29e-44bc-a395-a25b5fd26598 if area : 0180C3170 of Sodermalm_V4
+        #coord = checkMultiBloc(coord)
         return coord, BlocHeight, BlocNbFloor
 
     def EvenFloorCorrection(self,BlocHeight,nbfloor,BlocNbFloor,coord,LogFile):
@@ -522,6 +533,25 @@ class Building:
         height = checkLim(height,DBL['height_lim'][0],DBL['height_lim'][1])
         return height
 
+    def getAgreggatedFootprint(self):
+        # lets compute the aggregaded external footprint of the different blocs
+        # starting with the first one
+        AgregFootprint = self.footprint[0]
+        RemainingBlocs = self.footprint[1:]
+        idx = 0
+        while RemainingBlocs:
+            Intersectionline = Polygon(AgregFootprint).intersection(Polygon(RemainingBlocs[idx]))
+            if Intersectionline and type(Intersectionline) != Point:
+                AgregFootprint = list(Polygon(AgregFootprint).union(Polygon(RemainingBlocs[idx])).exterior.coords)
+                RemainingBlocs.remove(RemainingBlocs[idx])
+                idx = 0
+            else:
+                idx += 1
+        # in order to close the loop if not already done
+        if AgregFootprint[0] != AgregFootprint[-1]:
+            AgregFootprint.append(AgregFootprint[0])
+        return AgregFootprint
+
     def getshade(self, DB,Shadingsfile,Buildingsfile,GE,LogFile,PlotOnly = True):
         "Get all the shading surfaces to be build for surrounding building effect"
         shades = {}
@@ -530,25 +560,11 @@ class Building:
         except:
             return shades
         ModifiedShadeVertexes ={'ShadeId' : [], 'OldCoord': [], 'NewCoord' : []} #this dict will log the changes in the vertex coordinate to adjust other shading if necesseray afterward
-        # lets compute the aggregaded external footprint of the different blocs
-        # starting with the first one
-        AgregFootprint = self.footprint[0]
-        RemainingBlocs = self.footprint[1:]
-        idx = 0
-        while RemainingBlocs:
-            Intersectionline = Polygon(AgregFootprint).intersection(Polygon(RemainingBlocs[idx]))
-            if Intersectionline:
-                AgregFootprint = list(Polygon(AgregFootprint).union(Polygon(RemainingBlocs[idx])).exterior.coords)
-                RemainingBlocs.remove(RemainingBlocs[idx])
-                idx = 0
-            else:
-                idx += 1
-        AgregFootprint = [(node[0] - self.RefCoord[0], node[1] - self.RefCoord[1]) for node in AgregFootprint]
-        Meancoordx = list(Polygon(AgregFootprint).centroid.coords)[0][0]
-        Meancoordy = list(Polygon(AgregFootprint).centroid.coords)[0][1]
-        # in order to close the loop if not already done
-        if AgregFootprint[0] != AgregFootprint[-1]:
-            AgregFootprint.append(AgregFootprint[0])
+
+        RelativeAgregFootprint = [(node[0] - self.RefCoord[0], node[1] - self.RefCoord[1]) for node in self.AgregFootprint]
+        Meancoordx = list(Polygon(RelativeAgregFootprint).centroid.coords)[0][0]
+        Meancoordy = list(Polygon(RelativeAgregFootprint).centroid.coords)[0][1]
+
 
         currentRef = self.getRefCoord()
         ref = (0, 0) if currentRef==self.RefCoord else self.RefCoord
@@ -567,15 +583,20 @@ class Building:
             meanPx = (currentShadingElement[0][0] + currentShadingElement[1][0]) / 2
             meanPy = (currentShadingElement[0][1] + currentShadingElement[1][1]) / 2
             edgelength = LineString(currentShadingElement).length
+            if ShadeWall[GE['ShadingIdKey']] == 'V54335-2':
+                a=1
             if edgelength<2:
                 msg = '[Shading Info] This one is dropped, less than 2m wide ('+str(round(edgelength,2))+'m), shading Id : '+ ShadeWall[GE['ShadingIdKey']] +'\n'
                 GrlFct.Write2LogFile(msg, LogFile)
                 print(msg[:-1])
                 continue
-            confirmed,currentShadingElement,OverlapCode = checkShadeWithFootprint(AgregFootprint,currentShadingElement,ShadeWall[GE['ShadingIdKey']])
+            if ShadeWall[GE['ShadingIdKey']] =='V67656-3':
+                a=1
+            confirmed,currentShadingElement,OverlapCode = checkShadeWithFootprint(RelativeAgregFootprint,currentShadingElement,ShadeWall[GE['ShadingIdKey']])
             if confirmed:
-                if ShadeWall['height']<max(self.BlocHeight):
-                    ShadeWall['height'] = 3*round(ShadeWall['height'] / 3) #max(self.BlocHeight)#
+                if ShadeWall['height']<=(max(self.BlocHeight)+self.StoreyHeigth):
+                    OverlapCode +=1
+                    ShadeWall['height'] = self.StoreyHeigth*round(ShadeWall['height'] / self.StoreyHeigth) #max(self.BlocHeight)#
                 self.AdjacentWalls.append(ShadeWall)
                 shades[wallId] = {}
                 shades[wallId]['Vertex'] = [(node[0]+self.RefCoord[0],node[1]+self.RefCoord[1]) for node in currentShadingElement]
@@ -592,7 +613,7 @@ class Building:
             dist = (abs(meanPx - Meancoordx) ** 2 + abs(meanPy - Meancoordy) ** 2) ** 0.5
             shades[wallId] = {}
             shades[wallId]['Vertex'] = ShadeWall[GE['VertexKey']]
-            shades[wallId]['height'] = ShadeWall['height']
+            shades[wallId]['height'] = round(ShadeWall['height'],2)
             shades[wallId]['distance'] = dist
         return shades
 
@@ -683,6 +704,27 @@ class Building:
                 GrlFct.Write2LogFile(msg, LogFile)
         return IntLoad
 
+def CheckMultiBlocFootprint(blocs,tol =1):
+    validMultibloc = True
+    if len(blocs)>1:
+        import itertools
+        validMultibloc = False
+        for bloc1,bloc2 in itertools.product(blocs,repeat = 2):
+            if bloc1 != bloc2:
+                for ptidx,pt in enumerate(bloc1):
+                    edge = [bloc1[ptidx],bloc1[(ptidx+1)%len(bloc1)]]
+                    for ptidx1,pt1 in enumerate(bloc2):
+                        edge1 = [bloc2[ptidx1], bloc2[(ptidx1+1)%len(bloc2)]]
+                        if is_parallel(edge,edge1) and confirmMatch(edge, edge1, tol):
+                            validMultibloc = True
+                            if LineString(edge1).distance(Point(edge[0])) < tol:
+                                edge[0] = point_on_line(edge1[0], edge1[1],edge[0])
+                            if LineString(edge1).distance(Point(edge[1])) < tol:
+                                edge[1] = point_on_line(edge1[0], edge1[1],edge[1])
+                    bloc1[ptidx] = edge[0]
+                    bloc1[(ptidx + 1) % len(bloc1)] = edge[1]
+    return blocs,validMultibloc
+
 
 def point_on_line(a, b, p):
     import numpy as np
@@ -694,50 +736,56 @@ def point_on_line(a, b, p):
     result = a + np.dot(ap, ab) / np.dot(ab, ab) * ab
     return tuple(result)
 
-
 def is_parallel(line1, line2):
     vector_a_x = line1[1][0] - line1[0][0]
     vector_a_y = line1[1][1] - line1[0][1]
     vector_b_x = line2[1][0] - line2[0][0]
     vector_b_y = line2[1][1] - line2[0][1]
-    slope1 = vector_a_y/vector_a_x
-    slope2 = vector_b_y/vector_b_x
     import numpy as np
     v = np.array([vector_a_x,vector_a_y])
     w = np.array([vector_b_x,vector_b_y])
     angledeg = abs(np.rad2deg(np.arccos(round(v.dot(w) / (np.linalg.norm(v) * np.linalg.norm(w)),4))))
-    slopediff = abs((slope1 - slope2) / (slope1))
-    if angledeg <5 or abs(angledeg-180) < 5:# >slopediff < 0.05:# and slope1*slope2>0: #5%of tolerance in the slope difference
+    if angledeg <5 or abs(angledeg-180) < 5:
         return True
     else:
         return False
 
-def CoordAdjustement(edge,pt):
+def CoordAdjustement(edge,pt,tol):
     #if one point is closest than 1 m of on edge point, the point is moved to the edge's point
     coormade = False
-    if Point(pt).distance(Point(edge[0])) < 1:
+    if Point(pt).distance(Point(edge[0])) < tol:
         coormade = True
         pt = edge[0]
-    elif Point(pt).distance(Point(edge[1])) < 1:
+    elif Point(pt).distance(Point(edge[1])) < tol:
         coormade = True
         pt = edge[1]
     return pt,coormade
 
-def confirmShading(Edge, ShadeWall,tol):
+def confirmMatch(Edge, Edge1,tol):
+    #this should be enough if both edges are already checked being //
+    dist1 = min(LineString(Edge).distance(Point(Edge1[0])),LineString(Edge).distance(Point(Edge1[1])))
+    dist2 = min(LineString(Edge1).distance(Point(Edge[0])), LineString(Edge1).distance(Point(Edge[1])))
+    if dist1 <tol or dist2 < tol:
+        #we want to avoid cases with exactly the same vertexes (shading going from the building edge to the outside)
+        checkNode = [CoordAdjustement(Edge,Edge1[0],1),CoordAdjustement(Edge,Edge1[1],1) or CoordAdjustement(Edge1,Edge[0],1) or CoordAdjustement(Edge1,Edge[1],1)]
+        if True not in [val[1] for val in checkNode]:
+            return True
     #both shade vertex are on the edge
-    dist1 = LineString(Edge).distance(Point(ShadeWall[0]))
-    dist2 = LineString(Edge).distance(Point(ShadeWall[1]))
+    dist1 = LineString(Edge).distance(Point(Edge1[0]))
+    dist2 = LineString(Edge).distance(Point(Edge1[1]))
     if dist1 <tol and dist2 < tol:
         return True
     # both shade vertex are on the edge
-    dist1 = LineString(ShadeWall).distance(Point(Edge[0]))
-    dist2 = LineString(ShadeWall).distance(Point(Edge[1]))
+    dist1 = LineString(Edge1).distance(Point(Edge[0]))
+    dist2 = LineString(Edge1).distance(Point(Edge[1]))
     if dist1 < tol and dist2 < tol:
         return True
     return False
 
 
 def checkShadeWithFootprint(AgregFootprint, ShadeWall,ShadeId):
+    if ShadeId == 'V69467-8':
+        a=1
     # check if some shadingssurfaces are too close to the building
     # we consider the middle coordinate point fo the shading surface
     # if less than 1m than lets consider that the boundary conditions should be adiabatique instead of outdoor conditions (adjacent buildings)
@@ -757,24 +805,17 @@ def checkShadeWithFootprint(AgregFootprint, ShadeWall,ShadeId):
             if is_parallel([AgregFootprint[idx], AgregFootprint[idx + 1]], ShadeWall):#if dist1 < 0.1:
                 #first the segment direction shall be compute for the closest point if not equal
                 Edge = [AgregFootprint[idx], AgregFootprint[idx + 1]]
-                if confirmShading(Edge, ShadeWall,2):
-                    OverlapCode = 3
+                if confirmMatch(Edge, ShadeWall,1): #the tolerance is between points and edge (either from the footprint or the
+                    OverlapCode = 4
                     confirmed = True
                     ShadeWall[0] = point_on_line(Edge[0], Edge[1],ShadeWall[0])
-                    ShadeWall[0],CoorPt1 = CoordAdjustement(Edge, ShadeWall[0])
+                    ShadeWall[0],CoorPt1 = CoordAdjustement(Edge, ShadeWall[0],1)   #the tol is about distance bewteen 2 vertexes
                     if CoorPt1:
-                        if LineString(Edge).length >= LineString(ShadeWall).length:
-                            OverlapCode = 1
-                        else:
-                            OverlapCode = 2
+                        OverlapCode = 2
                     ShadeWall[1] = point_on_line(Edge[0], Edge[1],ShadeWall[1])
-                    ShadeWall[1], CoorPt2 = CoordAdjustement(Edge,ShadeWall[1])
+                    ShadeWall[1], CoorPt2 = CoordAdjustement(Edge,ShadeWall[1],1)   #the tol is about distance bewteen 2 vertexes
                     if CoorPt2:
-                        if LineString(Edge).length >= LineString(
-                                ShadeWall).length:
-                            OverlapCode = 1
-                        else:
-                            OverlapCode = 2
+                        OverlapCode = 2
                     if CoorPt1 and CoorPt2: #it means that the sade's edge is exactly on a footprint's edge, no need to go further
                         OverlapCode = 0
                         return confirmed,ShadeWall,OverlapCode
