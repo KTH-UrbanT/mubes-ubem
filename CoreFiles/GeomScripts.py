@@ -34,11 +34,11 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
     #here, the building geometry is created and extruded for each bloc composing the builing, it uses the function above as well
     Full_coord = building.footprint
     Nb_blocs = len(Full_coord)
-    print('Number of blocs for this building : '+ str(Nb_blocs))
-    try:
-        LogFile.write('Number of blocs for this building : ' + str(Nb_blocs)+'\n')
-    except:
-        pass
+    #print('Number of blocs for this building : '+ str(Nb_blocs))
+    # try:
+    #     LogFile.write('Number of blocs for this building : ' + str(Nb_blocs)+'\n')
+    # except:
+    #     pass
     for bloc in range(Nb_blocs):
         bloc_coord =  Full_coord[bloc]
         Height = building.BlocHeight[bloc]
@@ -71,7 +71,9 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
     createShadings(building, idf)
     #this function enable to create all the boundary conditions for all surfaces
     try:
-        idf.intersect_match()
+        MatchedShade = idf.intersect_match()
+        if MatchedShade:
+            LogFile.write('[Nb Adjacent_Surfaces] This building has ' + str(len(MatchedShade)) + ' adiabatic surfaces\n')
         #defineAdjacencies(idf,building)
     except:
         LogFile.write('[Error - Boundary] function intersect_match() failed....\n')

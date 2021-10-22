@@ -47,8 +47,8 @@ if __name__ == '__main__' :
     Bld2Sim = []
     for line in FileLines:
         Bld2Sim.append(int(line))
-    CaseName = 'test1'
-    BuildNum = [1]#Bld2Sim
+    CaseName = 'minnerbergnew'
+    BuildNum = []#Bld2Sim
     VarName2Change = []#['AirRecovEff', 'IntLoadCurveShape', 'wwr', 'EnvLeak', 'setTempLoL', 'AreaBasedFlowRate', 'WindowUval',
                   #'WallInsuThick', 'RoofInsuThick']
     Bounds = []#[[0.5, 0.9], [1, 5], [0.2, 0.4], [0.5, 1.6], [18, 22], [0.35, 1], [0.7, 2], [0.1, 0.3], [0.2, 0.4]]
@@ -56,9 +56,9 @@ if __name__ == '__main__' :
     CPUusage = 0.8
     CreateFMU = False
     CorePerim = False
-    FloorZoning = True
+    FloorZoning = False
     RefreshFolder = True
-    PathInputFile = 'Sodermalm4.txt'#'Pathways_Template.txt'#HammarbyLast.txt'#
+    PathInputFile = 'Pathways_Template.txt'#HammarbyLast.txt'#'Sodermalm4.txt'#
     OutputsFile = 'Outputs_Template.txt'#_withlosses.txt'#'Outputs_Template.txt'
     ZoneOfInterest = ''
 
@@ -92,8 +92,8 @@ if __name__ == '__main__' :
     nbBuild = 0
     idx = 0
     for nbfile,keyPath in enumerate(GlobKey):
-        if nbfile not in [49]:
-            continue
+        # if nbfile not in [21]:
+        #     continue
         epluspath = keyPath['epluspath']
         pythonpath = keyPath['pythonpath'] #this is needed only if processes are launch in terminal as it could be an options instead of staying in python environnement
         DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
@@ -130,7 +130,10 @@ if __name__ == '__main__' :
             for idx,nbBuild in enumerate(BuildNum2Launch):
                 MainInputs['FirstRun'] = True
                 #First, lets create the folder for the building and simulation processes
-                SimDir = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,MultipleFile = BuildingFiles[nbfile][:-18], Refresh=RefreshFolder)
+                if multipleFiles:
+                    SimDir = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,MultipleFile = BuildingFiles[nbfile][:-18], Refresh=RefreshFolder)
+                else:
+                    SimDir = GrlFct.CreateSimDir(CurrentPath, CaseName, SepThreads, nbBuild, idx, Refresh=RefreshFolder)
                 #a sample of parameter is generated is needed
                 ParamSample =  GrlFct.SetParamSample(SimDir, NbRuns, VarName2Change, Bounds,SepThreads)
                 if idx<len(DataBaseInput['Build']):

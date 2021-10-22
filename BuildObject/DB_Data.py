@@ -5,7 +5,7 @@ SimuData = \
     'Begin_Month' : 1,
     'End_Day_of_Month' : 31,
     'End_Month' : 12,
-    'SaveLogFiles' : True, #if True, computing folder is not removed thus all energyplus outpus files are preserved
+    'SaveLogFiles' : False, #if True, computing folder is not removed thus all energyplus outpus files are preserved
     #'FloorZoningLevel' : True,  #1 zone per floor, if False --> 1 zone per building bloc
  }
 
