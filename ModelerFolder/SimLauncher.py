@@ -47,7 +47,7 @@ if __name__ == '__main__' :
     Bld2Sim = []
     for line in FileLines:
         Bld2Sim.append(int(line))
-    CaseName = 'with2m_aussisurShade'
+    CaseName = 'with2m'
     BuildNum = []#Bld2Sim
     VarName2Change = []#['AirRecovEff', 'IntLoadCurveShape', 'wwr', 'EnvLeak', 'setTempLoL', 'AreaBasedFlowRate', 'WindowUval',
                   #'WallInsuThick', 'RoofInsuThick']
