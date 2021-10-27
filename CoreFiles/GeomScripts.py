@@ -35,11 +35,6 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
     #here, the building geometry is created and extruded for each bloc composing the builing, it uses the function above as well
     Full_coord = building.footprint
     Nb_blocs = len(Full_coord)
-    #print('Number of blocs for this building : '+ str(Nb_blocs))
-    # try:
-    #     LogFile.write('Number of blocs for this building : ' + str(Nb_blocs)+'\n')
-    # except:
-    #     pass
     for bloc in range(Nb_blocs):
         bloc_coord =  Full_coord[bloc]
         Height = building.BlocHeight[bloc]
@@ -75,7 +70,6 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
         MatchedShade = idf.intersect_match()
         if MatchedShade:
             LogFile.write('[Nb Adjacent_Surfaces] This building has ' + str(len(MatchedShade)) + ' adiabatic surfaces\n')
-        #defineAdjacencies(idf,building)
     except:
         LogFile.write('[Error - Boundary] function intersect_match() failed....\n')
         print('[Error - Boundary] function intersect_match() failed....')
@@ -86,8 +80,8 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
     # if not, some warning are appended because of shading computation.
     # it should thus be only the roof surfaces. Non convex internal zone are not concerned as Solar distribution is 'FullExterior'
     try:
-        #if not ForPlots:
-        split2convex(idf)
+        if not ForPlots:
+            split2convex(idf)
     except:
         try:
             LogFile.write('[Error] The Split2convex function failed for this building....\n')
@@ -95,32 +89,6 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
             pass
         print('The Split2convex function failed for this building....')
         pass
-
-def defineAdjacencies(idf,building):
-    # this function was suppose to deal with adiabatic conditions in case of adjacent shadowing element, buyt finaly
-    # this paradigm is already embedded in geomeppy and int intersect_match() function
-    surfaces = idf.getsurfaces()
-    for surf in surfaces:
-        if surf.Surface_Type == 'wall' and surf.Outside_Boundary_Condition =='outdoors':
-            # fig = plt.figure()
-            # ax = plt.axes(projection="3d")
-            # x,y,z = zip(*surf.coords)
-            # plt.plot(x,y,z)
-            if surf.Name == 'Block Build0 Storey 0 Wall 0005':
-                a=1
-            for wall in building.AdjacentWalls:
-                surfshade = [(wall['geometries'][0][0], wall['geometries'][0][1], 0.0), (wall['geometries'][1][0], wall['geometries'][1][1], 0.0),
-                             (wall['geometries'][1][0], wall['geometries'][1][1], wall['height']), (wall['geometries'][0][0], wall['geometries'][0][1], wall['height'])]
-                # x, y, z = zip(*surfshade)
-                # plt.plot(x, y, z)
-                #Block Build0 Storey 1 Wall 0001'
-                if Polygon(surfshade).intersects(Polygon(surf.coords)) or Polygon(surf.coords).intersects(Polygon(surfshade)):
-                    a=1
-                # if wall[0][0] in x and wall[1][0] in x and wall[0][1] in y and wall[1][1] in y:
-                #     surf.Outside_Boundary_Condition = 'Adiabatic'
-                #     surf.Sun_Exposure = 'NoSun'
-                #     surf.Wind_Exposure = 'NoWind'
-
 
 def createRapidGeomElem(idf,building):
     #envelop can be created now and allocated to the correct surfaces
@@ -132,10 +100,6 @@ def createRapidGeomElem(idf,building):
     # see https://unmethours.com/question/13094/change-all-interior-walls-to-air-walls/
     #see https://unmethours.com/question/41171/constructionairboundary-solar-enclosures-for-grouped-zones-solar-distribution/
     createAirwallsCstr(idf)
-
-    #the shading walls around the building are created with the function below
-    #createShadings(building, idf)
-
     return idf
 
 def createShadings(building,idf):
@@ -312,8 +276,7 @@ def split2convex(idf):
                     print('[Splitting Area Warning] The smallest surfaces remain below the threshold for all possible order combination')
         stillleft = True
         while stillleft:
-            #mergeTrigle, stillleft = MergeTri(trigle)
-            mergeTrigle, stillleft = NewMergeTri(trigle)
+            mergeTrigle, stillleft = MergeTri(trigle)
             trigle = mergeTrigle
         for nbi, subsurfi in enumerate(trigle):
             new_coord = []
@@ -339,62 +302,7 @@ def split2convex(idf):
         idf.removeidfobject(surf2treat)
     return idf
 
-# def MergeTri(trigleNonSorted):
-#     stillleft = True
-#     newtrigle = {}
-#     #the triangle needs to be sorted by area as very small area can occure, so lets start by merging these ones
-#     sortedIdx = sorted(range(len(trigleNonSorted)), key=lambda k: Polygon(trigleNonSorted[k]).area)
-#     trigle = [trigleNonSorted[idx] for idx in sortedIdx]
-#     for nbi, subsurfi in enumerate(trigle):
-#         PossibleMerge = {}
-#         PossibleMerge['Edge'] = []
-#         PossibleMerge['EdLg'] = []
-#         PossibleMerge['surf1'] = []
-#         PossibleMerge['surf2'] = []
-#         PossibleMerge['surf1Area'] = []
-#         PossibleMerge['surf2Area'] = []
-#         PossibleMerge['Vertexidx'] = []
-#         for nbj, subsurfj in enumerate(trigle):
-#             if nbj>nbi:
-#                 edge, idx = isCommunNode(subsurfi, subsurfj)
-#                 if len(edge)  == 2:
-#                     PossibleMerge['Edge'].append(edge)
-#                     PossibleMerge['Vertexidx'].append(idx)
-#                     PossibleMerge['EdLg'].append(edgeLength(edge[0],edge[1]))
-#                     PossibleMerge['surf1']=[i for i in subsurfi]
-#                     PossibleMerge['surf2']=[i for i in subsurfj]
-#                     PossibleMerge['surf1Area'] = Polygon(subsurfi).area
-#                     PossibleMerge['surf2Area'] = Polygon(subsurfj).area
-#         newtrigle[nbi]= PossibleMerge
-#     #now lets find the longests edge that could lead to merging surfaces
-#     #try to merge and if not, lets take the edge just befor and so on
-#     finished =0
-#     nb_tries = 0
-#     while finished==0:
-#         lg = 0
-#         for key in newtrigle:
-#             if newtrigle[key]['EdLg']:
-#                 if newtrigle[key]['EdLg'][0] > lg:
-#                     lg = newtrigle[key]['EdLg'][0]
-#                     idx = key  # dict(sorted(PossibleMerge.items(), key=lambda item: item[1]))
-#         try :
-#             isconv, newsurf = merge2surf(newtrigle[idx])
-#         except:
-#             a=1
-#         if isconv:
-#             newTrigle = composenewtrigle(trigle,newtrigle[idx],newsurf)
-#             finished = 1
-#         else:
-#             nb_tries+=1
-#             newtrigle[idx]['EdLg'][0]=0 #we just force the edge length to be 0 in order to avoid the above selection
-#             if nb_tries>len(newtrigle):
-#                 newTrigle = trigle
-#                 stillleft = False
-#                 finished = 1
-#     return newTrigle,stillleft
-
-def NewMergeTri(trigleNonSorted):
-    stillleft = True
+def MergeTri(trigleNonSorted):
     newTrigle = trigleNonSorted
     #the triangle needs to be sorted by area as very small area can occure, so lets start by merging these ones
     sortedIdx = sorted(range(len(trigleNonSorted)), key=lambda k: Polygon(trigleNonSorted[k]).area)

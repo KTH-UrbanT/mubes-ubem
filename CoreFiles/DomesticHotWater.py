@@ -22,14 +22,17 @@ def createWaterEqpt(idf,building):
     return idf
 
 def CallCorrectionFactor(BuildName):
-    BuildNumber = int(BuildName[BuildName.index('_')+1:BuildName.index('v')])
-    # Lets read the correction factors
-    import os
-    pth2corfactors  = os.path.normcase('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\ComputedElem4Calibration\\')
-    CorFactPath = os.path.normcase(os.path.join(pth2corfactors, 'DHWCorFact.txt'))
-    with open(CorFactPath, 'r') as handle:
-        FileLines = handle.readlines()
-    CorFact = {}
-    for line in FileLines:
-        CorFact[int(line[:line.index('\t')])] = float(line[line.index('\t')+1:line.index('\n')])
-    return CorFact[BuildNumber]
+    return 1
+    #all this below was done for the calibration study using the calibrated values to make Strobe package comply with measurements
+    #cf paper on the calibration study
+    # BuildNumber = int(BuildName[BuildName.index('_')+1:BuildName.index('v')])
+    # # Lets read the correction factors
+    # import os
+    # pth2corfactors  = os.path.normcase('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\ComputedElem4Calibration\\')
+    # CorFactPath = os.path.normcase(os.path.join(pth2corfactors, 'DHWCorFact.txt'))
+    # with open(CorFactPath, 'r') as handle:
+    #     FileLines = handle.readlines()
+    # CorFact = {}
+    # for line in FileLines:
+    #     CorFact[int(line[:line.index('\t')])] = float(line[line.index('\t')+1:line.index('\n')])
+    # return CorFact[BuildNumber]
