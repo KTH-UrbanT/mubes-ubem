@@ -119,6 +119,7 @@ GeomElement = \
   'BuildingIdKey' : 'byggnadsid',
   'VertexKey':'geometries',
   'MaxShadingDist': 100,
+  'DistanceTolerance': 2,  #this is a threshold below every edge are removed and vertexes merged
   }
 #this dict gives information on occupancy times each day. If DCV = True, the airflow will follow the number of person
 # and the schedule. if not it will be based only on the extra airflow rate but without schedule (all the time)

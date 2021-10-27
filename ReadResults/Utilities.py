@@ -268,6 +268,8 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
     Res = {}
     SimNumb = []
     Res['ErrFiles'] = []
+    Res['Warnings'] = []
+    Res['Errors'] = []
     print('reading file...')
     #First round just to see what number to get
     StillSearching = True
@@ -305,6 +307,10 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
                         ResBld[SimNumb[-1]] = pickle5.load(handle)
                 try:
                     Res['ErrFiles'].append(os.path.getsize(file[:file.index('.pickle')]+'.err'))
+                    with open(file[:file.index('.pickle')]+'.err') as file:
+                        lines = file.readlines()
+                    Res['Warnings'].append(int(lines[-1][lines[-1].index('--')+2:lines[-1].index('Warning')]))
+                    Res['Errors'].append(int(lines[-1][lines[-1].index('Warning') + 8:lines[-1].index('Severe Errors')]))
                 except:
                     Res['ErrFiles'].append(0)
             except:

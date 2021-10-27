@@ -5,6 +5,7 @@ from geomeppy import geom
 from shapely.geometry import Polygon
 from shapely.ops import cascaded_union
 import CoreFiles.Envelope_Param as Envelope_Param
+import itertools
 
 def BuildBloc(idf,perim,bloc,bloc_coord,Height,nbstories,nbBasementstories,BasementstoriesHeight,Perim_depth):
     if perim:
@@ -85,8 +86,8 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
     # if not, some warning are appended because of shading computation.
     # it should thus be only the roof surfaces. Non convex internal zone are not concerned as Solar distribution is 'FullExterior'
     try:
-        if not ForPlots:
-            split2convex(idf)
+        #if not ForPlots:
+        split2convex(idf)
     except:
         try:
             LogFile.write('[Error] The Split2convex function failed for this building....\n')
@@ -281,10 +282,38 @@ def split2convex(idf):
         for nbpt in surf2treat.coords:
             coord2split.append(nbpt[0:2])
         height = nbpt[2]
-        trigle = tripy.earclip(coord2split)
+        # #lets help a bit the process by adding nodes on the longest edges
+        # poly = geom.polygons.Polygon2D(coord2split)
+        # meanEdge = sum(poly.edges_length)/len(poly.edges_length)
+        # largeEdges = [idx for idx, val in enumerate(poly.edges_length) if val > 3*meanEdge]
+        # offset = 0
+        # for idx in largeEdges:
+        #     extraPt = ((poly.edges[idx].p2[0]+2*poly.edges[idx].p1[0])/3,(poly.edges[idx].p2[1]+2*poly.edges[idx].p1[1])/3)
+        #     coord2split.insert(idx+1+offset, extraPt)
+        #     extraPt = ((2*poly.edges[idx].p2[0] + poly.edges[idx].p1[0]) / 3,
+        #                (2*poly.edges[idx].p2[1] + poly.edges[idx].p1[1]) / 3)
+        #     coord2split.insert(idx + 2 + offset, extraPt)
+        #     offset += idx+2
+        #the methods below can lead to very small areas of triangles.
+        #We shall avoid this to avoid warnings afterward
+        #the work around is to change ending and starting point ofthe polygons and stop when all areas all above a threshold(0.1m2)
+        TrianglesOK = False
+        nbmove = 0
+        while not TrianglesOK:
+            trigle = tripy.earclip(coord2split)
+            Areas = [Polygon(s).area for s in trigle]
+            if min(Areas) >0.1:
+                TrianglesOK = True
+            else:
+                coord2split = [coord2split[-1]] + coord2split[:-1]
+                nbmove += 1
+                if nbmove > len(coord2split):
+                    TrianglesOK = True
+                    print('[Splitting Area Warning] The smallest surfaces remain below the threshold for all possible order combination')
         stillleft = True
         while stillleft:
-            mergeTrigle, stillleft = MergeTri(trigle)
+            #mergeTrigle, stillleft = MergeTri(trigle)
+            mergeTrigle, stillleft = NewMergeTri(trigle)
             trigle = mergeTrigle
         for nbi, subsurfi in enumerate(trigle):
             new_coord = []
@@ -296,7 +325,7 @@ def split2convex(idf):
             #print(surf2treat.Name + str(nbi))
             surftri = idf.newidfobject(
                 "BUILDINGSURFACE:DETAILED",
-                Name=surf2treat.Name + str(nbi),
+                Name=surf2treat.Name + '_'+ str(nbi),
                 Surface_Type=surf2treat.Surface_Type,
                 Construction_Name=surf2treat.Construction_Name,
                 Outside_Boundary_Condition=surf2treat.Outside_Boundary_Condition,
@@ -310,52 +339,85 @@ def split2convex(idf):
         idf.removeidfobject(surf2treat)
     return idf
 
-def MergeTri(trigle):
+# def MergeTri(trigleNonSorted):
+#     stillleft = True
+#     newtrigle = {}
+#     #the triangle needs to be sorted by area as very small area can occure, so lets start by merging these ones
+#     sortedIdx = sorted(range(len(trigleNonSorted)), key=lambda k: Polygon(trigleNonSorted[k]).area)
+#     trigle = [trigleNonSorted[idx] for idx in sortedIdx]
+#     for nbi, subsurfi in enumerate(trigle):
+#         PossibleMerge = {}
+#         PossibleMerge['Edge'] = []
+#         PossibleMerge['EdLg'] = []
+#         PossibleMerge['surf1'] = []
+#         PossibleMerge['surf2'] = []
+#         PossibleMerge['surf1Area'] = []
+#         PossibleMerge['surf2Area'] = []
+#         PossibleMerge['Vertexidx'] = []
+#         for nbj, subsurfj in enumerate(trigle):
+#             if nbj>nbi:
+#                 edge, idx = isCommunNode(subsurfi, subsurfj)
+#                 if len(edge)  == 2:
+#                     PossibleMerge['Edge'].append(edge)
+#                     PossibleMerge['Vertexidx'].append(idx)
+#                     PossibleMerge['EdLg'].append(edgeLength(edge[0],edge[1]))
+#                     PossibleMerge['surf1']=[i for i in subsurfi]
+#                     PossibleMerge['surf2']=[i for i in subsurfj]
+#                     PossibleMerge['surf1Area'] = Polygon(subsurfi).area
+#                     PossibleMerge['surf2Area'] = Polygon(subsurfj).area
+#         newtrigle[nbi]= PossibleMerge
+#     #now lets find the longests edge that could lead to merging surfaces
+#     #try to merge and if not, lets take the edge just befor and so on
+#     finished =0
+#     nb_tries = 0
+#     while finished==0:
+#         lg = 0
+#         for key in newtrigle:
+#             if newtrigle[key]['EdLg']:
+#                 if newtrigle[key]['EdLg'][0] > lg:
+#                     lg = newtrigle[key]['EdLg'][0]
+#                     idx = key  # dict(sorted(PossibleMerge.items(), key=lambda item: item[1]))
+#         try :
+#             isconv, newsurf = merge2surf(newtrigle[idx])
+#         except:
+#             a=1
+#         if isconv:
+#             newTrigle = composenewtrigle(trigle,newtrigle[idx],newsurf)
+#             finished = 1
+#         else:
+#             nb_tries+=1
+#             newtrigle[idx]['EdLg'][0]=0 #we just force the edge length to be 0 in order to avoid the above selection
+#             if nb_tries>len(newtrigle):
+#                 newTrigle = trigle
+#                 stillleft = False
+#                 finished = 1
+#     return newTrigle,stillleft
+
+def NewMergeTri(trigleNonSorted):
     stillleft = True
-    newtrigle = {}
-    for nbi, subsurfi in enumerate(trigle):
-        PossibleMerge = {}
-        PossibleMerge['Edge'] = []
-        PossibleMerge['EdLg'] = []
-        PossibleMerge['surf1'] = []
-        PossibleMerge['surf2'] = []
-        PossibleMerge['Vertexidx'] = []
-        for nbj, subsurfj in enumerate(trigle):
-            if nbj>nbi:
-                edge, idx = isCommunNode(subsurfi, subsurfj)
-                if len(edge)  == 2:
-                    PossibleMerge['Edge'].append(edge)
-                    PossibleMerge['Vertexidx'].append(idx)
-                    PossibleMerge['EdLg'].append(edgeLength(edge[0],edge[1]))
-                    PossibleMerge['surf1']=[i for i in subsurfi]
-                    PossibleMerge['surf2']=[i for i in subsurfj]
-        newtrigle[nbi]= PossibleMerge
-    #now lets find the longests edge that could lead to merging surfaces
-    #try to merge and if not, lets take the edge just befor and so on
-    finished =0
-    nb_tries = 0
-    while finished==0:
-        lg = 0
-        for key in newtrigle:
-            if newtrigle[key]['EdLg']:
-                if newtrigle[key]['EdLg'][0] > lg:
-                    lg = newtrigle[key]['EdLg'][0]
-                    idx = key  # dict(sorted(PossibleMerge.items(), key=lambda item: item[1]))
-        try :
-            isconv, newsurf = merge2surf(newtrigle[idx])
+    newTrigle = trigleNonSorted
+    #the triangle needs to be sorted by area as very small area can occure, so lets start by merging these ones
+    sortedIdx = sorted(range(len(trigleNonSorted)), key=lambda k: Polygon(trigleNonSorted[k]).area)
+    trigle = [trigleNonSorted[idx] for idx in sortedIdx]
+    for s1,s2 in itertools.combinations(trigle,2):
+        polygon1 = Polygon(s1)
+        polygon2 = Polygon(s2)
+        polygons = [polygon1, polygon2]
+        u = cascaded_union(polygons)
+        try:
+            newsurfcoord = list(u.exterior.coords)[:-1]
+            isconv = geom.polygons.is_convex_polygon(newsurfcoord)
+            if isconv:
+                newTrigle = []
+                for i in trigleNonSorted:
+                    if not i in [s1,s2]:
+                        newTrigle.append(i)
+                newTrigle.append(newsurfcoord)
+                return newTrigle, True
         except:
-            a=1
-        if isconv:
-            newTrigle = composenewtrigle(trigle,newtrigle[idx],newsurf)
-            finished = 1
-        else:
-            nb_tries+=1
-            newtrigle[idx]['EdLg'][0]=0 #we just force the edge length to be 0 in order to avoid the above selection
-            if nb_tries>len(newtrigle):
-                newTrigle = trigle
-                stillleft = False
-                finished = 1
-    return newTrigle,stillleft
+            pass
+    return newTrigle,False
+
 
 def composenewtrigle(trigle,data,newsurf):
     newTrigle = []

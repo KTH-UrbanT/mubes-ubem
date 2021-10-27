@@ -11,6 +11,7 @@ import shutil
 import BuildObject.DB_Data as DB_Data
 import re
 import CoreFiles.ProbGenerator as ProbGenerator
+import itertools
 
 import matplotlib.pyplot as plt
 #this class defines the building characteristics regarding available data in the geojson file
@@ -124,6 +125,7 @@ class Building:
         self.nbfloor = self.getnbfloor(DB, DBL,LogFile)
         self.nbBasefloor = self.getnbBasefloor(DB, DBL)
         self.height = self.getheight(DB, DBL)
+        self.DistTol = GE['DistanceTolerance']
         self.footprint,  self.BlocHeight, self.BlocNbFloor = self.getfootprint(DB,LogFile,self.nbfloor)
         self.AggregFootprint = self.getAggregatedFootprint()
         self.RefCoord = self.getRefCoord()
@@ -175,8 +177,6 @@ class Building:
         for Wall in self.AdjacentWalls:
             newcoord = [(round(node[0] - self.RefCoord[0],roundfactor), round(node[1] - self.RefCoord[1],roundfactor)) for node in Wall['geometries']]
             Wall['geometries'] = newcoord
-
-
 
     def CheckAndCorrEPCs(self,Buildingsfile,LogFile,nbcase,EPC):
         totHeat = []
@@ -314,6 +314,7 @@ class Building:
 
     def getfootprint(self,DB,LogFile=[],nbfloor=0):
         "get the footprint coordinate and the height of each building bloc"
+        DistTol = self.DistTol
         coord = []
         node2remove =[]
         BlocHeight = []
@@ -336,10 +337,11 @@ class Building:
                         #even before skewed angle, we need to check for tiny edge below the tolerance onsdered aftward (0.5m)
                         pt2remove = []
                         for edge in Polygon2D(polycoor).edges:
-                            if edge.length < 0.2:
+                            if edge.length < DistTol:
                                 pt2remove.append(edge.p2)
                         for pt in pt2remove:
-                            polycoor.remove(pt)
+                            if len(polycoor)>3:
+                                polycoor.remove(pt)
                         newpolycoor, node = core_perim.CheckFootprintNodes(polycoor,5)
                         node2remove.append(node)
                         #polycoor.reverse()
@@ -376,7 +378,7 @@ class Building:
                 # plt.savefig(self.name+ '.png')
                 # plt.close(fig)
 
-            #we need to clean the foot print from the node2remove but not if there are part of another bloc
+            #we need to clean the footprint from the node2remove but not if there are part of another bloc
             newbloccoor= []
             for idx,coor in enumerate(coord):
                 newcoor = []
@@ -407,13 +409,13 @@ class Building:
             BlocHeight.append(self.height)
             coord= [coord]
         #before submitting the full coordinates, we need to check correspondance in case of multibloc
-        coord, validFootprint = CheckMultiBlocFootprint(coord,tol = 0.5)
+        coord, validFootprint = CheckMultiBlocFootprint(coord,tol = DistTol)
         if not validFootprint:
             msg = '[Poly Error] The different bloc are not adjacent...\n'
             #print(msg[:-1])
             GrlFct.Write2LogFile(msg, LogFile)
             return
-        # multiblocshould share at least one edge and not a polygon as bld:a3848e24-d29e-44bc-a395-a25b5fd26598 if area : 0180C3170 of Sodermalm_V4
+        # multibloc should share at least one edge and not a polygon as bld:a3848e24-d29e-44bc-a395-a25b5fd26598 in area : 0180C3170 of Sodermalm_V4
         SmallEdge = False
         for bloc in coord:
             if [val for val in Polygon2D(bloc).edges_length if val < 2]:
@@ -592,6 +594,8 @@ class Building:
             ShadeWall = findWallId(wallId, Shadingsfile, ref, GE)
             if not 'height' in ShadeWall.keys():
                 ShadeWall['height'] = findBuildId(ShadeWall[GE['BuildingIdKey']], Buildingsfile,GE)
+                if ShadeWall['height']==None:
+                    ShadeWall['height'] = self.height
             currentShadingElement = [(node[0]-self.RefCoord[0],node[1]-self.RefCoord[1]) for node in ShadeWall[GE['VertexKey']]]
             meanPx = (currentShadingElement[0][0] + currentShadingElement[1][0]) / 2
             meanPy = (currentShadingElement[0][1] + currentShadingElement[1][1]) / 2
@@ -603,7 +607,7 @@ class Building:
                 continue
             if ShadeWall[GE['ShadingIdKey']] =='V67656-3':
                 a=1
-            confirmed,currentShadingElement,OverlapCode = checkShadeWithFootprint(RelativeAgregFootprint,currentShadingElement,ShadeWall[GE['ShadingIdKey']])
+            confirmed,currentShadingElement,OverlapCode = checkShadeWithFootprint(RelativeAgregFootprint,currentShadingElement,ShadeWall[GE['ShadingIdKey']],tol = self.DistTol)
             if confirmed:
                 if ShadeWall['height']<=(max(self.BlocHeight)+self.StoreyHeigth):
                     OverlapCode +=1
@@ -724,7 +728,6 @@ class Building:
 def CheckMultiBlocFootprint(blocs,tol =1):
     validMultibloc = True
     if len(blocs)>1:
-        import itertools
         validMultibloc = False
         for bloc1,bloc2 in itertools.product(blocs,repeat = 2):
             if bloc1 != bloc2:
@@ -733,7 +736,7 @@ def CheckMultiBlocFootprint(blocs,tol =1):
                     comEdges = []
                     for ptidx1,pt1 in enumerate(bloc2):
                         edge1 = [bloc2[ptidx1], bloc2[(ptidx1+1)%len(bloc2)]]
-                        if is_parallel(edge,edge1) and confirmMatch(edge, edge1, tol):
+                        if is_parallel(edge,edge1,10) and confirmMatch(edge, edge1, tol):
                             validMultibloc = True
                             pt1 = False
                             pt2 = False
@@ -786,9 +789,9 @@ def getAngle(line1,line2):
     w = np.array([vector_b_x, vector_b_y])
     return abs(np.rad2deg(np.arccos(round(v.dot(w) / (np.linalg.norm(v) * np.linalg.norm(w)), 4))))
 
-def is_parallel(line1, line2):
+def is_parallel(line1, line2, tol = 5):
     angledeg = getAngle(line1, line2)
-    if angledeg <5 or abs(angledeg-180) < 5:
+    if angledeg <tol or abs(angledeg-180) < tol:
         return True
     else:
         return False
@@ -826,7 +829,7 @@ def confirmMatch(Edge, Edge1,tol):
     return False
 
 
-def checkShadeWithFootprint(AggregFootprint, ShadeWall,ShadeId):
+def checkShadeWithFootprint(AggregFootprint, ShadeWall,ShadeId,tol = 2):
     if ShadeId == 'V69467-8':
         a=1
     # check if some shadingssurfaces are too close to the building
@@ -842,21 +845,21 @@ def checkShadeWithFootprint(AggregFootprint, ShadeWall,ShadeId):
     # 2 for partial overlap with one commun edge and longer shading element,
     # 4 for partial overlap with no commun edge,
     # it is further increased by one if the height is below the building
-    if min([Point(ShadeWall[0]).distance(Polygon(AggregFootprint)), Point(ShadeWall[1]).distance(Polygon(AggregFootprint))])< 2:
+    if min([Point(ShadeWall[0]).distance(Polygon(AggregFootprint)), Point(ShadeWall[1]).distance(Polygon(AggregFootprint))])< tol:
         for idx, node in enumerate(AggregFootprint[:-1]):
             #dist1 = LineString([AggregFootprint[idx], AggregFootprint[idx + 1]]).distance(LineString(ShadeWall))
             if is_parallel([AggregFootprint[idx], AggregFootprint[idx + 1]], ShadeWall):#if dist1 < 0.1:
                 #first the segment direction shall be compute for the closest point if not equal
                 Edge = [AggregFootprint[idx], AggregFootprint[idx + 1]]
-                if confirmMatch(Edge, ShadeWall,1): #the tolerance is between points and edge (either from the footprint or the
+                if confirmMatch(Edge, ShadeWall,tol): #the tolerance is between points and edge (either from the footprint or the
                     OverlapCode = 4
                     confirmed = True
                     ShadeWall[0] = point_on_line(Edge[0], Edge[1],ShadeWall[0])
-                    ShadeWall[0],CoorPt1 = CoordAdjustement(Edge, ShadeWall[0],1)   #the tol is about distance bewteen 2 vertexes
+                    ShadeWall[0],CoorPt1 = CoordAdjustement(Edge, ShadeWall[0],tol)   #the tol is about distance bewteen 2 vertexes
                     if CoorPt1:
                         OverlapCode = 2
                     ShadeWall[1] = point_on_line(Edge[0], Edge[1],ShadeWall[1])
-                    ShadeWall[1], CoorPt2 = CoordAdjustement(Edge,ShadeWall[1],1)   #the tol is about distance bewteen 2 vertexes
+                    ShadeWall[1], CoorPt2 = CoordAdjustement(Edge,ShadeWall[1],tol)   #the tol is about distance bewteen 2 vertexes
                     if CoorPt2:
                         OverlapCode = 2
                     if CoorPt1 and CoorPt2: #it means that the sade's edge is exactly on a footprint's edge, no need to go further

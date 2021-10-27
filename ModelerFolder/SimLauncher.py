@@ -47,7 +47,7 @@ if __name__ == '__main__' :
     Bld2Sim = []
     for line in FileLines:
         Bld2Sim.append(int(line))
-    CaseName = 'minnerbergnew'
+    CaseName = 'with2m_aussisurShade'
     BuildNum = []#Bld2Sim
     VarName2Change = []#['AirRecovEff', 'IntLoadCurveShape', 'wwr', 'EnvLeak', 'setTempLoL', 'AreaBasedFlowRate', 'WindowUval',
                   #'WallInsuThick', 'RoofInsuThick']
@@ -57,8 +57,8 @@ if __name__ == '__main__' :
     CreateFMU = False
     CorePerim = False
     FloorZoning = False
-    RefreshFolder = True
-    PathInputFile = 'Pathways_Template.txt'#HammarbyLast.txt'#'Sodermalm4.txt'#
+    RefreshFolder = False
+    PathInputFile = 'Sodermalm4.txt'#'MinnebergLast.txt'#'Pathways_Template.txt'#HammarbyLast.txt'#
     OutputsFile = 'Outputs_Template.txt'#_withlosses.txt'#'Outputs_Template.txt'
     ZoneOfInterest = ''
 
@@ -92,8 +92,9 @@ if __name__ == '__main__' :
     nbBuild = 0
     idx = 0
     for nbfile,keyPath in enumerate(GlobKey):
-        # if nbfile not in [21]:
+        # if nbfile not in [70]:
         #     continue
+        print('Process is started with file nb : '+str(nbfile)+' over a total of : '+str(len(GlobKey))+' files')
         epluspath = keyPath['epluspath']
         pythonpath = keyPath['pythonpath'] #this is needed only if processes are launch in terminal as it could be an options instead of staying in python environnement
         DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
