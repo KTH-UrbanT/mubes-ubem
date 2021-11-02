@@ -47,7 +47,7 @@ if __name__ == '__main__' :
     Bld2Sim = []
     for line in FileLines:
         Bld2Sim.append(int(line))
-    CaseName = 'with2m'
+    CaseName = 'Minneberg2DcoreperimfloorzoneNew'
     BuildNum = []#Bld2Sim
     VarName2Change = []#['AirRecovEff', 'IntLoadCurveShape', 'wwr', 'EnvLeak', 'setTempLoL', 'AreaBasedFlowRate', 'WindowUval',
                   #'WallInsuThick', 'RoofInsuThick']
@@ -55,10 +55,10 @@ if __name__ == '__main__' :
     NbRuns = 1
     CPUusage = 0.8
     CreateFMU = False
-    CorePerim = False
-    FloorZoning = False
-    RefreshFolder = False
-    PathInputFile = 'Sodermalm4.txt'#'MinnebergLast.txt'#'Pathways_Template.txt'#HammarbyLast.txt'#
+    CorePerim = True
+    FloorZoning = True
+    RefreshFolder = True
+    PathInputFile = 'Minneberg2D.txt'#'Sodermalm4.txt'#'MinnebergLast.txt'#'Pathways_Template.txt'#HammarbyLast.txt'#
     OutputsFile = 'Outputs_Template.txt'#_withlosses.txt'#'Outputs_Template.txt'
     ZoneOfInterest = ''
 

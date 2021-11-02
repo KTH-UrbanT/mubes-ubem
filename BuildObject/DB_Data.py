@@ -11,7 +11,7 @@ SimuData = \
 
 #files are needed to be located in the eather folder of EnergyPlus asthe same path is used afterward to launch the simulation
 WeatherFile = \
- {'Loc' : 'WeatherData/Year2012WithIRfromStandard.epw',#USA_CA_San.Francisco.Intl.AP.724940_TMY3.epw', #SWE_Stockholm.Arlanda.024600_IWEC.epw'#
+ {'Loc' : 'WeatherData/SWE_Stockholm.Arlanda.024600_IWEC.epw',#Year2012WithIRfromStandard.epw',#USA_CA_San.Francisco.Intl.AP.724940_TMY3.epw', #
   }
 
 #Thisdict gives all the materials characteristics.
@@ -118,7 +118,7 @@ GeomElement = \
   'ShadingIdKey' : 'vaggid',
   'BuildingIdKey' : 'byggnadsid',
   'VertexKey':'geometries',
-  'MaxShadingDist': 100,
+  'MaxShadingDist': 300,
   'DistanceTolerance': 2,  #this is a threshold below every edge are removed and vertexes merged
   }
 #this dict gives information on occupancy times each day. If DCV = True, the airflow will follow the number of person
@@ -136,7 +136,7 @@ BasisElement = \
  'wwr': 0.25,
  'ExternalInsulation' : False,
  'ElecYearlyLoad' :15,          #this is the W\m2 value that will be applied constantly for appliances and occupancy consumptipon impact. It is replace by the values in EPCs if available
- 'IntLoadType' : 'winter',        #change either by 'Cste', 'winter', or 'summer' for reversed sigmoid or sigmoid this will generate hourly values file in the InputFiles folder
+ 'IntLoadType' : 'Cste',        #change either by 'Cste', 'winter', or 'summer' for reversed sigmoid or sigmoid this will generate hourly values file in the InputFiles folder
  'IntLoadMultiplier': 1,        #this is a multiplier the modeler would like to play with for calibration
  'IntLoadCurveShape':3,         #this defines the slop of the curves
  'OffOccRandom' : False,
@@ -146,7 +146,7 @@ BasisElement = \
  'setTempLoL' : [20,20],        #only one have to be defined for none temperature modulation
  'ComfortTempOff' :'23:00',     #hours at wich the first temperature set point is considered
  'ComfortTempOn': '06:00',      #hours at wich the second temperature set point is considered
- 'ACH_freecool' :0,             #this the the vol/hr of extra ventilation when free cooling is on
+ 'ACH_freecool' :4,             #this the the vol/hr of extra ventilation when free cooling is on
  'intT_freecool' : 26,          #internal temperature threshold for free coolong (opening windows with fixed ACH)
  'dT_freeCool': 1,              #Tint-Text to authorize free cooling to be turned on
  'AirRecovEff' : 0.65,          #efficiency if heat is recovered from ventilation
