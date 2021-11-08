@@ -4,6 +4,7 @@
  on the number of FMU considered in total."""
 
 import os,sys
+
 from fmpy import *
 #from fmpy.fmi1 import FMU1Slave
 from fmpy.fmi1 import fmi1OK
@@ -60,7 +61,8 @@ def InstAndInitiV1(filelist,VarNames,start_time,stop_time) :
             #                 instanceName=model_name, fmiCallLogger = log_message1)
             # FMUElement[FMUKeyName]['fmu'].instantiate()
 
-            FMUElement[FMUKeyName]['fmu'].setReal([vrs[VarNames['Inputs'][0]]],[21])
+            for i,input in enumerate(VarNames['Inputs']):
+                FMUElement[FMUKeyName]['fmu'].setReal([vrs[input]],[VarNames['InitialValue'][i]])
             FMUElement[FMUKeyName]['fmu'].initialize(tStart=start_time, stopTime=stop_time)
     return  FMUElement
 
@@ -80,7 +82,6 @@ def InstAndInitiV2(filelist,VarNames,start_time,stop_time) :
             for variable in model_description.modelVariables:
                 vrs[variable.name] = variable.valueReference
             FMUElement[FMUKeyName]['Exch_Var'] = vrs
-
             FMUElement[FMUKeyName]['fmu'] = instantiate_fmu(FMUElement[FMUKeyName]['unzipdir'], model_description,
                                                             fmi_type='CoSimulation', visible=False, debug_logging=False,
                                                             logger=log_message2,
@@ -94,7 +95,8 @@ def InstAndInitiV2(filelist,VarNames,start_time,stop_time) :
             # FMUElement[FMUKeyName]['fmu'].instantiate()
 
             FMUElement[FMUKeyName]['fmu'].setupExperiment(startTime=start_time, stopTime=stop_time)
-            FMUElement[FMUKeyName]['fmu'].setReal([vrs[VarNames['Inputs'][0]]],[21])
+            for i,input in enumerate(VarNames['Inputs']):
+                FMUElement[FMUKeyName]['fmu'].setReal([vrs[input]],[VarNames['InitialValue'][i]])
             FMUElement[FMUKeyName]['fmu'].enterInitializationMode()
             FMUElement[FMUKeyName]['fmu'].exitInitializationMode()
     return  FMUElement
@@ -105,11 +107,13 @@ def LaunchFMU_Sim(FMUElement,VarNames, start_time,stop_time,step_size):
     SetPoints = {}
     MeanTemp = {}
     HeatPow = {}
+    IntLoad = {}
     bld = 0
     for key in FMUElement.keys():
         HeatPow[key] = [0]
         MeanTemp[key] = [0]
         SetPoints[key] = [21]
+        IntLoad[key] = [0]
     # simulation loop
     while time < stop_time:
         if (time % (240 * 3600)) == 0:
@@ -121,8 +125,14 @@ def LaunchFMU_Sim(FMUElement,VarNames, start_time,stop_time,step_size):
         for i, key in enumerate(FMUElement.keys()):
             SetPoints[key].append(21)
             if i == bld:
-                SetPoints[key].append(18)
+                SetPoints[key][-1] = 18
+            IntLoad[key].append(2) #a base of 2W/m2 is considered
+            if 6 <= time%(24*3600)/3600 <= 10:
+                IntLoad[key][-1] = 10
+            if 16 <= time%(24*3600)/3600 <= 22:
+                IntLoad[key][-1] = 10
             FMUElement[key]['fmu'].setReal([FMUElement[key]['Exch_Var']['TempSetPoint']], [SetPoints[key][-1]])
+            FMUElement[key]['fmu'].setReal([FMUElement[key]['Exch_Var']['IntLoadPow']], [IntLoad[key][-1]])
             FMUElement[key]['fmu'].doStep(currentCommunicationPoint=time, communicationStepSize=step_size)
             #lets catch the outputs (even if not used in this example, it could be used to control the next inputs)
             MeanTemp[key].append(FMUElement[key]['fmu'].getReal([FMUElement[key]['Exch_Var'][VarNames['Outputs'][0]]]))
@@ -165,7 +175,9 @@ if __name__ == '__main__':
     start_time = 0*24*3600
     stop_time =  100*24*3600
     step_size = 900
-    VarNames = {'Inputs': ['TempSetPoint'], 'Outputs' : ['MeanBldTemp', 'HeatingPower']}
+    VarNames = {'Inputs': ['TempSetPoint','IntLoadPow'],
+                'InitialValue': [21,0],
+                'Outputs' : ['MeanBldTemp', 'HeatingPower']}
     #to make it work if being either version1.0 or 2.0 or FMU Standards
     try:
         FMUElement = InstAndInitiV1(filelist,VarNames,start_time,stop_time)

@@ -1,11 +1,15 @@
 #this file is just a tank of utilities for ploting stuff mainly.
 #It creates the figures and the plots
 import os
-import pickle
+import pickle#5 as pickle
+import pickle5
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import numpy as np
-
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn import metrics
+import pandas as pd
 
 
 def CountAbovethreshold(Data,threshold):
@@ -264,6 +268,8 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
     Res = {}
     SimNumb = []
     Res['ErrFiles'] = []
+    Res['Warnings'] = []
+    Res['Errors'] = []
     print('reading file...')
     #First round just to see what number to get
     StillSearching = True
@@ -293,10 +299,18 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
             try:
                 print(file)
                 SimNumb.append(int(file[file.index(idxF[0]) + len(idxF[0]):file.index(idxF[1])]))
-                with open(file, 'rb') as handle:
-                    ResBld[SimNumb[-1]] = pickle.load(handle)
+                try:
+                    with open(file, 'rb') as handle:
+                        ResBld[SimNumb[-1]] = pickle.load(handle)
+                except:
+                    with open(file, 'rb') as handle:
+                        ResBld[SimNumb[-1]] = pickle5.load(handle)
                 try:
                     Res['ErrFiles'].append(os.path.getsize(file[:file.index('.pickle')]+'.err'))
+                    with open(file[:file.index('.pickle')]+'.err') as file:
+                        lines = file.readlines()
+                    Res['Warnings'].append(int(lines[-1][lines[-1].index('--')+2:lines[-1].index('Warning')]))
+                    Res['Errors'].append(int(lines[-1][lines[-1].index('Warning') + 8:lines[-1].index('Severe Errors')]))
                 except:
                     Res['ErrFiles'].append(0)
             except:
@@ -442,4 +456,21 @@ def gener_Plot(gs,data,i,pos,titre):
             top=False,  # ticks along the top edge are off
             labelbottom=False)  # labels along the bottom edge are off
     else:
-        plt.xlabel('L/min')#data = np.array(data)    return max(volFlow)
+        plt.xlabel('L/min')#data = np.array(data)
+    return max(volFlow)
+
+def getLRMetaModel(X,y):
+    #this function comuts a Linear Regression model give the X parameters in a dataframe formet and the y output
+    #20% of the data are used to check the model afterward
+    #the function returns the coeffient of the model
+    #print('Launching calib process of linear regression')
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+    regressor = LinearRegression()
+    regressor.fit(X_train, y_train)
+    coeff_df = pd.DataFrame(regressor.coef_, X.columns, columns=['Coefficient'])
+    y_pred = regressor.predict(X_test)
+    # print('Mean Absolute Error:', metrics.mean_absolute_error(y_test, y_pred))
+    # print('Mean Squared Error:', metrics.mean_squared_error(y_test, y_pred))
+    #print('R2:', metrics.r2_score(y_test, y_pred))
+    # print('Root Mean Squared Error:', np.sqrt(metrics.mean_squared_error(y_test, y_pred)))
+    return coeff_df, regressor.intercept_, metrics.r2_score(y_test, y_pred)

@@ -11,8 +11,8 @@ SimuData = \
 
 #files are needed to be located in the eather folder of EnergyPlus asthe same path is used afterward to launch the simulation
 WeatherFile = \
-    {'Loc': 'WeatherData/USA_CA_San.Francisco.Intl.AP.724940_TMY3.epw',  # SWE_Stockholm.Arlanda.024600_IWEC.epw'#
-     }
+ {'Loc' : 'WeatherData/USA_CA_San.Francisco.Intl.AP.724940_TMY3.epw', #WE_Stockholm.Arlanda.024600_IWEC.epw'
+  }
 
 #Thisdict gives all the materials characteristics.
 # There are 2 layer maximum, the word Inertia and Insulation or key factor further in the code. If one layer is wanted, just comment the other one.
@@ -102,14 +102,13 @@ InternalMass = \
 #if empty it is no longer taken into account. if new file are given, thses should be present in the Externael file folder
 ExtraEnergy = \
         {}          #if no DomesticHot Water is to be consdered, it still needs an empty dict
-
-#ExtraEnergy = \
-#    {'Name' : 'DHW',
-#            'WatertapsFile':'ExternalFiles/mDHW_Sum_over_40.txt', #this file is in l/mnin and will be converted into m3/s afertward. it needs to have hourly values
-#            'ColdWaterTempFile' :'ExternalFiles/ColdWaterTemp.txt',
-#            'HotWaterSetTemp': 55,
-#            'WaterTapsMultiplier':1e-4/6/40, #this is because the file given above is for 40 apartment and is in l/min where we need m3/s. in the code in is afterward multiplied by the number of apartement in the building
-#            }
+# ExtraEnergy = \
+#     {'Name' : 'DHW',
+#             'WatertapsFile':'ExternalFiles/mDHW_Sum_over_40.txt', #this file is in l/mnin and will be converted into m3/s afertward. it needs to have hourly values
+#             'ColdWaterTempFile' :'ExternalFiles/ColdWaterTemp.txt',
+#             'HotWaterSetTemp': 55,
+#             'WaterTapsMultiplier':1e-4/6/40, #this is because the file given above is for 40 apartment and is in l/min where we need m3/s. in the code in is afterward multiplied by the number of apartement in the building
+#             }
 
 #this dict is for the shading paradigm. There are two files that we need. the firt one is the main geojson that contains all buildings and their propreties
 #the other one contains for each shading surface id the vertex point and the building Id in order to catch the height of it.
@@ -120,6 +119,7 @@ GeomElement = \
   'BuildingIdKey' : 'byggnadsid',
   'VertexKey':'geometries',
   'MaxShadingDist': 200,
+  'DistanceTolerance': 0.2,  #this is a threshold below every edge are removed and vertexes merged
   }
 #this dict gives information on occupancy times each day. If DCV = True, the airflow will follow the number of person
 # and the schedule. if not it will be based only on the extra airflow rate but without schedule (all the time)
@@ -136,7 +136,7 @@ BasisElement = \
  'wwr': 0.25,
  'ExternalInsulation' : False,
  'ElecYearlyLoad' :15,          #this is the W\m2 value that will be applied constantly for appliances and occupancy consumptipon impact. It is replace by the values in EPCs if available
- 'IntLoadType' : 'winter',        #change either by 'Cste', 'winter', or 'summer' for reversed sigmoid or sigmoid this will generate hourly values file in the InputFiles folder
+ 'IntLoadType' : 'Cste',        #change either by 'Cste', 'winter', or 'summer' for reversed sigmoid or sigmoid this will generate hourly values file in the InputFiles folder
  'IntLoadMultiplier': 1,        #this is a multiplier the modeler would like to play with for calibration
  'IntLoadCurveShape':3,         #this defines the slop of the curves
  'OffOccRandom' : False,
@@ -151,7 +151,7 @@ BasisElement = \
  'dT_freeCool': 1,              #Tint-Text to authorize free cooling to be turned on
  'AirRecovEff' : 0.65,          #efficiency if heat is recovered from ventilation
  'HVACLimitMode': 'NoLimit',    #'LimitCapacity', #can be NoLimit or LimitFlowRate or LimitFlowRateAndCpacity
- 'HVACPowLimit' : 25,           #in Watt/m2 considered if the above attribute is not 'NoLimit'
+ 'HVACPowLimit' : 25,           #in Watt/m2
 
  }
 

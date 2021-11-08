@@ -36,6 +36,7 @@ def AddOutputs(idf,building,path,EMSOutputs,OutputsFile):
     idf.newidfobject(
         "OUTPUT:DIAGNOSTICS",
         Key_1="DISPLAYEXTRAWARNINGS",
+        Key_2 ="DisplayAdvancedReportVariables",
     )
 
     for var in OutputsVar['Var']:

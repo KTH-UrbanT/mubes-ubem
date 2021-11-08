@@ -3,6 +3,7 @@
 
 import CoreFiles.ProbGenerator as ProbGenerator
 import os
+
 def Schedule_Type(idf):
     #Schedule type creation to refer to for each associated zone's schedule
     #needs to be done ones for all
@@ -89,7 +90,7 @@ def CreateThermostat(idf,name,setUp, setLo):
     if type(setUp) == str:
         Therm.Cooling_Setpoint_Schedule_Name=setUp
     else:
-        Therm.Constant_Cooling_Setpoint =setUp
+        Therm.Constant_Cooling_Setpoint = max(setLo+4,setUp)
     if type(setLo) == str:
         Therm.Heating_Setpoint_Schedule_Name = setLo
     else:
@@ -172,6 +173,7 @@ def CreateBasementLeakage(idf, zone, ACH):
 def CreateInternalMass(idf,zone,FloorArea,name,Material):
     #buffering effect of internal mass, taking into account version issues from 9.1.0 and 9.4.0
     surf = 2*Material['WeightperZoneArea']*FloorArea/Material['Density']/Material['Thickness']
+    surf = 2 *  FloorArea #as used in https://www.sciencedirect.com/science/article/pii/S036013231930160X?via%3Dihub
     if idf.idd_version[1] == 1:
         idf.newidfobject(
             "INTERNALMASS",
@@ -217,9 +219,12 @@ def getEfficiencyCor(OfficeTypeZone,ZoningMultiplier,building,PeopleDensity):
         # we are conservative has only the minimun occupation rate is considered for the airflows
         OfficeAreaAirFlow = OfficeTypeZone * (
                     ZoningMultiplier * building.AreaBasedFlowRate / 1000) + ZoningMultiplier * building.OccupBasedFlowRate / 1000 * PeopleDensity
-        TotalAreaAirFlow = ZoningMultiplier * building.AreaBasedFlowRate / 1000 + ZoningMultiplier * building.OccupBasedFlowRate / 1000 * PeopleDensity
+        TotalAreaAirFlow = ZoningMultiplier * building.AreaBasedFlowRate / 1000 + ZoningMultiplier * building.OccupBasedFlowRate / 1000 * PeopleDensity#this is changed by the 2 lines below on the 6th of October 2021
+        MeanBuildingFlowRate = OfficeTypeZone*building.AreaBasedFlowRate+(1-OfficeTypeZone)*building.AreaBasedFlowRateDefault
+        TotalAreaAirFlow = ZoningMultiplier * MeanBuildingFlowRate / 1000 + ZoningMultiplier * building.OccupBasedFlowRate / 1000 * PeopleDensity
         Correctdeff = OfficeAreaAirFlow / TotalAreaAirFlow
-        ZoneAreaBasedFlowRate = Correctdeff*building.AreaBasedFlowRate + (1-Correctdeff)*building.AreaBasedFlowRateDefault
+        ZoneAreaBasedFlowRate = Correctdeff*building.AreaBasedFlowRate + (1-Correctdeff)*building.AreaBasedFlowRateDefault #this is changed by the line below on the 6th of October 2021
+        ZoneAreaBasedFlowRate = MeanBuildingFlowRate
     else:
         Correctdeff = 1
         ZoneAreaBasedFlowRate = building.AreaBasedFlowRate
@@ -273,7 +278,7 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
     if building.setTempUpL[1]-building.setTempUpL[0] == 0:
         CoolSetPoint = building.setTempUpL[0]
     else:
-        #this means that weneed to create a file for the set points
+        #this means that we need to create a file for the set points
         pathfile = os.path.join(os.getcwd(), 'InputFiles')
         CoolSetPoint = idf.idfname + '_UpLTempSetPoints.txt'
         create_ScheduleFile(idf, 'CoolSetPointFile', os.path.join(pathfile,CoolSetPoint))
@@ -315,7 +320,6 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
     for idx in SortedZoneIdx:
         zone = AllZone[idx]
         bloc = bloclist[idx]
-
         # we need to compute the envelop area facing outside as well as the floor area (for HVAC)
         ExtWallArea = 0
         sur2lookat = (s for s in zone.zonesurfaces if s.key not in ['INTERNALMASS'])
@@ -394,10 +398,10 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
             # HVAC equipment for each zone including ventilation systems (exhaust, balanced with or not heat recovery)
             ThermostatType = 'OfficeZone'+ str(idx) if building.OffOccRandom and OfficeTypeZone>0 else 'ResidZone'#  if OfficeTypeZone==0 else
             #we need to catch some correction on the efficiency, see the function for more details
-            CorrectdEff = getEfficiencyCor(OfficeTypeZone,ZoningMultiplier,building,min(BlocPeopleDensity[bloc]))
+            CorrectdEff = getEfficiencyCor(OfficeTypeZone,ZoningMultiplier,building,sum(BlocPeopleDensity[bloc])/2)
             #now the HVAC system is created for this zone
             ZoneCtrl(idf, zone, building, max(BlocPeopleDensity[bloc]),ThermostatType, ZoningMultiplier,CorrectdEff,FloorArea)
-            #lets add freecooling to consider that peaopl just open windows when there're too hot !
+            #lets add freecooling to consider that people just open windows when there're too hot !
             ZoneFreeCooling(idf,zone,building,'AlwaysON')
 
 if __name__ == '__main__' :
