@@ -67,7 +67,11 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
     createShadings(building, idf)
     #this function enable to create all the boundary conditions for all surfaces
     try:
+        # import time
+        # start = time.time()
         MatchedShade = idf.intersect_match()
+        # end = time.time()
+        # print('[Time Report] : The intersect_match function took : ', round(end - start, 2), ' sec')
         if MatchedShade:
             LogFile.write('[Nb Adjacent_Surfaces] This building has ' + str(len(MatchedShade)) + ' adiabatic surfaces\n')
     except:

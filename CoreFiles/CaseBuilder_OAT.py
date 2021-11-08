@@ -17,6 +17,7 @@ from BuildObject.DB_Building import BuildingList
 from BuildObject.DB_Filter4Simulations import checkBldFilter
 import BuildObject.DB_Data as DB_Data
 import re
+import time
 
 def LaunchOAT(MainInputs,SimDir,nbBuild,ParamVal,currentRun,pythonpath=[]):
 
@@ -95,7 +96,10 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
         GrlFct.setSimLevel(idf, building)
         # The geometry is assigned here
         try:
+            # start = time.time()
             GrlFct.setBuildingLevel(idf, building,LogFile,CorePerim,FloorZoning)
+            # end = time.time()
+            # print('[Time Report] : The setBuildingLevel took : ',round(end-start,2),' sec')
         except:
             msg = '[Error] The setBuildingLevel failed...\n'
             print(msg[:-1])
@@ -134,7 +138,10 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
 
     # lets assign the material and finalize the envelope definition
     try:
+        # start = time.time()
         GrlFct.setEnvelopeLevel(idf, building)
+        # end = time.time()
+        # print('[Time Report] : The setEnvelopeLevel took : ', round(end - start, 2), ' sec')
     except:
         msg = '[Error] The setEnvelopeLevel failed...\n'
         print(msg[:-1])
@@ -148,7 +155,10 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
 
     # lets define the zone level now
     try:
+        # start = time.time()
         GrlFct.setZoneLevel(idf, building,FloorZoning)
+        # end = time.time()
+        # print('[Time Report] : The setZoneLevel took : ', round(end - start, 2), ' sec')
     except:
         msg = '[Error] The setZoneLevel failed...\n'
         print(msg[:-1])
@@ -160,6 +170,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
 
     try:
         # add some extra energy loads like domestic Hot water
+        # start = time.time()
         GrlFct.setExtraEnergyLoad(idf,building)
 
         #lets add the main gloval variable : Mean temperautre over the heated areas and the total building power consumption
@@ -176,7 +187,8 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,Core
 
         # the outputs are set using the Output file
         GrlFct.setOutputLevel(idf,building,MainPath,EMSOutputs,OutputsFile)
-
+        # end = time.time()
+        # print('[Time Report] : The setOutputLevel took : ', round(end - start, 2), ' sec')
         #special ending process if FMU is wanted
         if CreateFMU:
             GrlFct.CreatFMU(idf,building,nbcase,epluspath,SimDir, currentRun,EMSOutputs,LogFile)
