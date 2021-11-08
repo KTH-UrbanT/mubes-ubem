@@ -219,9 +219,12 @@ def getEfficiencyCor(OfficeTypeZone,ZoningMultiplier,building,PeopleDensity):
         # we are conservative has only the minimun occupation rate is considered for the airflows
         OfficeAreaAirFlow = OfficeTypeZone * (
                     ZoningMultiplier * building.AreaBasedFlowRate / 1000) + ZoningMultiplier * building.OccupBasedFlowRate / 1000 * PeopleDensity
-        TotalAreaAirFlow = ZoningMultiplier * building.AreaBasedFlowRate / 1000 + ZoningMultiplier * building.OccupBasedFlowRate / 1000 * PeopleDensity
+        TotalAreaAirFlow = ZoningMultiplier * building.AreaBasedFlowRate / 1000 + ZoningMultiplier * building.OccupBasedFlowRate / 1000 * PeopleDensity#this is changed by the 2 lines below on the 6th of October 2021
+        MeanBuildingFlowRate = OfficeTypeZone*building.AreaBasedFlowRate+(1-OfficeTypeZone)*building.AreaBasedFlowRateDefault
+        TotalAreaAirFlow = ZoningMultiplier * MeanBuildingFlowRate / 1000 + ZoningMultiplier * building.OccupBasedFlowRate / 1000 * PeopleDensity
         Correctdeff = OfficeAreaAirFlow / TotalAreaAirFlow
-        ZoneAreaBasedFlowRate = Correctdeff*building.AreaBasedFlowRate + (1-Correctdeff)*building.AreaBasedFlowRateDefault
+        ZoneAreaBasedFlowRate = Correctdeff*building.AreaBasedFlowRate + (1-Correctdeff)*building.AreaBasedFlowRateDefault #this is changed by the line below on the 6th of October 2021
+        ZoneAreaBasedFlowRate = MeanBuildingFlowRate
     else:
         Correctdeff = 1
         ZoneAreaBasedFlowRate = building.AreaBasedFlowRate
@@ -395,7 +398,7 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
             # HVAC equipment for each zone including ventilation systems (exhaust, balanced with or not heat recovery)
             ThermostatType = 'OfficeZone'+ str(idx) if building.OffOccRandom and OfficeTypeZone>0 else 'ResidZone'#  if OfficeTypeZone==0 else
             #we need to catch some correction on the efficiency, see the function for more details
-            CorrectdEff = getEfficiencyCor(OfficeTypeZone,ZoningMultiplier,building,min(BlocPeopleDensity[bloc]))
+            CorrectdEff = getEfficiencyCor(OfficeTypeZone,ZoningMultiplier,building,sum(BlocPeopleDensity[bloc])/2)
             #now the HVAC system is created for this zone
             ZoneCtrl(idf, zone, building, max(BlocPeopleDensity[bloc]),ThermostatType, ZoningMultiplier,CorrectdEff,FloorArea)
             #lets add freecooling to consider that people just open windows when there're too hot !

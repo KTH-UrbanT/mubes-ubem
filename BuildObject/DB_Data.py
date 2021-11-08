@@ -81,16 +81,16 @@ BaseMaterial = \
 #the mass gives a volume thanks to the density that gives a surface thanks to the average thickness
 InternalMass = \
  {'HeatedZoneIntMass' : {
-        'Thickness' : 0.15, #m this will define the surface in contact with the zone
-        'Conductivity' : 0.12,
+        'Thickness' : 0.1, #m this will define the surface in contact with the zone
+        'Conductivity' : 0.3,
         'Roughness' : "Rough",
         'Density' : 600,
         'Specific_Heat' : 1400,
         'WeightperZoneArea' : 40, #kg/m2
     },
 'NonHeatedZoneIntMass' : {
-        'Thickness' : 0.15, #m this will define the surface in contact with the zone
-        'Conductivity' : 0.12,
+        'Thickness' : 0.1, #m this will define the surface in contact with the zone
+        'Conductivity' : 0.3,
         'Roughness' : "Rough",
         'Density' : 600,
         'Specific_Heat' : 1400,
@@ -118,8 +118,8 @@ GeomElement = \
   'ShadingIdKey' : 'vaggid',
   'BuildingIdKey' : 'byggnadsid',
   'VertexKey':'geometries',
-  'MaxShadingDist': 300,
-  'DistanceTolerance': 2,  #this is a threshold below every edge are removed and vertexes merged
+  'MaxShadingDist': 0,
+  'DistanceTolerance': 0.2,  #this is a threshold below every edge are removed and vertexes merged
   }
 #this dict gives information on occupancy times each day. If DCV = True, the airflow will follow the number of person
 # and the schedule. if not it will be based only on the extra airflow rate but without schedule (all the time)
@@ -142,8 +142,8 @@ BasisElement = \
  'OffOccRandom' : False,
  'AreaBasedFlowRate' : 0.35,    #l/s/m2
  'AreaBasedFlowRateDefault' : 0.35, #l/s/m2 This will not be changed by EPCs and is needed if EPCs report only the balcned ventilation flow with HR for building that have 2 system and one wihtout recovery.
- 'setTempUpL' : [30,30],        #only one have to be defined for none temperature modulation
- 'setTempLoL' : [20,20],        #only one have to be defined for none temperature modulation
+ 'setTempUpL' : [25,25],        #only one have to be defined for none temperature modulation
+ 'setTempLoL' : [21,21],        #only one have to be defined for none temperature modulation
  'ComfortTempOff' :'23:00',     #hours at wich the first temperature set point is considered
  'ComfortTempOn': '06:00',      #hours at wich the second temperature set point is considered
  'ACH_freecool' :4,             #this the the vol/hr of extra ventilation when free cooling is on

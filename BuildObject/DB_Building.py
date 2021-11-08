@@ -407,7 +407,8 @@ class Building:
                 coord.append(tuple(new_coor))
             BlocNbFloor.append(nbfloor)
             BlocHeight.append(self.height)
-            coord= [coord]
+            newpolycoor, node = core_perim.CheckFootprintNodes(coord, 5)
+            coord= [newpolycoor]
         #before submitting the full coordinates, we need to check correspondance in case of multibloc
         coord, validFootprint = CheckMultiBlocFootprint(coord,tol = DistTol)
         if not validFootprint:
