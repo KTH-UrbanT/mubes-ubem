@@ -37,10 +37,10 @@ This scripts is the main one. It deals with the construction of the .idf file fo
 
 Some few other files are present in this folder :  
 __PlotBuilder.py__ : enables to make 3D Matplotlib figures out of the idf files. It will plot all the buildings that are considered or each building appart depending on the available option.  
-__FMPySimPlayGroundEx1.py__ and __FMPySimPlayGroundEx2.py__: it uses FMPy package and as been successfully tested for controlling temperature's setpoints, or watertaps at each time steps of the simulation. For one who'd like to make co-simulation, a deep understanding is still needed on the EP side as inputs and ouputs are to be defined. The SimLauncher, using *CreateFMU = True*, proposes by default the temperature's setpoints and the water taps as inputs and the averaged indoor temperature, the total power for heat needs and for domestic hot water as outputs.  
+__FMPySimPlayGroundEx1.py__ and __FMPySimPlayGroundEx2.py__: it uses FMPy package and as been successfully tested for controlling temperature's setpoints, internal loads, or watertaps at each time steps of the simulation. For one who'd like to make co-simulation, a deep understanding is still needed on the EP side as inputs and ouputs are to be defined. The SimLauncher, using *CreateFMU = True*, proposes by default the temperature's setpoints and the water taps as inputs and the averaged indoor temperature, the total power for heat needs and for domestic hot water as outputs.  
 The two examples (Ex1 and Ex2) :  
-Ex1 : proposes a simple offset on the temperature setPoints. Every two hours a new building sees its setpoint decreases from 21degC to 18degC. the frequency of changes for each building thus depends on the size of the district that is considered.  
-Ex2 : proposes a couple temperature setpoints and water taps controls for each building. It reads an external file to feed the water taps at each time step, and depending on a threshold of water taps' flow, the temperature's setpoints are changed.  
+Ex1 : proposes a simple offset on the temperature setPoints. Every two hours a new building sees its setpoint decreases from 21degC to 18degC. the frequency of changes for each building thus depends on the size of the district that is considered. The internal Loads are also modified depending on working and nonworking hours  
+Ex2 : proposes a couple temperature setpoints and water taps controls for each building, keeping the hourly based internal load inputs. It reads an external file to feed the water taps at each time step, and depending on a threshold of water taps' flow, the temperature's setpoints are changed.  
 Ex1 is usable by default, Ex2 needs to have Domestic Hot Water in external file, so DB_Data.ExtraEnergy dictionnary in __BuildObject__  folder needs to be uncommented.  
   
 The __ReadResults__ folder contains also a template for post-processing the results :  
@@ -59,7 +59,7 @@ _python3_ _PlotBuilder.py_ will read all the buildings and make the figure below
   
 By changing the *createFMU* key in *True*, in SimLauncher, it will automatically create FMUs for each building.  
 
-*python3 FMPySimPlayGroundEx1.py* enable to launch a co-simulation with the above simple temperature's setpoint modulation law for each building.    
+*python3 FMPySimPlayGroundEx1.py* enable to launch a co-simulation with the above simple temperature's setpoint and internal loads modulation law for each building.    
 
 ## Engine structure
 The paradigm of simulation engine is to automate simulation on several different levels :

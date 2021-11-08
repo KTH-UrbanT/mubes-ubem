@@ -21,18 +21,24 @@ def setFMUsINOut(idf, building,TotPowerName):
     EPVarName = TotPowerName
     #EPVarName = 'Weighted Average Heated Zone Air Temperature'
     FMUsOutputNames = ['MeanBldTemp','HeatingPower','DHWHeat']
-    FMusInputNames = ['TempSetPoint']
-    ActiveFMusInputNames = ['FMUsActTempSetP']
+    FMusInputNames = ['TempSetPoint','IntLoadPow']
+    ActiveFMusInputNames = ['FMUsActTempSetP','FMUsActIntLoad']
     if building.DHWInfos:
         FMUsOutputNames.append('DHWHeat')
         FMusInputNames.append('WaterTap_m3_s')
         ActiveFMusInputNames.append('FMUsActWaterTaps')
-    FMusInputInitialValues = [21,0]
+    FMusInputInitialValues = [21,0,0]
     #############################
-    ##This is for Temperature set point, the thermostat schedulle or value is raplced by another schedule value that will be controlled by FMU's input
+    ##This is for Temperature set point, the thermostat schedulle or value is replaced by another schedule value that will be controlled by FMU's input
     SetPoints = idf.idfobjects['HVACTEMPLATE:THERMOSTAT']
     SetPoints[0].Heating_Setpoint_Schedule_Name = 'FMUsActTempSetP'
     SetPoints[0].Constant_Heating_Setpoint = ''
+    #############################
+    ##This is for the internal Load powaer per area, the internal load schedulle or value is replaced by another schedule value that will be controlled by FMU's input
+    IntLoadObj = idf.idfobjects['ELECTRICEQUIPMENT']
+    for intloadobj in IntLoadObj:
+        intloadobj.Schedule_Name = 'FMUsActIntLoad'
+        intloadobj.Watts_per_Zone_Floor_Area = 1
     #############################
     ##Same as above but for the masse flow rate of the domestic hoter water taps (in m3/s)
     if building.DHWInfos:
@@ -83,7 +89,6 @@ def buildEplusFMU(epluspath,weatherpath,Filepath):
         os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'FMUsKit/EnergyPlusToFMU-v3.1.0'))
     sys.path.append(path2addFMU)
     from Scripts import EnergyPlusToFMU
-
     Path2FMUs = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),os.path.normcase('FMUsKit/EnergyPlusToFMU-v3.1.0/Scripts'))
     EpluIddPath = os.path.join(os.path.normcase(epluspath),'Energy+.idd')
     EplusEpwPath = os.path.join(epluspath,os.path.normcase(weatherpath))

@@ -85,10 +85,28 @@ def ReadGeoJsonFile(keyPath):
         Shadingsfile = checkRefCoordinates(Shadingsfile)
         return {'Build': Buildingsfile, 'Shades': Shadingsfile}
 
+def ReadGeoJsonDir(keyPath):
+    print('Reading Input dir,...')
+    BuildingFiles = []
+    ShadingWallFiles = []
+    if os.path.isdir(keyPath['Buildingsfile']):
+        FileList = os.listdir(keyPath['Buildingsfile'])
+        for nb,file in enumerate(FileList):
+            if 'Buildings' in file:
+                print('Building main input file with file nb: ' + str(nb))
+                BuildingFiles.append(file)
+                ShadingWallFiles.append(file.replace('Buildings', 'Walls'))
+
+    return BuildingFiles,ShadingWallFiles
+
+
+
 def checkRefCoordinates(GeojsonFile):
     if 'EPSG' in GeojsonFile.crs['properties']['name']:
         return GeojsonFile
-    if "CRS84" in GeojsonFile.crs['properties']['name']:
+    ##The coordinate system depends on the input file, thus, if specific filter or conversion from one to another,
+    # it should be done here
+    else:#if "CRS84" in GeojsonFile.crs['properties']['name']:
         print('Projecting coordinates of Input file,...')
         transformer = pyproj.Transformer.from_crs("CRS84", "epsg:3950") #this transformation if done for the France's reference
         for idx,obj in enumerate(GeojsonFile):
@@ -103,6 +121,37 @@ def checkRefCoordinates(GeojsonFile):
 
 def ComputeDistance(v1,v2):
     return ((v2[0]-v1[0])**2+(v2[1]-v1[1])**2)**0.5
+
+def MakeAbsoluteCoord(idf,building):
+    # we need to convert change the reference coordinate because precision is needed for boundary conditions definition:
+    newfoot = []
+    for foot in building.footprint:
+        newfoot.append([(node[0] + building.RefCoord[0], node[1] + building.RefCoord[1]) for node in foot])
+    building.footprint = newfoot
+    for shade in building.shades.keys():
+        newcoord = [(node[0] + building.RefCoord[0], node[1] + building.RefCoord[1]) for node in
+                    building.shades[shade]['Vertex']]
+        building.shades[shade]['Vertex'] = newcoord
+    newwalls = []
+    for Wall in building.AdjacentWalls:
+        newcoord = [(node[0] - building.RefCoord[0], node[1] - building.RefCoord[1]) for node in Wall['geometries']]
+        Wall['geometries'] = newcoord
+    surfaces = idf.getsurfaces() + idf.getshadingsurfaces() + idf.getsubsurfaces()
+    for surf in surfaces:
+        for i,node in enumerate(surf.coords):
+            try:
+                x,y,z = node[0], node[1], node[2]
+                varx = 'Vertex_' + str(i+1) + '_Xcoordinate'
+                vary = 'Vertex_' + str(i+1) + '_Ycoordinate'
+                varz = 'Vertex_' + str(i+1) + '_Zcoordinate'
+                setattr(surf, varx, x + building.RefCoord[0])
+                setattr(surf, vary, y + building.RefCoord[1])
+                setattr(surf, varz, z)
+            except:
+                a=1
+    return idf,building
+
+
 
 def SaveCase(MainPath,SepThreads,CaseName,nbBuild):
     SaveDir = os.path.join(os.path.dirname(os.path.dirname(MainPath)), 'SimResults')
@@ -124,7 +173,7 @@ def SaveCase(MainPath,SepThreads,CaseName,nbBuild):
         except:
             pass
 
-def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,Refresh = False):
+def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,MultipleFile = '',Refresh = False):
     if not os.path.exists(os.path.join(os.path.dirname(os.path.dirname(CurrentPath)),'MUBES_SimResults')):
         os.mkdir(os.path.join(os.path.dirname(os.path.dirname(CurrentPath)),'MUBES_SimResults'))
     SimDir = os.path.normcase(
@@ -139,7 +188,15 @@ def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,Refresh = False):
             os.path.join(SimDir, 'Build_' + str(nbBuild)))
         if not os.path.exists(SimDir):
             os.mkdir(SimDir)
-        elif idx == 0:
+        elif idx == 0 and Refresh:
+            shutil.rmtree(SimDir)
+            os.mkdir(SimDir)
+    if len(MultipleFile)> 0 :
+        SimDir = os.path.normcase(
+            os.path.join(SimDir, MultipleFile))
+        if not os.path.exists(SimDir):
+            os.mkdir(SimDir)
+        elif idx == 0 and Refresh:
             shutil.rmtree(SimDir)
             os.mkdir(SimDir)
     return SimDir
@@ -221,9 +278,9 @@ def CleanUpLogFiles(MainPath):
     listOfFiles = os.listdir(MainPath)
     file2pick = []
     for file in listOfFiles:
-        if file[-8:] in '_Logs.log':
+        if '_Logs.log' in file[-9:] :
             file2pick.append(file)
-    MainLogFile = open(os.path.join(MainPath, 'MainFile_Logs.log'), 'w')
+    MainLogFile = open(os.path.join(MainPath, 'AllLogs.log'), 'a')
     for file in file2pick:
         file1 = open(os.path.join(MainPath,file), 'r')
         Lines = file1.readlines()
@@ -254,17 +311,17 @@ def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shad
             building.setTempLoL = [round(ParamVal[varnum], 3),round(ParamVal[varnum], roundVal)]
         elif 'WallInsuThick' in var:
             exttmass = building.Materials
-            exttmass['Wall Insulation']['Thickness'] = round(ParamVal[varnum], roundVal)
+            exttmass['Wall Insulation']['Thickness'] = max(round(ParamVal[varnum], roundVal),0.005)
             setattr(building, var, exttmass)
         elif 'RoofInsuThick' in var:
             exttmass = building.Materials
-            exttmass['Roof Insulation']['Thickness'] = round(ParamVal[varnum], roundVal)
+            exttmass['Roof Insulation']['Thickness'] = max(round(ParamVal[varnum], roundVal),0.005)
             setattr(building, var, exttmass)
         elif 'MaxShadingDist' in var:
             building.MaxShadingDist = round(ParamVal[varnum], roundVal)
             building.shades = building.getshade(Buildingsfile[nbcase], Shadingsfile, Buildingsfile,DB_Data.GeomElement,LogFile,PlotOnly = False)
         elif 'IntLoadCurveShape' in var:
-            building.IntLoadCurveShape = round(ParamVal[varnum], roundVal)
+            building.IntLoadCurveShape = max(round(ParamVal[varnum], roundVal),1e-6)
             building.IntLoad = building.getIntLoad(MainPath, LogFile)
         elif 'AreaBasedFlowRate' in var:
             building.AreaBasedFlowRate = round(ParamVal[varnum], roundVal)
@@ -278,7 +335,7 @@ def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shad
 def SetParamSample(SimDir,nbruns,VarName2Change,Bounds,SepThreads):
     #the parameter are constructed. the oupute gives a matrix ofn parameter to change with nbruns values to simulate
     if SepThreads:
-        Paramfile = os.path.join(os.path.dirname(SimDir), 'ParamSample.pickle')
+        Paramfile = os.path.join(SimDir, 'ParamSample.pickle')#os.path.join(os.path.dirname(SimDir), 'ParamSample.pickle')
         if os.path.isfile(Paramfile):
             with open(Paramfile, 'rb') as handle:
                 ParamSample = pickle.load(handle)

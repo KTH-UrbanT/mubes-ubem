@@ -14,7 +14,10 @@ def sigmoid(x,coef):
   return 1 / (1 + math.exp(-x*coef))
 
 def NormVar(x):
-    var = [((i-min(x))/(max(x)-min(x))) for i in x]
+    try:
+        var = [((i-min(x))/(max(x)-min(x))) for i in x]
+    except:
+        var = x
     return var
 
 def SigmoFile(Season,width,AnnualLoad,name):
@@ -61,8 +64,8 @@ def BuildOccupancyFile(name,path,min,max,building):
     FirstDayofWeek = 0 #the foirst day is a Monday
     for i in range(8760):
         HrperDay = i%24                 #this will gives us values between 0 and 24hours
-        DayofWeek = int(i % (24 * 7) / 24) + FirstDayofWeek # this will give the day of the week (0 is for Mondays)
-        WE = False if DayofWeek < 6 else True  #this will gove a 1 when we are on weekends
+        DayofWeek = (int(i % (24 * 7) / 24) + FirstDayofWeek)%7 # this will give the day of the week (0 is for Mondays)
+        WE = False if DayofWeek < 5 else True  #this will gove a 1 when we are on weekends
         if HrperDay<int(building.Office_Open[:building.Office_Open.find(':')]) or HrperDay>int(building.Office_Close[:building.Office_Close.find(':')]):# or WE:
             nbocc.append(0)
         else:
