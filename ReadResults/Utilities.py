@@ -2,7 +2,7 @@
 #It creates the figures and the plots
 import os
 import pickle#5 as pickle
-import pickle5
+#import pickle5
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import numpy as np
@@ -303,8 +303,9 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
                     with open(file, 'rb') as handle:
                         ResBld[SimNumb[-1]] = pickle.load(handle)
                 except:
-                    with open(file, 'rb') as handle:
-                        ResBld[SimNumb[-1]] = pickle5.load(handle)
+                    pass
+                    # with open(file, 'rb') as handle:
+                    #     ResBld[SimNumb[-1]] = pickle5.load(handle)
                 try:
                     Res['ErrFiles'].append(os.path.getsize(file[:file.index('.pickle')]+'.err'))
                     with open(file[:file.index('.pickle')]+'.err') as file:
