@@ -131,24 +131,31 @@ def plotEnergy(GlobRes,FigName,name):
     #                          'Heat Needs (kWh/m2)', 'k-')
 
 
-def plotTimeSeries(GlobRes,FigName,name,Location,TimeSerieList,SimNum=0):
+def plotTimeSeries(GlobRes,FigName,name,Location,TimeSerieList,SimNum=[]):
     refVar= '[''BuildID''][''50A_UUID'']'
     reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
     signe = ['.','s','>','<','d','o','.','s','>','<','d','o']
     for nb in GlobRes:
         Res = GlobRes[nb]
+        if not SimNum:
+            SimNum = Res['SimNum']
         locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
-        index_y,varx = Utilities.getSortedIdx(reference,locref)
-        vary = Res[Location][index_y[varx.index(SimNum)]][TimeSerieList]
-        varx = np.linspace(1,len(vary),len(vary))
-        Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax0'],varx, [vary], 'Time', [name[nb]],
-                                 TimeSerieList, '--')
-        if nb==0:
-            vary0 = vary
-        else:
-            diff = [(vary0[idx]-val) for idx,val in enumerate(vary)]
-            Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax1'],varx, [diff], 'Time', [name[nb]],
-                                     'Error', '--')
+
+        for nbBld in SimNum:
+            index_y, varx = Utilities.getSortedIdx(reference, locref)
+            vary = Res[Location][index_y[varx.index(nbBld)]][TimeSerieList]
+            varx = np.linspace(1,len(vary),len(vary))
+            Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0],varx, [vary], 'Time', [name[nb]+'_Bld_'+str(nbBld)],
+                                     TimeSerieList, '--')
+            Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][1], varx, [np.cumsum(vary)], 'Time',
+                                     [name[nb] + '_Bld_' + str(nbBld)],
+                                     'Cumulative form', '--')
+        # if nb==0:
+        #     vary0 = vary
+        # else:
+        #     diff = [(vary0[idx]-val) for idx,val in enumerate(vary)]
+        #     Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax1'],varx, [diff], 'Time', [name[nb]],
+        #                              'Error', '--')
 
 
 def plotIndex(GlobRes,FigName,name):
@@ -169,7 +176,7 @@ def plotIndex(GlobRes,FigName,name):
 
 if __name__ == '__main__' :
 
-    CaseName= 'Test' #Name of the case study to post-process
+    CaseName= 'ForTest' #Name of the case study to post-process
 
     #Names (attributes) wanted to be taken in the pickle files for post-processing. The time series are agrregated into HeatedArea, NonHeatedArea and OutdoorSite
     extraVar=['height','StoreyHeigth','nbfloor','BlocHeight','BlocFootprintArea','BlocNbFloor','HeatedArea','NonHeatedArea','OutdoorSite']
@@ -219,8 +226,8 @@ if __name__ == '__main__' :
     Timecomp={}
     for i,serie in enumerate(TimeSerieList):
         try:
-            Timecomp[i] = Utilities.createSimpleFig()
-            plotTimeSeries(Res,Timecomp[i],Names4Plots,'HeatedArea',serie,SimNum =0)
+            Timecomp[i] = Utilities.createMultilFig('',2,linked=False)
+            plotTimeSeries(Res,Timecomp[i],Names4Plots,'HeatedArea',serie,SimNum =[])
         except:
             pass
 
