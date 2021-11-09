@@ -164,7 +164,7 @@ def createDualFig(title,ratio):
 
 #this function enable to create a two subplots figure with ratio definition between the two plots
 def createMultilFig(title,nbFig,linked=True):
-    fig_name = plt.figure()
+    fig_name = plt.figure(figsize=(10, 7))
     gs = gridspec.GridSpec(nbFig,1, left=0.1, bottom = 0.1)
     ax = {}
     for i in range(nbFig):
@@ -177,7 +177,7 @@ def createMultilFig(title,nbFig,linked=True):
     return {'fig_name' : fig_name, 'ax': ax}
 
 def createMultilDblFig(title,nbFigx,nbFigy,linked=True):
-    fig_name = plt.figure()
+    fig_name = plt.figure(figsize=(20, 20))
     gs = gridspec.GridSpec(nbFigx,nbFigy, left=0.1, bottom = 0.1)
     ax = {}
     totfig = 0
@@ -194,7 +194,7 @@ def createMultilDblFig(title,nbFigx,nbFigy,linked=True):
 
 #this function enable to create a single graph areas
 def createSimpleFig():
-    fig_name = plt.figure()
+    fig_name = plt.figure(figsize=(20, 10))
     gs = gridspec.GridSpec(4, 1, left=0.1, bottom = 0.1)
     ax0 = plt.subplot(gs[:, 0])
     ax0.grid()

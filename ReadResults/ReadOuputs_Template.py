@@ -50,18 +50,33 @@ def plotAreaVal(GlobRes,FigName,name):
     #                             'EP Area (m2)', '--')
 
 
-def plotErrorFile(GlobRes,FigName,name):
-    refVar= '[''BuildID''][''50A_UUID'']'
-    reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
+def plotErrorFile(GlobRes,FigName,name,legend = True):
+    #reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
     #definition of the reference for comparison
     signe = ['.','s','>','<','d','o','.','s','>','<','d','o']
+    offset = 0
+    tot = 0
     for nb in GlobRes:
         Res = GlobRes[nb]
-        locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
-        index_y,varx = Utilities.getSortedIdx(reference,locref)
-        vary = [Res['ErrFiles'][idx] for idx in index_y]
-        Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax0'],varx, [vary], 'Building', [name[nb]],
-                                 'ErrFilesSize (bytes)', signe[nb])
+        #locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
+        #index_y,varx = Utilities.getSortedIdx(reference,locref)
+        vary = Res['Warnings']
+        varx = [int(x) for x in np.linspace(offset, offset + len(vary), len(vary))]
+        xtitle = 'Building'
+        Warnings = [Res['SimNum'][idx] for idx, val in enumerate(vary) if val > 0]
+        if Warnings:
+            print('File nb : ' + str(nb) + ' has simulations with Warnings on buildings : ' + str(Warnings))
+        Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0],varx, [vary], xtitle, [name[nb]],
+                                 'Nb Warnings', signe[np.random.randint(0,10)],legend = legend)
+        vary = Res['Errors']
+        varx = [int(x) for x in np.linspace(offset, offset + len(vary), len(vary))]
+        offset += (len(vary) + 1)
+        xtitle = 'Building'
+        Errors = [Res['SimNum'][idx] for idx,val in enumerate(vary) if val>0]
+        if Errors:
+            print('File nb : '+str(nb)+' has simulations with errors on buildings : '+str(Errors))
+        Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][1], varx, [vary], xtitle, [name[nb]],
+                                 'Nb Severe Errors (bytes)', signe[np.random.randint(0, 10)], legend=legend)
 
 
 def plotDim(GlobRes,FigName,name):
@@ -132,24 +147,32 @@ def plotEnergy(GlobRes,FigName,name):
     #                          'Heat Needs (kWh/m2)', 'k-')
 
 
-def plotTimeSeries(GlobRes,FigName,name,Location,TimeSerieList,SimNum=0):
+def plotTimeSeries(GlobRes,FigName,name,Location,TimeSerieList,SimNum=[]):
+
     refVar= '[''BuildID''][''50A_UUID'']'
     reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
     signe = ['.','s','>','<','d','o','.','s','>','<','d','o']
     for nb in GlobRes:
         Res = GlobRes[nb]
+        if not SimNum:
+            SimNum = Res['SimNum']
         locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
-        index_y,varx = Utilities.getSortedIdx(reference,locref)
-        vary = Res[Location][index_y[varx.index(SimNum)]][TimeSerieList]
-        varx = np.linspace(1,len(vary),len(vary))
-        Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax0'],varx, [vary], 'Time', [name[nb]],
-                                 TimeSerieList, '--')
-        if nb==0:
-            vary0 = vary
-        else:
-            diff = [(vary0[idx]-val) for idx,val in enumerate(vary)]
-            Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax1'],varx, [diff], 'Time', [name[nb]],
-                                     'Error', '--')
+
+        for nbBld in SimNum:
+            index_y, varx = Utilities.getSortedIdx(reference, locref)
+            vary = Res[Location][index_y[varx.index(nbBld)]][TimeSerieList]
+            varx = np.linspace(1,len(vary),len(vary))
+            Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0],varx, [vary], 'Time', [name[nb]+'_Bld_'+str(nbBld)],
+                                     TimeSerieList, '--')
+            Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][1], varx, [np.cumsum(vary)], 'Time',
+                                     [name[nb] + '_Bld_' + str(nbBld)],
+                                     'Cumulative form', '--')
+        # if nb==0:
+        #     vary0 = vary
+        # else:
+        #     diff = [(vary0[idx]-val) for idx,val in enumerate(vary)]
+        #     Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax1'],varx, [diff], 'Time', [name[nb]],
+        #                              'Error', '--')
 
 
 def plotIndex(GlobRes,FigName,name):
@@ -201,27 +224,27 @@ if __name__ == '__main__' :
 
 
     #The opening order does not follows the building simulation number while opening the data. Thus, this first graphs provides the correspondance between the other plots, building number and their simulation number
-    IndexFig = Utilities.createSimpleFig()
-    plotIndex(Res, IndexFig, Names4Plots)
+    # IndexFig = Utilities.createSimpleFig()
+    # plotIndex(Res, IndexFig, Names4Plots)
     #this 2nd plot gives the size of the error file. It gives insights if some buildings causses particulary over whole issue in the simulation process
-    ErrorFig = Utilities.createSimpleFig()
-    plotErrorFile(Res, ErrorFig, Names4Plots)
+    ErrorFig = Utilities.createMultilFig('',2,linked=False)
+    plotErrorFile(Res, ErrorFig, Names4Plots,legend = False)
     #this 3rd graph gives the footprint area and the correspondance between EPCs value if available
-    AreaFig = Utilities.createMultilFig('',2,linked=False)
-    plotAreaVal(Res, AreaFig, Names4Plots)
+    # AreaFig = Utilities.createMultilFig('',2,linked=False)
+    # plotAreaVal(Res, AreaFig, Names4Plots)
     #this one gives geometric values
-    DimFig = Utilities.createMultilFig('', 3)
-    plotDim(Res, DimFig,Names4Plots)
+    # DimFig = Utilities.createMultilFig('', 3)
+    # plotDim(Res, DimFig,Names4Plots)
     # this one gives the energy demand of heating with EPCs values
-    EnergyFig = Utilities.createMultilFig('',2,linked=False)
-    plotEnergy(Res, EnergyFig,Names4Plots)
+    # EnergyFig = Utilities.createMultilFig('',2,linked=False)
+    # plotEnergy(Res, EnergyFig,Names4Plots)
 
     #below, some timeseries are plotted, all time series available but only for building Simulation Number 0
     Timecomp={}
     for i,serie in enumerate(TimeSerieList):
         try:
-            Timecomp[i] = Utilities.createSimpleFig()
-            plotTimeSeries(Res,Timecomp[i],Names4Plots,'HeatedArea',serie,SimNum =0)
+            Timecomp[i] =  Utilities.createMultilFig('',2,linked=False)
+            plotTimeSeries(Res,Timecomp[i],Names4Plots,'HeatedArea',serie,SimNum =[])
         except:
             pass
 
