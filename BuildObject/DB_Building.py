@@ -155,12 +155,12 @@ class Building:
             self.IntLoad = self.getIntLoad(MainPath,LogFile)
             self.DHWInfos = self.getExtraEnergy(ExEn, MainPath)
             #if there are no cooling comsumption, lets considerer a set point at 50deg max
-            # for key in self.EPCMeters['Cooling']:
-            #     if self.EPCMeters['Cooling'][key]>0:
-            #         self.setTempUpL = BE['setTempUpL']
-            #         self.intT_freecool = 50
-            #     else:
-            #         self.setTempUpL = [50]*len(BE['setTempUpL'])
+            for key in self.EPCMeters['Cooling']:
+                if self.EPCMeters['Cooling'][key]>0:
+                    self.setTempUpL = BE['setTempUpL']
+                    self.intT_freecool = 50
+                else:
+                    self.setTempUpL = [50]*len(BE['setTempUpL'])
 
     def MakeRelativeCoord(self):
         # we need to convert change the reference coordinate because precision is needed for boundary conditions definition:

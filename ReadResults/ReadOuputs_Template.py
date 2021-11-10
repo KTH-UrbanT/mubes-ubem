@@ -130,6 +130,31 @@ def plotEnergy(GlobRes,FigName,name):
     #                          'EPCs', ['1:1'],
     #                          'Heat Needs (kWh/m2)', 'k-')
 
+def plotDistrictEnergy(GlobRes,FigName,name):
+    refVar = '[''BuildID''][''50A_UUID'']'
+    reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(
+        len(GlobRes[0]['BuildID']))]  # we need this reference because some building are missing is somme simulation !!!
+    # definition of the reference for comparison
+    signe = ['.', 's', '>', '<', 'd', 'o', '.', 's', '>', '<', 'd', 'o']
+    for nb in GlobRes:
+        Res = GlobRes[nb]
+        locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
+        index_y, varx = Utilities.getSortedIdx(reference, locref)
+        varyref = [Res['EPC_Heat'][idx]*Res['ATemp'][idx] for idx in index_y]
+        if nb == 0:
+            Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0], varx, [np.cumsum(varyref)], 'Building num',
+                                     ['EPCs'],
+                                     'Heat Needs (kWh)', 'x')
+        vary = [Res['EP_Heat'][idx]*Res['EP_Area'][idx] for idx in index_y]
+        Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0], varx, [np.cumsum(vary)], 'Building', [name[nb]],
+                                 'Heat Needs (kWh/m2)', signe[nb])
+        Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][1], varyref, [vary], 'EP Sim',
+                                 [name[nb]],
+                                 'EP Sim', signe[nb])
+    # Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][1], [0, max(varyref)], [[0, max(varyref)]],
+    #                          'EPCs', ['1:1'],
+    #                          'Heat Needs (kWh/m2)', 'k-')
+
 
 def plotTimeSeries(GlobRes,FigName,name,Location,TimeSerieList,SimNum=[]):
     refVar= '[''BuildID''][''50A_UUID'']'
@@ -140,7 +165,6 @@ def plotTimeSeries(GlobRes,FigName,name,Location,TimeSerieList,SimNum=[]):
         if not SimNum:
             SimNum = Res['SimNum']
         locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
-
         for nbBld in SimNum:
             index_y, varx = Utilities.getSortedIdx(reference, locref)
             vary = Res[Location][index_y[varx.index(nbBld)]][TimeSerieList]
@@ -150,12 +174,17 @@ def plotTimeSeries(GlobRes,FigName,name,Location,TimeSerieList,SimNum=[]):
             Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][1], varx, [np.cumsum(vary)], 'Time',
                                      [name[nb] + '_Bld_' + str(nbBld)],
                                      'Cumulative form', '--')
-        # if nb==0:
-        #     vary0 = vary
-        # else:
-        #     diff = [(vary0[idx]-val) for idx,val in enumerate(vary)]
-        #     Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax1'],varx, [diff], 'Time', [name[nb]],
-        #                              'Error', '--')
+            try:
+                tot = [tot[idx]+val for idx,val in enumerate(vary)]
+            except:
+                tot = vary
+        if TimeSerieList == 'Data_Zone Ideal Loads Supply Air Total Heating Rate':
+           Write2file(tot,'DistrictHeatNeeds.txt')
+
+def Write2file(val,name):
+    with open(name, 'w') as f:
+        for item in val:
+            f.write("%s\n" % item)
 
 
 def plotIndex(GlobRes,FigName,name):
@@ -176,7 +205,7 @@ def plotIndex(GlobRes,FigName,name):
 
 if __name__ == '__main__' :
 
-    CaseName= 'ForTest' #Name of the case study to post-process
+    CaseName= 'minnebergsmarties' #Name of the case study to post-process
 
     #Names (attributes) wanted to be taken in the pickle files for post-processing. The time series are agrregated into HeatedArea, NonHeatedArea and OutdoorSite
     extraVar=['height','StoreyHeigth','nbfloor','BlocHeight','BlocFootprintArea','BlocNbFloor','HeatedArea','NonHeatedArea','OutdoorSite']
@@ -221,6 +250,10 @@ if __name__ == '__main__' :
     # this one gives the energy demand of heating with EPCs values
     EnergyFig = Utilities.createMultilFig('',2,linked=False)
     plotEnergy(Res, EnergyFig,Names4Plots)
+
+    EnergyFig = Utilities.createMultilFig('', 2, linked=False)
+    plotDistrictEnergy(Res, EnergyFig, Names4Plots)
+
 
     #below, some timeseries are plotted, all time series available but only for building Simulation Number 0
     Timecomp={}
