@@ -131,17 +131,17 @@ BasisElement = \
  'DemandControlledVentilation' : True,
  'OccupBasedFlowRate': 7,       # l/s/person
  'OccupHeatRate' : 70,          #W per person
- 'EnvLeak': 1,                # l/s/m2 at 50Pa
+ 'EnvLeak': 0.8,                # l/s/m2 at 50Pa
  'BasementAirLeak': 1,          #in Air change rate [vol/hour]
- 'wwr': 0.3,
+ 'wwr': 0.25,
  'ExternalInsulation' : False,
  'ElecYearlyLoad' :15,          #this is the W\m2 value that will be applied constantly for appliances and occupancy consumptipon impact. It is replace by the values in EPCs if available
  'IntLoadType' : 'Cste',        #change either by 'Cste', 'winter', or 'summer' for reversed sigmoid or sigmoid this will generate hourly values file in the InputFiles folder
  'IntLoadMultiplier': 1,        #this is a multiplier the modeler would like to play with for calibration
  'IntLoadCurveShape':3,         #this defines the slop of the curves
  'OffOccRandom' : False,
- 'AreaBasedFlowRate' : 0.5,    #l/s/m2
- 'AreaBasedFlowRateDefault' : 0.5, #l/s/m2 This will not be changed by EPCs and is needed if EPCs report only the balcned ventilation flow with HR for building that have 2 system and one wihtout recovery.
+ 'AreaBasedFlowRate' : 0.35,    #l/s/m2
+ 'AreaBasedFlowRateDefault' : 0.35, #l/s/m2 This will not be changed by EPCs and is needed if EPCs report only the balcned ventilation flow with HR for building that have 2 system and one wihtout recovery.
  'setTempUpL' : [25,25],        #only one have to be defined for none temperature modulation
  'setTempLoL' : [21,21],        #only one have to be defined for none temperature modulation
  'ComfortTempOff' :'23:00',     #hours at wich the first temperature set point is considered

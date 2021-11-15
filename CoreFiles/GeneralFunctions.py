@@ -70,7 +70,7 @@ def readPathfile(Pathways):
     return keyPath
 
 def ReadGeoJsonFile(keyPath):
-    print('Reading Input files,...')
+    #print('Reading Input files,...')
     try:
         BuildObjectDict = ReadGeojsonKeyNames(keyPath['GeojsonProperties'])
         Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'])
@@ -86,14 +86,14 @@ def ReadGeoJsonFile(keyPath):
         return {'Build': Buildingsfile, 'Shades': Shadingsfile}
 
 def ReadGeoJsonDir(keyPath):
-    print('Reading Input dir,...')
+    #print('Reading Input dir,...')
     BuildingFiles = []
     ShadingWallFiles = []
     if os.path.isdir(keyPath['Buildingsfile']):
         FileList = os.listdir(keyPath['Buildingsfile'])
         for nb,file in enumerate(FileList):
             if 'Buildings' in file:
-                print('Building main input file with file nb: ' + str(nb))
+                #print('Building main input file with file nb: ' + str(nb))
                 BuildingFiles.append(file)
                 ShadingWallFiles.append(file.replace('Buildings', 'Walls'))
 

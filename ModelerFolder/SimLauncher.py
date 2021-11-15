@@ -47,7 +47,7 @@ if __name__ == '__main__' :
     Bld2Sim = []
     for line in FileLines:
         Bld2Sim.append(int(line))
-    CaseName = 'MinnebergSmarties'
+    CaseName = 'ForNewtest'
     BuildNum = []#Bld2Sim
     VarName2Change = []#['AirRecovEff', 'IntLoadCurveShape', 'wwr', 'EnvLeak', 'setTempLoL', 'AreaBasedFlowRate', 'WindowUval',
                   #'WallInsuThick', 'RoofInsuThick']
@@ -56,9 +56,9 @@ if __name__ == '__main__' :
     CPUusage = 0.8
     CreateFMU = False
     CorePerim = False
-    FloorZoning = True
+    FloorZoning = False
     RefreshFolder = True
-    PathInputFile = 'MinnebergLast.txt'#'Pathways_Template.txt'#'Minneberg2D.txt'#'MinnebergLast.txt''Sodermalm4.txt'#'MinnebergLast.txt'#'HammarbyLast.txt'#
+    PathInputFile = 'HammarbyLast.txt'#'Sodermalm4.txt'#'MinnebergLast.txt'#'Pathways_Template.txt'#'Minneberg2D.txt'#'MinnebergLast.txt''MinnebergLast.txt'#'HammarbyLast.txt'#
     OutputsFile = 'Outputs_Template.txt'#'Outputs_detailed.txt'#_withlosses.txt'#
     ZoneOfInterest = ''
 
@@ -143,7 +143,7 @@ if __name__ == '__main__' :
                         # lets check if this building is already present in the folder (means Refresh = False in CreateSimDir() above)
                         if not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + '_template.idf'))):
                             #there is a need to launch the first one that will also create the template for all the others
-                            CB_OAT.LaunchOAT(MainInputs,SimDir,nbBuild,ParamSample[0, :],0,pythonpath)
+                            CB_OAT.LaunchOAT(MainInputs,SimDir,keyPath,nbBuild,ParamSample[0, :],0,pythonpath)
                         # lets check whether all the files are to be run or if there's only some to run again
                         NewRuns = []
                         for i in range(NbRuns):
@@ -153,7 +153,7 @@ if __name__ == '__main__' :
                         MainInputs['FirstRun'] = False
                         pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
                         for i in NewRuns:
-                            pool.apply_async(CB_OAT.LaunchOAT, args=(MainInputs,SimDir,nbBuild,ParamSample[i, :],i,pythonpath))
+                            pool.apply_async(CB_OAT.LaunchOAT, args=(MainInputs,SimDir,keyPath,nbBuild,ParamSample[i, :],i,pythonpath))
                         pool.close()
                         pool.join()
                     # lets check if this building is already present in the folder (means Refresh = False in CreateSimDir() above)
@@ -178,7 +178,7 @@ if __name__ == '__main__' :
                 #lets launch the idf file creation process using the listed created above
                 pool = mp.Pool(processes=int(nbcpu))
                 for nbBuild in File2Launch['nbBuild']:
-                    pool.apply_async(CB_OAT.LaunchOAT, args=(MainInputs,SimDir,nbBuild,[1],0,pythonpath))
+                    pool.apply_async(CB_OAT.LaunchOAT, args=(MainInputs,SimDir,keyPath,nbBuild,[1],0,pythonpath))
                 pool.close()
                 pool.join()
                 # now that all the files are created, we can aggregate all the log files into a single one.
@@ -195,5 +195,5 @@ if __name__ == '__main__' :
                 GrlFct.CleanUpLogFiles(SimDir)
                 #the FMU are not taking advantage of the parallel computing option yet
                 for nbBuild in File2Launch['nbBuild']:
-                    CB_OAT.LaunchOAT(MainInputs,SimDir,nbBuild,[1],0,pythonpath)
+                    CB_OAT.LaunchOAT(MainInputs,SimDir,keyPath,nbBuild,[1],0,pythonpath)
 

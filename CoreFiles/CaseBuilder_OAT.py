@@ -1,8 +1,7 @@
 # @Author  : Xavier Faure
 # @Email   : xavierf@kth.se
 
-import os
-import sys
+import os, sys, platform
 #add the required path
 path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 sys.path.append(path2addgeom)
@@ -11,7 +10,7 @@ sys.path.append("..")
 from subprocess import check_call
 from geomeppy import IDF
 import pickle#5 as pickle
-import pickle5
+#import pickle5
 import CoreFiles.GeneralFunctions as GrlFct
 from BuildObject.DB_Building import BuildingList
 from BuildObject.DB_Filter4Simulations import checkBldFilter
@@ -19,19 +18,22 @@ import BuildObject.DB_Data as DB_Data
 import re
 import time
 
-def LaunchOAT(MainInputs,SimDir,nbBuild,ParamVal,currentRun,pythonpath=[]):
+def LaunchOAT(MainInputs,SimDir,keypath,nbBuild,ParamVal,currentRun,pythonpath=[],BldObj=[]):
 
     #this function was made to enable either to launch a process in a seperate terminal or not, given a python path to a virtualenv
     #but if kept in seperate terminal, the inputfile needs to be read for each simulation...not really efficient,
     #thus, the first option, being fully in the same envirnment is used with the optionnal argument 'DataBaseInput'
     if not pythonpath:
         LaunchProcess(SimDir, MainInputs['FirstRun'], MainInputs['TotNbRun'], currentRun,
-                                  MainInputs['PathInputFiles'], nbBuild, MainInputs['CorePerim'],
+                                  keypath, nbBuild, MainInputs['CorePerim'],
                                   MainInputs['FloorZoning'], ParamVal,MainInputs['VarName2Change'],MainInputs['CreateFMU'],
                                     MainInputs['OutputsFile'],DataBaseInput = MainInputs['DataBaseInput'])
     # if willing to launch each run in seperate terminals, all arguments must be given in text form and the pythonpath is required
     else:
-        virtualenvline = os.path.join(pythonpath,'python.exe')
+        if platform.system() == "Windows":
+            virtualenvline = os.path.join(pythonpath, "python.exe")
+        else:
+            virtualenvline = os.path.join(pythonpath, "python")
         scriptpath =os.path.join(os.path.dirname(os.getcwd()),'CoreFiles')
         cmdline = [virtualenvline, os.path.join(scriptpath, 'CaseBuilder_OAT.py')]
         for key in MainInputs.keys():
@@ -40,6 +42,13 @@ def LaunchOAT(MainInputs,SimDir,nbBuild,ParamVal,currentRun,pythonpath=[]):
                 cmdline.append(MainInputs[key])
             else:
                 cmdline.append(str(MainInputs[key]))
+
+        for key in keypath.keys():
+            cmdline.append('-'+key)
+            if type(keypath[key]) == str:
+                cmdline.append(keypath[key])
+            else:
+                cmdline.append(str(keypath[key]))
 
         cmdline.append('-SimDir')
         cmdline.append(str(SimDir))
@@ -51,14 +60,17 @@ def LaunchOAT(MainInputs,SimDir,nbBuild,ParamVal,currentRun,pythonpath=[]):
         cmdline.append(str(currentRun))
         check_call(cmdline,stdout=open(os.devnull, "w"))
 
-def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,PathInputFiles,nbcase,CorePerim,FloorZoning,ParamVal,VarName2Change,
+def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,FloorZoning,ParamVal,VarName2Change,
                   CreateFMU,OutputsFile,DataBaseInput = []):
     #This function builds the idf file, a log file is generated if the buildiung is run for the first time,
     #the idf file will be saved as well as the building object as a pickle. the latter could be commented as not required
-
     MainPath = os.getcwd()
 
-    keyPath = GrlFct.readPathfile(PathInputFiles)
+    # try:
+    #     keyPath = GrlFct.readPathfile(PathInputFiles)
+    # except:
+    #     #this is in case the PathInput file is already the dictionnary (it is the case when launched through the API
+    #     keyPath = PathInputFiles
     if not DataBaseInput:
         # Building and Shading objects from reading the geojson file as input for further functionsif not given as arguments
         DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
@@ -242,9 +254,15 @@ if __name__ == '__main__' :
         if (currArg.startswith('-SimDir')):
             currIdx += 1
             SimDir = sys.argv[currIdx]
-        elif (currArg.startswith('-PathInputFiles')):
+        elif (currArg.startswith('-epluspath')):
             currIdx += 1
             PathInputFiles = sys.argv[currIdx]
+        elif (currArg.startswith('-BuildingsFile')):
+            currIdx += 1
+            BuildingsFile = sys.argv[currIdx]
+        elif (currArg.startswith('-ShadingsFile')):
+            currIdx += 1
+            ShadingsFile = sys.argv[currIdx]
         elif (currArg.startswith('-nbBuild')):
             currIdx += 1
             nbcase = int(sys.argv[currIdx])
@@ -284,5 +302,6 @@ if __name__ == '__main__' :
         ParamVal = [float(val) for val in ParamVal]
         VarName2Change = re.split(r'\W+', VarName2Change)[1:-1]
 
-    LaunchProcess(SimDir, FirstRun, TotNbRun, currentRun,PathInputFiles, nbcase, CorePerim, FloorZoning, ParamVal,VarName2Change,
+    keypath = {'epluspath':epluspath, 'BuildingsFile':BuildingsFile, 'ShadingsFile':ShadingsFile}
+    LaunchProcess(SimDir, FirstRun, TotNbRun, currentRun,keypath, nbcase, CorePerim, FloorZoning, ParamVal,VarName2Change,
                   CreateFMU, OutputsFile)
