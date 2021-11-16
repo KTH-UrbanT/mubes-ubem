@@ -31,6 +31,7 @@ def Read_Arguments():
     FloorZoning = True
     RefreshFolder = True
     DataPath = []
+    EPlusPath = []
 
     # Get command-line options.
     lastIdx = len(sys.argv) - 1
@@ -43,6 +44,9 @@ def Read_Arguments():
         if (currArg.startswith('-DataPath')):
             currIdx += 1
             DataPath = sys.argv[currIdx]
+        if (currArg.startswith('-EPlusPath')):
+            currIdx += 1
+            EPlusPath = sys.argv[currIdx]
         elif (currArg.startswith('-UUID')):
             currIdx += 1
             UUID = sys.argv[currIdx]
@@ -77,7 +81,7 @@ def Read_Arguments():
 
         ListUUID = re.findall("[^,]+", UUID)
 
-    return CaseName,DataPath,ListUUID,DESO,VarName2Change,Bounds,NbRuns,CPUusage,CreateFMU,CorePerim,FloorZoning,RefreshFolder
+    return CaseName,DataPath,EPlusPath,ListUUID,DESO,VarName2Change,Bounds,NbRuns,CPUusage,CreateFMU,CorePerim,FloorZoning,RefreshFolder
 
 def ListAvailableFiles(keyPath):
     # reading the pathfiles and the geojsonfile
@@ -136,9 +140,9 @@ if __name__ == '__main__' :
     # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
     #these are default values :
-    CaseName,DataPath,UUID,DESO,VarName2Change,Bounds,NbRuns,CPUusage,CreateFMU,CorePerim,FloorZoning,RefreshFolder = Read_Arguments()
+    CaseName,DataPath,EPlusPath,UUID,DESO,VarName2Change,Bounds,NbRuns,CPUusage,CreateFMU,CorePerim,FloorZoning,RefreshFolder = Read_Arguments()
 
-    epluspath = os.path.normcase('C:/EnergyPlusV9-1-0/')
+    epluspath = EPlusPath
     #a first keypath dict needs to be defined to comply with the current paradigme along the code
     Buildingsfile = DataPath
     Shadingsfile = Buildingsfile
