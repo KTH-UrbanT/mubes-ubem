@@ -30,6 +30,7 @@ def Read_Arguments():
     CorePerim = False
     FloorZoning = True
     RefreshFolder = True
+    DataPath = []
 
     # Get command-line options.
     lastIdx = len(sys.argv) - 1
@@ -39,6 +40,9 @@ def Read_Arguments():
         if (currArg.startswith('-CaseName')):
             currIdx += 1
             CaseName = sys.argv[currIdx]
+        if (currArg.startswith('-DataPath')):
+            currIdx += 1
+            DataPath = sys.argv[currIdx]
         elif (currArg.startswith('-UUID')):
             currIdx += 1
             UUID = sys.argv[currIdx]
@@ -73,7 +77,7 @@ def Read_Arguments():
 
         ListUUID = re.findall("[^,]+", UUID)
 
-    return CaseName,ListUUID,DESO,VarName2Change,Bounds,NbRuns,CPUusage,CreateFMU,CorePerim,FloorZoning,RefreshFolder
+    return CaseName,DataPath,ListUUID,DESO,VarName2Change,Bounds,NbRuns,CPUusage,CreateFMU,CorePerim,FloorZoning,RefreshFolder
 
 def ListAvailableFiles(keyPath):
     # reading the pathfiles and the geojsonfile
@@ -132,11 +136,11 @@ if __name__ == '__main__' :
     # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
     #these are default values :
-    CaseName,UUID,DESO,VarName2Change,Bounds,NbRuns,CPUusage,CreateFMU,CorePerim,FloorZoning,RefreshFolder = Read_Arguments()
+    CaseName,DataPath,UUID,DESO,VarName2Change,Bounds,NbRuns,CPUusage,CreateFMU,CorePerim,FloorZoning,RefreshFolder = Read_Arguments()
 
     epluspath = os.path.normcase('C:/EnergyPlusV9-1-0/')
     #a first keypath dict needs to be defined to comply with the current paradigme along the code
-    Buildingsfile = os.path.normcase(os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'API\\api\\sample data\\Sodermalmv4'))
+    Buildingsfile = DataPath
     Shadingsfile = Buildingsfile
     keyPath =  {'epluspath': epluspath, 'Buildingsfile': Buildingsfile, 'Shadingsfile': Shadingsfile,'pythonpath': '','GeojsonProperties':''}
     #this function makes the list of dictionnary with single input files if several are present inthe sample folder
