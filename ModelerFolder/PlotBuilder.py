@@ -77,7 +77,7 @@ def LaunchProcess(SimDir, DataBaseInput, LogFile, bldidx, keyPath, nbcase, CoreP
     if ok2plot:
         GrlFct.Write2LogFile('[Nb Adjacent_Walls] This building has '+str(nbadiab)+' walls with adiabatic surfaces\n', LogFile)
 
-        idf_ref.view_model(test=PlotBuilding, FigCenter=FigCentroid, WindSize=2 * WindSize)
+    idf_ref.view_model(test=PlotBuilding, FigCenter=FigCentroid, WindSize=2 * WindSize)
 
     GrlFct.Write2LogFile('##############################################################\n', LogFile)
 
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     PathInputFile = 'Pathways_Template.txt'
     CorePerim = False
     FloorZoning = False
-    PlotBuilding = False
+    PlotBuilding = False,
     ZoneOfInterest = ''
 
     ######################################################################################################################
