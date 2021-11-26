@@ -194,7 +194,9 @@ def createMultilDblFig(title,nbFigx,nbFigy,linked=True):
 
 #this function enable to create a single graph areas
 def createSimpleFig():
-    fig_name = plt.figure(figsize=(10, 7))
+    fig_name = plt.figure(figsize=(7, 5))
+    plt.rc('font', size=15)
+    #plt.subplots_adjust(bottom=0.3)
     gs = gridspec.GridSpec(4, 1, left=0.1, bottom = 0.1)
     ax0 = plt.subplot(gs[:, 0])
     ax0.grid()
@@ -202,13 +204,18 @@ def createSimpleFig():
     return {'fig_name' : fig_name, 'ax0': ax0}
 
 #basic plots
-def plotBasicGraph(fig_name,ax0,varx,vary,varxname,varyname,title,sign,legend = True, markersize = 5):
+def plotBasicGraph(fig_name,ax0,varx,vary,varxname,varyname,title,sign,legend = True, markersize = 5, xlim =[], ylim = []):
     plt.figure(fig_name)
+
     if len(varyname)>0:
         for nb,var in enumerate(vary):
             ax0.plot(varx,var,sign,label= varyname[nb], mfc='none',markersize=markersize)
         ax0.set_xlabel(varxname)
         ax0.set_ylabel(title)
+        if xlim:
+            ax0.set_xlim(xlim)
+        if ylim:
+            ax0.set_ylim(ylim)
         if legend:
             ax0.legend()
     else:
@@ -216,6 +223,10 @@ def plotBasicGraph(fig_name,ax0,varx,vary,varxname,varyname,title,sign,legend = 
             ax0.plot(varx,var,sign, mfc='none',markersize=markersize)
         ax0.set_xlabel(varxname)
         ax0.set_ylabel(title)
+        if xlim:
+            ax0.set_xlim(xlim)
+        if ylim:
+            ax0.set_ylim(ylim)
 
 #this plots variables realtively to their maximum value
 def plotRelative2Max(fig_name,ax0,varx,vary,varxname,varyname):

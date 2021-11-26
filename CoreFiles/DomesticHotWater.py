@@ -10,12 +10,14 @@ def createWaterEqpt(idf,building):
     Load_and_occupancy.create_ScheduleFile(idf, 'Watertaps', building.DHWInfos['WatertapsFile'])
     Load_and_occupancy.create_ScheduleFile(idf, 'ColdWaterTemp', building.DHWInfos['ColdWaterTempFile'])
     Load_and_occupancy.ScheduleCompact(idf, 'HotWaterTemp', building.DHWInfos['HotWaterSetTemp'])
+    Load_and_occupancy.ScheduleCompact(idf, 'TargetWaterTemp', building.DHWInfos['TargetWaterTapTemp'])
     #now lets create the water equipment object
     idf.newidfobject(
         'WATERUSE:EQUIPMENT',
         Name = building.DHWInfos['Name'],
         Peak_Flow_Rate = building.nbAppartments*building.DHWInfos['WaterTapsMultiplier']*CallCorrectionFactor(building.name),#the flow rate should be in m3/s and we are using schedul file in l/min, thus we need this transformation,
         Flow_Rate_Fraction_Schedule_Name = 'WaterTaps',
+        Target_Temperature_Schedule_Name='TargetWaterTemp',
         Hot_Water_Supply_Temperature_Schedule_Name = 'HotWaterTemp',
         Cold_Water_Supply_Temperature_Schedule_Name='ColdWaterTemp',
         )

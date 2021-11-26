@@ -100,15 +100,16 @@ InternalMass = \
 
 #this dict give element for the Domestic Hot water. it gives the externail file for the water taps and the inlet cold water temp.
 #if empty it is no longer taken into account. if new file are given, thses should be present in the Externael file folder
-ExtraEnergy = \
-        {}          #if no DomesticHot Water is to be consdered, it still needs an empty dict
 # ExtraEnergy = \
-#     {'Name' : 'DHW',
-#             'WatertapsFile':'ExternalFiles/mDHW_Sum_over_40.txt', #this file is in l/mnin and will be converted into m3/s afertward. it needs to have hourly values
-#             'ColdWaterTempFile' :'ExternalFiles/ColdWaterTemp.txt',
-#             'HotWaterSetTemp': 55,
-#             'WaterTapsMultiplier':1e-4/6/40, #this is because the file given above is for 40 apartment and is in l/min where we need m3/s. in the code in is afterward multiplied by the number of apartement in the building
-#             }
+#         {}          #if no DomesticHot Water is to be consdered, it still needs an empty dict
+ExtraEnergy = \
+    {'Name' : 'DHW',
+            'WatertapsFile':'ExternalFiles/mDHW_Sum_over_40.txt', #this file is in l/mnin and will be converted into m3/s afertward. it needs to have hourly values
+            'ColdWaterTempFile' :'ExternalFiles/ColdWaterTemp.txt',
+            'TargetWaterTapTemp': 37,
+            'HotWaterSetTemp': 55,
+            'WaterTapsMultiplier':1e-4/6/40, #this is because the file given above is for 40 apartment and is in l/min where we need m3/s. in the code in is afterward multiplied by the number of apartement in the building
+            }
 
 #this dict is for the shading paradigm. There are two files that we need. the firt one is the main geojson that contains all buildings and their propreties
 #the other one contains for each shading surface id the vertex point and the building Id in order to catch the height of it.
@@ -192,7 +193,7 @@ DBLimits = \
  'nbBasefloor_key': 'EgenAntalKallarplan',     'nbBasefloor_lim':  [0, 4],
  'year_key': 'EgenNybyggAr',                   'year_lim':         [0, 2022],
  'nbAppartments_key': 'EgenAntalBolgh',        'nbAppartments_lim':[0, 100],
- 'height_key': ['height', 'SHAPE.LEN','st_lengthshape'],                      'height_lim':       [0, 100],
+ 'height_key': ['Height', 'SHAPE.LEN','st_lengthshape'],                      'height_lim':       [0, 100],
  'AreaBasedFlowRate_key': 'EgenProjVentFlode', 'AreaBasedFlowRate_lim':     [0.35, 10],
  'nbStairwell_key': 'EgenAntalTrapphus',       'nbStairwell_lim': [0, 100],
  }
