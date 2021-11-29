@@ -125,7 +125,7 @@ if __name__ == '__main__' :
     #this function makes the list of dictionnary with single input files if several are present inthe sample folder
     GlobKey, MultipleFiles = ListAvailableFiles(keyPath)
     #this function creates the full pool to launch afterward, including the file name and which buildings to simulate
-    Pool2Launch = CreatePool2Launch(UUID,GlobKey)
+    Pool2Launch = CreatePool2Launch(CaseChoices['UUID'],GlobKey)
 
     PathInputFile = keyPath
     ######################################################################################################################
