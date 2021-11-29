@@ -15,73 +15,30 @@ sys.path.append(MUBES_Paths)
 import CoreFiles.GeneralFunctions as GrlFct
 from CoreFiles import LaunchSim as LaunchSim
 from CoreFiles import CaseBuilder_OAT as CB_OAT
+from CoreFiles import setConfig as setConfig
 import multiprocessing as mp
+import platform
 
 def Read_Arguments():
     #these are defaults values:
-    CaseName = 'ForTest'
     UUID = []
     DESO = []
-    VarName2Change = []
-    Bounds = []
-    NbRuns = 1
-    CPUusage = 0.8
-    CreateFMU = False
-    CorePerim = False
-    FloorZoning = True
-    RefreshFolder = True
-    DataPath = []
-    EPlusPath = []
-
     # Get command-line options.
     lastIdx = len(sys.argv) - 1
     currIdx = 1
     while (currIdx < lastIdx):
         currArg = sys.argv[currIdx]
-        if (currArg.startswith('-CaseName')):
-            currIdx += 1
-            CaseName = sys.argv[currIdx]
-        if (currArg.startswith('-DataPath')):
-            currIdx += 1
-            DataPath = sys.argv[currIdx]
-        if (currArg.startswith('-EPlusPath')):
-            currIdx += 1
-            EPlusPath = sys.argv[currIdx]
-        elif (currArg.startswith('-UUID')):
+        if (currArg.startswith('-UUID')):
             currIdx += 1
             UUID = sys.argv[currIdx]
         elif (currArg.startswith('-DESO')):
             currIdx += 1
             DESO = int(sys.argv[currIdx])
-        elif (currArg.startswith('-VarName2Change')):
-            currIdx += 1
-            VarName2Change = eval(sys.argv[currIdx])
-        elif (currArg.startswith('-Bounds')):
-            currIdx += 1
-            Bounds = eval(sys.argv[currIdx])
-        elif (currArg.startswith('-NbRuns')):
-            currIdx += 1
-            NbRuns = eval(sys.argv[currIdx])
-        elif (currArg.startswith('-CPUusage')):
-            currIdx += 1
-            CPUusage = sys.argv[currIdx]
-        elif (currArg.startswith('-CreateFMU')):
-            currIdx += 1
-            CreateFMU = sys.argv[currIdx]
-        elif (currArg.startswith('-CorePerim')):
-            currIdx += 1
-            CorePerim = eval(sys.argv[currIdx])
-        elif (currArg.startswith('-FloorZoning')):
-            currIdx += 1
-            FloorZoning = int(sys.argv[currIdx])
-        elif (currArg.startswith('-RefreshFolder')):
-            currIdx += 1
-            RefreshFolder = sys.argv[currIdx]
         currIdx += 1
 
-        ListUUID = re.findall("[^,]+", UUID)
+    ListUUID = re.findall("[^,]+", UUID) if UUID else []
 
-    return CaseName,DataPath,EPlusPath,ListUUID,DESO,VarName2Change,Bounds,NbRuns,CPUusage,CreateFMU,CorePerim,FloorZoning,RefreshFolder
+    return ListUUID,DESO
 
 def ListAvailableFiles(keyPath):
     # reading the pathfiles and the geojsonfile
@@ -107,6 +64,8 @@ def CreatePool2Launch(UUID,GlobKey):
         #check of the building to run
         for bldNum, Bld in enumerate(DataBaseInput['Build']):
             if Bld.properties['50A_UUID'] in UUID:
+                Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum})
+            if not UUID:
                 Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum})
     return Pool2Launch
 
@@ -140,12 +99,24 @@ if __name__ == '__main__' :
     # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
     #these are default values :
-    CaseName,DataPath,EPlusPath,UUID,DESO,VarName2Change,Bounds,NbRuns,CPUusage,CreateFMU,CorePerim,FloorZoning,RefreshFolder = Read_Arguments()
+    UUID,DESO = Read_Arguments()
 
-    epluspath = EPlusPath
+    config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()),'CoreFiles','DefaultConfig.yml'))
+    CaseChoices = config['SIM']['CaseChoices']
+    if UUID:
+        CaseChoices['UUID'] = UUID
+    if DESO:
+        CaseChoices['DESO'] = DESO
+    CaseChoices['OutputsFile'] = 'Outputs4API.txt'
+    config = setConfig.check4localConfig(config,os.getcwd())
+    if type(config) != dict:
+        print('Something seems wrong in : ' + config)
+        print('Please check if there is a local.yml with your specific path')
+        sys.exit()
+    epluspath = config['APP']['PATH_TO_ENERGYPLUS']
     #a first keypath dict needs to be defined to comply with the current paradigme along the code
-    Buildingsfile = DataPath
-    Shadingsfile = Buildingsfile
+    Buildingsfile = os.path.abspath(config['DATA']['Buildingsfile'])
+    Shadingsfile = os.path.abspath(config['DATA']['Shadingsfile'])
     keyPath =  {'epluspath': epluspath, 'Buildingsfile': Buildingsfile, 'Shadingsfile': Shadingsfile,'pythonpath': '','GeojsonProperties':''}
     #this function makes the list of dictionnary with single input files if several are present inthe sample folder
     GlobKey, MultipleFiles = ListAvailableFiles(keyPath)
@@ -153,21 +124,19 @@ if __name__ == '__main__' :
     Pool2Launch = CreatePool2Launch(UUID,GlobKey)
 
     PathInputFile = keyPath
-    OutputsFile = 'Outputs4API.txt'
-    ZoneOfInterest = ''
     ######################################################################################################################
     ########     LAUNCHING MULTIPROCESS PROCESS PART  (nothing should be changed hereafter)   ############################
     ######################################################################################################################
-    if NbRuns>1:
+    if CaseChoices['NbRuns']>1:
         SepThreads = True
-        if CreateFMU:
+        if CaseChoices['CreateFMU']:
             print('###  INPUT ERROR ### ' )
             print('/!\ It is asked to ceate FMUs but the number of runs for each building is above 1...')
             print('/!\ Please, check you inputs as this case is not allowed yet')
             sys.exit()
     else:
         SepThreads = False
-    nbcpu = max(mp.cpu_count() * CPUusage, 1)
+    nbcpu = max(mp.cpu_count() * CaseChoices['CPUusage'], 1)
 
     nbBuild = 0
     idx = 0
@@ -176,12 +145,12 @@ if __name__ == '__main__' :
     FigCenter = []
     CurrentPath = os.getcwd()
     MainInputs = {}
-    MainInputs['CorePerim'] = CorePerim
-    MainInputs['FloorZoning'] = FloorZoning
-    MainInputs['CreateFMU'] = CreateFMU
-    MainInputs['TotNbRun'] = NbRuns
-    MainInputs['OutputsFile'] = OutputsFile
-    MainInputs['VarName2Change'] = VarName2Change
+    MainInputs['CorePerim'] = CaseChoices['CorePerim']
+    MainInputs['FloorZoning'] = CaseChoices['FloorZoning']
+    MainInputs['CreateFMU'] = CaseChoices['CreateFMU']
+    MainInputs['TotNbRun'] = CaseChoices['NbRuns']
+    MainInputs['OutputsFile'] = CaseChoices['OutputsFile']
+    MainInputs['VarName2Change'] = CaseChoices['VarName2Change']
     MainInputs['DataBaseInput'] = []
     File2Launch = []
     pythonpath = keyPath['pythonpath']
@@ -192,18 +161,18 @@ if __name__ == '__main__' :
 
         MainInputs['FirstRun'] = True
         #First, lets create the folder for the building and simulation processes
-        SimDir = GrlFct.CreateSimDir(CurrentPath, CaseName, SepThreads, nbBuild, idx, Refresh=RefreshFolder)
+        SimDir = GrlFct.CreateSimDir(CurrentPath, CaseChoices['CaseName'], SepThreads, nbBuild, idx, Refresh=CaseChoices['RefreshFolder'])
         #a sample of parameter is generated is needed
-        ParamSample =  GrlFct.SetParamSample(SimDir, NbRuns, VarName2Change, Bounds,SepThreads)
+        ParamSample =  GrlFct.SetParamSample(SimDir, CaseChoices['NbRuns'], CaseChoices['VarName2Change'], CaseChoices['Bounds'],SepThreads)
         #lets check if there are several simulation for one building or not
-        if NbRuns > 1:
+        if CaseChoices['NbRuns'] > 1:
             # lets check if this building is already present in the folder (means Refresh = False in CreateSimDir() above)
             if not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + '_template.idf'))):
                 #there is a need to launch the first one that will also create the template for all the others
                 CB_OAT.LaunchOAT(MainInputs,SimDir,keypath,nbBuild,ParamSample[0, :],0,pythonpath)
             # lets check whether all the files are to be run or if there's only some to run again
             NewRuns = []
-            for i in range(NbRuns):
+            for i in range(CaseChoices['NbRuns']):
                 if not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + 'v'+str(i)+'.idf'))):
                     NewRuns.append(i)
             #now the pool can be created changing the FirstRun key to False for all other runs
@@ -218,16 +187,16 @@ if __name__ == '__main__' :
             #if not, then the building number will be appended to alist that will be used afterward
             File2Launch.append({'nbBuild' : nbBuild,'keypath': keypath})
         #the simulation are launched below using a pool of the earlier created idf files
-        if SepThreads and not CreateFMU:
+        if SepThreads and not CaseChoices['CreateFMU']:
             file2run = LaunchSim.initiateprocess(SimDir)
-            nbcpu = max(mp.cpu_count()*CPUusage,1)
+            nbcpu = max(mp.cpu_count()*CaseChoices['CPUusage'],1)
             pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
             for i in range(len(file2run)):
                 pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath, True))
             pool.close()
             pool.join()
 
-    if not SepThreads and not CreateFMU:
+    if not SepThreads and not CaseChoices['CreateFMU']:
         #lets launch the idf file creation process using the listed created above
         pool = mp.Pool(processes=int(nbcpu))
         for nbBuild in File2Launch:
@@ -243,7 +212,7 @@ if __name__ == '__main__' :
             pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath,True))
         pool.close()
         pool.join()
-    elif CreateFMU:
+    elif CaseChoices['CreateFMU']:
         # now that all the files are created, we can aggregate all the log files into a single one.
         GrlFct.CleanUpLogFiles(SimDir)
         #the FMU are not taking advantage of the parallel computing option yet

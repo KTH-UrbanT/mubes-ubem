@@ -3,12 +3,13 @@
 
 from shapely.geometry.polygon import Polygon, Point, LineString
 import CoreFiles.GeneralFunctions as GrlFct
+from CoreFiles import setConfig as setConfig
 from geomeppy.geom.polygons import Polygon2D, Polygon3D,break_polygons
 from geomeppy import IDF
 from geomeppy.geom import core_perim
 import os
 import shutil
-import BuildObject.DB_Data as DB_Data
+#import BuildObject.DB_Data as DB_Data
 import re
 import CoreFiles.ProbGenerator as ProbGenerator
 import itertools
@@ -106,12 +107,15 @@ class Building:
         Buildingsfile = DataBaseInput['Build']
         Shadingsfile = DataBaseInput['Shades']
         DB = Buildingsfile[nbcase]
-        DBL = DB_Data.DBLimits
-        BE = DB_Data.BasisElement
-        GE = DB_Data.GeomElement
-        EPC = DB_Data.EPCMeters
-        SD = DB_Data.SimuData
-        ExEn = DB_Data.ExtraEnergy
+        config = setConfig.read_yaml(os.path.join(os.path.dirname(MainPath), 'CoreFiles', 'DefaultConfig.yml'))
+        config = setConfig.check4localConfig(config, MainPath)
+
+        DBL = config['SIM']['DBLimits']
+        BE = config['SIM']['BasisElement']
+        GE = config['SIM']['GeomElement']
+        EPC = config['SIM']['EPCMeters']
+        SD = config['SIM']['SimuData']
+        ExEn = config['SIM']['ExtraEnergy']
         try:
             self.CRS = Buildingsfile.crs['properties']['name'] #this is the coordinates reference system for the polygons
         except:
@@ -136,16 +140,16 @@ class Building:
         self.MaxShadingDist = GE['MaxShadingDist']
         self.AdjacentWalls = [] #this will be appended in the getshade function if any present
         self.shades = self.getshade(DB,Shadingsfile,Buildingsfile,GE,LogFile)
-        self.Materials = DB_Data.BaseMaterial
-        self.InternalMass = DB_Data.InternalMass
+        self.Materials = config['SIM']['BaseMaterial']
+        self.InternalMass = config['SIM']['InternalMass']
         self.MakeRelativeCoord() # we need to convert into local coordinate in order to compute adjacencies with more precision than keeping thousand of km for x and y
         if not PlotOnly:
             #the attributres above are needed in all case, the one below are needed only if energy simulation is asked for
-            self.VentSyst = self.getVentSyst(DB, LogFile)
+            self.VentSyst = self.getVentSyst(DB, config['SIM']['VentSyst'], LogFile)
             self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB, DBL, BE)
-            self.OccupType = self.getOccupType(DB, LogFile)
+            self.OccupType = self.getOccupType(DB, config['SIM']['OccupType'], LogFile)
             self.nbStairwell = self.getnbStairwell(DB, DBL)
-            self.WeatherDataFile = DB_Data.WeatherFile['Loc']
+            self.WeatherDataFile = config['SIM']['WeatherFile']['Loc']
             self.year = self.getyear(DB, DBL)
             self.EPCMeters = self.getEPCMeters(DB, EPC, LogFile)
             if len(self.SharedBld) > 0:
@@ -640,12 +644,12 @@ class Building:
         return shades
 
 
-    def getVentSyst(self, DB,LogFile):
+    def getVentSyst(self, DB,VentSystDict,LogFile):
         "Get ventilation system type"
         VentSyst = {}
-        for key in DB_Data.VentSyst:
+        for key in VentSystDict:
             try:
-                VentSyst[key] = True if 'Ja' in DB.properties[DB_Data.VentSyst[key]] else False
+                VentSyst[key] = True if 'Ja' in DB.properties[VentSystDict[key]] else False
             except:
                 VentSyst[key] = False
         nbVentSyst = [idx for idx, key in enumerate(VentSyst) if VentSyst[key]]
@@ -666,18 +670,18 @@ class Building:
         AreaBasedFlowRate = checkLim(AreaBasedFlowRate,DBL['AreaBasedFlowRate_lim'][0],DBL['AreaBasedFlowRate_lim'][1])
         return AreaBasedFlowRate
 
-    def getOccupType(self,DB,LogFile):
+    def getOccupType(self,DB,OccupTypeDict,LogFile):
         "get the occupency type of the building"
         OccupType = {}
         self.OccupRate = {}
-        for key in DB_Data.OccupType:
+        for key in OccupTypeDict:
             if '_key' in key:
                 try:
-                    OccupType[key[:-4]] = int(DB.properties[DB_Data.OccupType[key]])/100
+                    OccupType[key[:-4]] = int(DB.properties[OccupTypeDict[key]])/100
                 except:
                     OccupType[key[:-4]] = 0
             if '_Rate' in key:
-                self.OccupRate[key[:-5]] = DB_Data.OccupType[key]
+                self.OccupRate[key[:-5]] = OccupTypeDict[key]
         msg = '[Usage Info] This building has ' + str(1 - OccupType['Residential']) + ' % of none residential occupancy type\n'
         GrlFct.Write2LogFile(msg, LogFile)
         return OccupType
