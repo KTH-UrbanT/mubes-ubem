@@ -95,6 +95,7 @@ def ReadGeoJsonDir(keyPath):
             if 'Buildings' in file:
                 #print('Building main input file with file nb: ' + str(nb))
                 BuildingFiles.append(file)
+            if 'Walls' in file:
                 ShadingWallFiles.append(file.replace('Buildings', 'Walls'))
 
     return BuildingFiles,ShadingWallFiles

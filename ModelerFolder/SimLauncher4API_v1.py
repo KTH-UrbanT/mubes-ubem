@@ -63,10 +63,14 @@ def CreatePool2Launch(UUID,GlobKey):
         DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
         #check of the building to run
         for bldNum, Bld in enumerate(DataBaseInput['Build']):
-            if Bld.properties['50A_UUID'] in UUID:
-                Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum})
             if not UUID:
                 Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum})
+            else:
+                try:
+                    if Bld.properties['50A_UUID'] in UUID:
+                        Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum})
+                except: pass
+
     return Pool2Launch
 
 if __name__ == '__main__' :

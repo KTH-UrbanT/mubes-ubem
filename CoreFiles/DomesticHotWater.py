@@ -10,13 +10,18 @@ def createWaterEqpt(idf,building):
     Load_and_occupancy.create_ScheduleFile(idf, 'Watertaps', building.DHWInfos['WatertapsFile'])
     Load_and_occupancy.create_ScheduleFile(idf, 'ColdWaterTemp', building.DHWInfos['ColdWaterTempFile'])
     Load_and_occupancy.ScheduleCompact(idf, 'HotWaterTemp', building.DHWInfos['HotWaterSetTemp'])
+    Load_and_occupancy.ScheduleCompact(idf, 'TargetWaterTemp', building.DHWInfos['TargetWaterTapTemp'])
     #now lets create the water equipment object
+    #if somme math expression is given in the multiplier we need to try an eval() function:
+    try: multiplier = eval(building.DHWInfos['WaterTapsMultiplier'])
+    except: multiplier = building.DHWInfos['WaterTapsMultiplier']
     idf.newidfobject(
         'WATERUSE:EQUIPMENT',
         Name = building.DHWInfos['Name'],
-        Peak_Flow_Rate = building.nbAppartments*building.DHWInfos['WaterTapsMultiplier']*CallCorrectionFactor(building.name),#the flow rate should be in m3/s and we are using schedul file in l/min, thus we need this transformation,
+        Peak_Flow_Rate = building.nbAppartments*multiplier*CallCorrectionFactor(building.name),#the flow rate should be in m3/s and we are using schedul file in l/min, thus we need this transformation,
         Flow_Rate_Fraction_Schedule_Name = 'WaterTaps',
         Hot_Water_Supply_Temperature_Schedule_Name = 'HotWaterTemp',
+        Target_Temperature_Schedule_Name = 'TargetWaterTemp',
         Cold_Water_Supply_Temperature_Schedule_Name='ColdWaterTemp',
         )
     return idf
