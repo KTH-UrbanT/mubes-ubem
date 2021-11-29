@@ -48,7 +48,7 @@ if __name__ == '__main__' :
     for line in FileLines:
         Bld2Sim.append(int(line))
     CaseName = 'ExergiCase'
-    BuildNum = [0]#Bld2Sim
+    BuildNum = []#Bld2Sim
     VarName2Change = []#['AirRecovEff', 'IntLoadCurveShape', 'wwr', 'EnvLeak', 'setTempLoL', 'AreaBasedFlowRate', 'WindowUval',
                   #'WallInsuThick', 'RoofInsuThick']
     Bounds = []#[[0.5, 0.9], [1, 5], [0.2, 0.4], [0.5, 1.6], [18, 22], [0.35, 1], [0.7, 2], [0.1, 0.3], [0.2, 0.4]]
@@ -58,9 +58,9 @@ if __name__ == '__main__' :
     CorePerim = False
     FloorZoning = True
     RefreshFolder = True
-    PathInputFile = 'MinnebergLast.txt'#'Pathways_Template.txt'#'Minneberg2D.txt'#'MinnebergLast.txt''Sodermalm4.txt'#'MinnebergLast.txt'#'HammarbyLast.txt'#
+    PathInputFile = 'Hammarby0401.txt'#
     OutputsFile = 'Outputs_Template.txt'#'Outputs_detailed.txt'#_withlosses.txt'#
-    ZoneOfInterest = ''
+    ZoneOfInterest = 'HSS_Network.txt'
 
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART  (nothing should be changed hereafter)   ############################

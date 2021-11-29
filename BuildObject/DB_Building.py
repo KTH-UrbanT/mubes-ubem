@@ -288,12 +288,19 @@ class Building:
                 GrlFct.Write2LogFile(msg, LogFile)
         return BuildID
 
+    # def getMultipolygon(self,DB):
+    #     test = DB.geometry.coordinates[0][0][0]
+    #     if type(test) is list:
+    #         Multipolygon = True
+    #     else:
+    #         Multipolygon = False
+    #     return Multipolygon
     def getMultipolygon(self,DB):
-        test = DB.geometry.coordinates[0][0][0]
-        if type(test) is list:
+        Multipolygon = False
+        try:
+            DB.geometry.poly3rdcoord
             Multipolygon = True
-        else:
-            Multipolygon = False
+        except: pass
         return Multipolygon
 
     def getRefCoord(self):
@@ -347,69 +354,99 @@ class Building:
                         #polycoor.reverse()
                         coord.append(polycoor)
                         BlocHeight.append(round(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]),1))
-            #these following lines are here to highlight holes in footprint and split it into two blocs...
-            #it may appear some errors for other building with several blocs and some with holes (these cases havn't been checked)
-            poly2merge = []
-            for idx, coor in enumerate(coord):
-                for i in range(len(coord)-idx-1):
-                    if Polygon(coor).contains(Polygon(coord[idx+i+1])):
-                        poly2merge.append([idx,idx+i+1])
-            try:
-                for i,idx in enumerate(poly2merge):
-                    new_surfaces = break_polygons(Polygon3D(coord[idx[0]]), Polygon3D(coord[idx[1]]))
-                    xs,ys,zs = zip(*list(new_surfaces[0]))
-                    coord[idx[0]] = [(xs[nbv],ys[nbv]) for nbv in range(len(xs))]
-                    xs,ys,zs = zip(*list(new_surfaces[1]))
-                    coord[idx[1]] = [(xs[nbv],ys[nbv]) for nbv in range(len(xs))]
-                    BlocHeight[idx[1]] = BlocHeight[idx[0]]
-                    msg ='[Geom Cor] There is a hole that will split the main surface in two blocs \n'
-                    GrlFct.Write2LogFile(msg, LogFile)
-            except:
-                msg = '[Poly Error] Some error are present in the polygon parts. Some are identified as being inside others...\n'
-                print(msg[:-1])
-                GrlFct.Write2LogFile(msg, LogFile)
-                import matplotlib.pyplot as plt
-                fig = plt.figure(0)
-                for i in coord:
-                    xs,ys = zip(*i)
-                    plt.plot(xs,ys,'-.')
-                #titre = 'FormularId : '+str(DB.properties['FormularId'])+'\n 50A_UUID : '+str(DB.properties['50A_UUID'])
-                # plt.title(titre)
-                # plt.savefig(self.name+ '.png')
-                # plt.close(fig)
-
-            #we need to clean the footprint from the node2remove but not if there are part of another bloc
-            newbloccoor= []
-            for idx,coor in enumerate(coord):
-                newcoor = []
-                FilteredNode2remove = []
-                single = False
-                for node in node2remove[idx]:
-                    single = True
-                    for idx1,coor1 in enumerate(coord):
-                        if idx!=idx1:
-                            if coor[node] in coor1 and coor[node] not in [n for i,n in enumerate(coor1[idx1]) if i in node2remove[idx1]]:
-                                single =False
-                    if single:
-                        FilteredNode2remove.append(node)
-                for nodeIdx,node in enumerate(coor):
-                    if not nodeIdx in FilteredNode2remove:
-                        newcoor.append(node)
-                newbloccoor.append(newcoor)
-            coord = newbloccoor
         else:
             #for dealing with 2D files
+            singlepoly = False
             for j in DB.geometry.coordinates[0]:
-                new = (j[0], j[1])
-                new_coor = new#[]
-                # for ii in range(len(self.RefCoord)):
-                #     new_coor.append((new[ii] - self.RefCoord[ii]))
-                coord.append(tuple(new_coor))
-            BlocNbFloor.append(nbfloor)
-            BlocHeight.append(self.height)
-            newpolycoor, node = core_perim.CheckFootprintNodes(coord, 5)
-            coord= [newpolycoor]
-        #before submitting the full coordinates, we need to check correspondance in case of multibloc
+                if len(j)==2:
+                    new = (j[0], j[1])
+                    coord.append(tuple(new))
+                    singlepoly = True
+                else:
+                    new = []
+                    for jj in j:
+                        new.append(tuple(jj))
+                    # even before skewed angle, we need to check for tiny edge below the tolerance onsdered aftward (0.5m)
+                    pt2remove = []
+                    for edge in Polygon2D(new).edges:
+                        if edge.length < DistTol:
+                            pt2remove.append(edge.p2)
+                    for pt in pt2remove:
+                        if len(new) > 3:
+                            new.remove(pt)
+                    newpolycoor, node = core_perim.CheckFootprintNodes(new, 5)
+                    coord.append(new)
+                    node2remove.append(node)
+            if singlepoly:
+                newpolycoor, node = core_perim.CheckFootprintNodes(coord, 5)
+                node2remove.append(node)
+                coord = [coord]
+            for i in range(len(coord)):
+                BlocNbFloor.append(nbfloor)
+                BlocHeight.append(self.height)
+
+        # we need to clean the footprint from the node2remove but not if there are part of another bloc
+        newbloccoor = []
+        for idx, coor in enumerate(coord):
+            newcoor = []
+            FilteredNode2remove = []
+            single = False
+            for node in node2remove[idx]:
+                single = True
+                for idx1, coor1 in enumerate(coord):
+                    if idx != idx1:
+                        if coor[node] in coor1 and coor[node] not in [n for i, n in enumerate(coor1[idx1]) if
+                                                                      i in node2remove[idx1]]:
+                            single = False
+                if single:
+                    FilteredNode2remove.append(node)
+            for nodeIdx, node in enumerate(coor):
+                if not nodeIdx in FilteredNode2remove:
+                    newcoor.append(node)
+            newbloccoor.append(newcoor)
+        coord = newbloccoor
+        # these following lines are here to highlight holes in footprint and split it into two blocs...
+        # it may appear some errors for other building with several blocs and some with holes (these cases havn't been checked)
+        poly2merge = []
+        for idx, coor in enumerate(coord):
+            for i in range(len(coord) - idx - 1):
+                if Polygon(coor).contains(Polygon(coord[idx + i + 1])):
+                    poly2merge.append([idx, idx + i + 1])
+        try:
+            for i, idx in enumerate(poly2merge):
+                new_surfaces = break_polygons(Polygon3D(coord[idx[0]]), Polygon3D(coord[idx[1]]))
+                xs, ys, zs = zip(*list(new_surfaces[0]))
+                coord[idx[0]] = [(xs[nbv], ys[nbv]) for nbv in range(len(xs))]
+                if len(new_surfaces)>1:
+                    xs, ys, zs = zip(*list(new_surfaces[1]))
+                    coord[idx[1]] = [(xs[nbv], ys[nbv]) for nbv in range(len(xs))]
+                    BlocHeight[idx[1]] = BlocHeight[idx[0]]
+                else:
+                    coord.pop(idx[1])
+                    BlocHeight.pop(idx[1])
+                msg = '[Geom Cor] There is a hole that will split the main surface in two blocs \n'
+                GrlFct.Write2LogFile(msg, LogFile)
+        except:
+            msg = '[Poly Error] Some error are present in the polygon parts. Some are identified as being inside others...\n'
+            print(msg[:-1])
+            GrlFct.Write2LogFile(msg, LogFile)
+            import matplotlib.pyplot as plt
+            fig = plt.figure(0)
+            for i in coord:
+                xs, ys = zip(*i)
+                plt.plot(xs, ys, '-.')
+            # titre = 'FormularId : '+str(DB.properties['FormularId'])+'\n 50A_UUID : '+str(DB.properties['50A_UUID'])
+            # plt.title(titre)
+            # plt.savefig(self.name+ '.png')
+            # plt.close(fig)
+
+
+
+
+
+
+
+    #before submitting the full coordinates, we need to check correspondance in case of multibloc
         coord, validFootprint = CheckMultiBlocFootprint(coord,tol = DistTol)
         if not validFootprint:
             msg = '[Poly Error] The different bloc are not adjacent...\n'

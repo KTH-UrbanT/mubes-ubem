@@ -193,7 +193,7 @@ DBLimits = \
  'nbBasefloor_key': 'EgenAntalKallarplan',     'nbBasefloor_lim':  [0, 4],
  'year_key': 'EgenNybyggAr',                   'year_lim':         [0, 2022],
  'nbAppartments_key': 'EgenAntalBolgh',        'nbAppartments_lim':[0, 100],
- 'height_key': ['Height', 'SHAPE.LEN','st_lengthshape'],                      'height_lim':       [0, 100],
+ 'height_key': ['height', 'Height', 'SHAPE.LEN','st_lengthshape'],                      'height_lim':       [0, 100],
  'AreaBasedFlowRate_key': 'EgenProjVentFlode', 'AreaBasedFlowRate_lim':     [0.35, 10],
  'nbStairwell_key': 'EgenAntalTrapphus',       'nbStairwell_lim': [0, 100],
  }
