@@ -110,7 +110,7 @@ if __name__ == '__main__':
     PathInputFile = 'Pathways_Template.txt'
     CorePerim = False
     FloorZoning = False
-    PlotBuilding = False,
+    PlotBuilding = False
     ZoneOfInterest = ''
 
     ######################################################################################################################
