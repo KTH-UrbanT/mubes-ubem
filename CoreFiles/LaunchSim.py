@@ -57,7 +57,7 @@ def runcase(file,filepath, epluspath):
     #once the simulation has ended, the results are saved
     #savecase(CaseName, RunDir, building, ResSimpath,file,idf,filepath)
     savecase(CaseName, RunDir, building, ResSimpath, file, filepath)
-    print(file[:-4] + ' is finished')
+    return (file[:-4] + ' is finished')
 
 def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,withFMU = False):
     #the resultst are read with html table and energyplus eso files. The html could be avoid, but then some information will have to computes in the building object (could be)

@@ -14,6 +14,11 @@ import CoreFiles.LaunchSim as LaunchSim
 import CoreFiles.CaseBuilder_OAT as CB_OAT
 import multiprocessing as mp
 
+
+def log_results(result):
+    print('This is from the Pool : ' + result)
+
+
 if __name__ == '__main__' :
 
 ######################################################################################################################
@@ -47,12 +52,12 @@ if __name__ == '__main__' :
     Bld2Sim = []
     for line in FileLines:
         Bld2Sim.append(int(line))
-    CaseName = 'ExergiCase'
-    BuildNum = []#Bld2Sim
-    VarName2Change = []#['AirRecovEff', 'IntLoadCurveShape', 'wwr', 'EnvLeak', 'setTempLoL', 'AreaBasedFlowRate', 'WindowUval',
+    CaseName = 'ForTest'
+    BuildNum = [1]#Bld2Sim
+    VarName2Change = ['wwr']#['AirRecovEff', 'IntLoadCurveShape', 'wwr', 'EnvLeak', 'setTempLoL', 'AreaBasedFlowRate', 'WindowUval',
                   #'WallInsuThick', 'RoofInsuThick']
-    Bounds = []#[[0.5, 0.9], [1, 5], [0.2, 0.4], [0.5, 1.6], [18, 22], [0.35, 1], [0.7, 2], [0.1, 0.3], [0.2, 0.4]]
-    NbRuns = 1
+    Bounds = [[0.2,0.4]]#[[0.5, 0.9], [1, 5], [0.2, 0.4], [0.5, 1.6], [18, 22], [0.35, 1], [0.7, 2], [0.1, 0.3], [0.2, 0.4]]
+    NbRuns = 20
     CPUusage = 0.8
     CreateFMU = False
     CorePerim = False
@@ -60,7 +65,7 @@ if __name__ == '__main__' :
     RefreshFolder = True
     PathInputFile = 'Hammarby0401.txt'#
     OutputsFile = 'Outputs_Template.txt'#'Outputs_detailed.txt'#_withlosses.txt'#
-    ZoneOfInterest = 'HSS_Network.txt'
+    ZoneOfInterest = ''#'HSS_Network.txt'
 
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART  (nothing should be changed hereafter)   ############################
@@ -69,9 +74,15 @@ if __name__ == '__main__' :
         SepThreads = True
         if CreateFMU:
             print('###  INPUT ERROR ### ' )
-            print('/!\ It is asked to ceate FMUs but the number of runs for each building is above 1...')
+            print('/!\ It is asked to create FMUs but the number of runs for each building is above 1...')
             print('/!\ Please, check you inputs as this case is not allowed yet')
             sys.exit()
+        if not VarName2Change or not Bounds:
+            print('###  INPUT ERROR ### ')
+            print('/!\ It is asked to make several runs but no variable is specified or bound of variation...')
+            print('/!\ Please, check you inputs VarName2Change and Bounds')
+            sys.exit()
+
     else:
         SepThreads = False
     nbcpu = max(mp.cpu_count() * CPUusage, 1)
@@ -166,7 +177,7 @@ if __name__ == '__main__' :
                         nbcpu = max(mp.cpu_count()*CPUusage,1)
                         pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
                         for i in range(len(file2run)):
-                            pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath))
+                            pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath),callback = log_results)
                         pool.close()
                         pool.join()
 

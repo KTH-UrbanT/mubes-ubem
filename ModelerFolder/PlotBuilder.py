@@ -76,13 +76,23 @@ def LaunchProcess(SimDir, DataBaseInput, LogFile, bldidx, keyPath, nbcase, CoreP
                 nbadiab += 1
     if ok2plot:
         GrlFct.Write2LogFile('[Nb Adjacent_Walls] This building has '+str(nbadiab)+' walls with adiabatic surfaces\n', LogFile)
-    RoofSpecialColor = "firebrick"
 
+    RoofSpecialColor = "firebrick"
     # with open('HamId.txt','r') as f:
     #     Lines = f.readlines()
     # Ids2look = [line[:-1] for line in Lines]
     # if building_ref.BuildID['50A_UUID'] in Ids2look:
     #     RoofSpecialColor = 'royalblue'
+
+
+    # with open('Ham2Simu4Calib_Last.txt') as f:
+    #     FileLines = f.readlines()
+    # Bld2Sim = []
+    # for line in FileLines:
+    #     Bld2Sim.append(int(line))
+    # if nbcase in Bld2Sim:
+    #     RoofSpecialColor = 'limegreen'
+
     idf_ref.view_model(test=PlotBuilding, FigCenter=FigCentroid, WindSize=2 * WindSize, RoofSpecialColor = RoofSpecialColor)
 
     GrlFct.Write2LogFile('##############################################################\n', LogFile)
@@ -112,12 +122,12 @@ if __name__ == '__main__':
     # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
     import numpy as np
-    BuildNum = []#,26,28,34,35]#[int(i) for i in np.linspace(5,10,6)]#[int(i) for i in np.linspace(0,3,4)]#[40,41,42,43,44,45,46,47,48,49]##[52]#,51,52,53]#[40,41,42,43,44,45,46,47,48,49]#[30,31,32,33,34,35,36,37,38,39]#[20,21,22,23,24,25,26,27,28,29]#[10,11,12,13,14,15,16,17,18,19]#[0,1,2,3,4,5,6,7,8,9]#[50,51,52,53]#
-    PathInputFile = 'Minneberg2D.txt'#'ExergiProject1.txt'#'Hammarby0401.txt'#'Pathways_Template.txt'# 'Hammarby0401.txt'#'Pathways_Template.txt'#'Sodermalm4.txt'  #'MinnebergLast.txt'#'Minneberg2D.txt'#'Sodermalm4.txt'##
+    BuildNum = [33]#,14]#,15]#16,17,18,19,20]#,12,13,14,15]#,26,28,34,35]#[int(i) for i in np.linspace(5,10,6)]#[int(i) for i in np.linspace(0,3,4)]#[40,41,42,43,44,45,46,47,48,49]##[52]#,51,52,53]#[40,41,42,43,44,45,46,47,48,49]#[30,31,32,33,34,35,36,37,38,39]#[20,21,22,23,24,25,26,27,28,29]#[10,11,12,13,14,15,16,17,18,19]#[0,1,2,3,4,5,6,7,8,9]#[50,51,52,53]#
+    PathInputFile =  'Pathways_Template.txt'#'HammarbyLast.txt'#'ExergiProject.txt'#'Pathways_Template.txt'##'Hammarby0401.txt'#'Pathways_Template.txt'#'Sodermalm4.txt'  #'MinnebergLast.txt'#'Minneberg2D.txt'#'Sodermalm4.txt'##
     CorePerim = False
-    FloorZoning = True
-    PlotBuilding = False
-    ZoneOfInterest = ''
+    FloorZoning = False
+    PlotBuilding = True
+    ZoneOfInterest = ''#'HSS_Network.txt'
 
     ######################################################################################################################
     ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
