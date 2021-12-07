@@ -57,7 +57,7 @@ def runcase(file,filepath, epluspath, API = False):
     #once the simulation has ended, the results are saved
     #savecase(CaseName, RunDir, building, ResSimpath,file,idf,filepath)
     savecase(CaseName, RunDir, building, ResSimpath, file, filepath, API)
-    print(file[:-4] + ' is finished')
+    return (file[:-4] + ' is finished')
 
 def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,API,withFMU = False):
     if API:

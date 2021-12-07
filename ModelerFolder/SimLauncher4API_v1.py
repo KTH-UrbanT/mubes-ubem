@@ -19,6 +19,9 @@ from CoreFiles import setConfig as setConfig
 import multiprocessing as mp
 import platform
 
+def giveReturnFromPool(results):
+    print('This is given by the pool : ', results)
+
 def Read_Arguments():
     #these are defaults values:
     UUID = []
@@ -196,7 +199,7 @@ if __name__ == '__main__' :
             nbcpu = max(mp.cpu_count()*CaseChoices['CPUusage'],1)
             pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
             for i in range(len(file2run)):
-                pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath, True))
+                pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath, True), callback=giveReturnFromPool)
             pool.close()
             pool.join()
 
@@ -213,7 +216,7 @@ if __name__ == '__main__' :
         file2run = LaunchSim.initiateprocess(SimDir)
         pool = mp.Pool(processes=int(nbcpu))
         for i in range(len(file2run)):
-            pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath,True))
+            pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath,True), callback=giveReturnFromPool)
         pool.close()
         pool.join()
     elif CaseChoices['CreateFMU']:
