@@ -172,8 +172,10 @@ def createMultilFig(title,nbFig,linked=True):
         ax[i].grid()
         if i>0 and linked:
             ax[i].sharex(ax[0])
+
+        if i ==0:
+            plt.title(title)
     #plt.tight_layout()
-    plt.title(title)
     return {'fig_name' : fig_name, 'ax': ax}
 
 def createMultilDblFig(title,nbFigx,nbFigy,linked=True):
@@ -422,7 +424,10 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
                     Res[varName] = np.vstack((Res[varName] ,ResBld[key][Timeseries[key1]['Location']][Timeseries[key1]['Data']]))
         except:
             pass
-
+    #Finaly lets reorder the results by the number of the SimNum :
+    sorted_idx = np.argsort(Res['SimNum'])
+    for key in Res.keys():
+        Res[key] = [Res[key][idx] for idx in sorted_idx]
     return Res
 
 

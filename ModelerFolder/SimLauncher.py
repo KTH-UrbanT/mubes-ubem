@@ -53,17 +53,17 @@ if __name__ == '__main__' :
     for line in FileLines:
         Bld2Sim.append(int(line))
     CaseName = 'ForTest'
-    BuildNum = [1]#Bld2Sim
+    BuildNum = Bld2Sim
     VarName2Change = ['wwr']#['AirRecovEff', 'IntLoadCurveShape', 'wwr', 'EnvLeak', 'setTempLoL', 'AreaBasedFlowRate', 'WindowUval',
                   #'WallInsuThick', 'RoofInsuThick']
     Bounds = [[0.2,0.4]]#[[0.5, 0.9], [1, 5], [0.2, 0.4], [0.5, 1.6], [18, 22], [0.35, 1], [0.7, 2], [0.1, 0.3], [0.2, 0.4]]
-    NbRuns = 20
+    NbRuns = 1
     CPUusage = 0.8
     CreateFMU = False
     CorePerim = False
     FloorZoning = True
     RefreshFolder = True
-    PathInputFile = 'Hammarby0401.txt'#
+    PathInputFile = 'HammarbyLast.txt'#
     OutputsFile = 'Outputs_Template.txt'#'Outputs_detailed.txt'#_withlosses.txt'#
     ZoneOfInterest = ''#'HSS_Network.txt'
 

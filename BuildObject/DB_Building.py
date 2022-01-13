@@ -570,7 +570,7 @@ class Building:
                 if '_key' in key2:
                     try:
                         Meters[key1][key2[:-4]] = DB.properties[EPC[key1][key2]]
-                        Meters[key1][key2[:-4]] = int(DB.properties[EPC[key1][key2]])*EPC[key1][key2[:-4]+'COP']
+                        Meters[key1][key2[:-4]] = int(DB.properties[EPC[key1][key2]])*EPC[key1][key2[:-4]+'COP']*1000 #to convert kW in W
                     except:
                         pass
         return Meters
@@ -745,7 +745,7 @@ class Building:
         try :
             for x in self.EPCMeters['ElecLoad']:
                 if self.EPCMeters['ElecLoad'][x]:
-                    eleval += self.EPCMeters['ElecLoad'][x]*1000 #to convert kW in W
+                    eleval += self.EPCMeters['ElecLoad'][x]
         except:
             pass
         if eleval>0:

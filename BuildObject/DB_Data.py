@@ -11,7 +11,7 @@ SimuData = \
 
 #files are needed to be located in the eather folder of EnergyPlus asthe same path is used afterward to launch the simulation
 WeatherFile = \
- {'Loc' : 'WeatherData/SWE_Stockholm.Arlanda.024600_IWEC.epw',#Year2012WithIRfromStandard.epw',#USA_CA_San.Francisco.Intl.AP.724940_TMY3.epw', #Year202021WithIRfromStandard.epw',#
+ {'Loc' : 'WeatherData/Year2012WithIRfromStandard.epw',#USA_CA_San.Francisco.Intl.AP.724940_TMY3.epw', #Year202021WithIRfromStandard.epw',#
   }
 
 #Thisdict gives all the materials characteristics.
@@ -106,7 +106,7 @@ ExtraEnergy = \
     {'Name' : 'DHW',
             'WatertapsFile':'ExternalFiles/mDHW_Sum_over_40.txt', #this file is in l/mnin and will be converted into m3/s afertward. it needs to have hourly values
             'ColdWaterTempFile' :'ExternalFiles/ColdWaterTemp.txt',
-            'TargetWaterTapTemp': 37,
+            'TargetWaterTapTemp': 55,
             'HotWaterSetTemp': 55,
             'WaterTapsMultiplier':1e-4/6/40, #this is because the file given above is for 40 apartment and is in l/min where we need m3/s. in the code in is afterward multiplied by the number of apartement in the building
             }
