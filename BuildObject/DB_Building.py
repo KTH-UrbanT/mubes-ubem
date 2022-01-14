@@ -4,15 +4,15 @@
 from shapely.geometry.polygon import Polygon, Point, LineString
 import CoreFiles.GeneralFunctions as GrlFct
 from CoreFiles import setConfig as setConfig
-from geomeppy.geom.polygons import Polygon2D, Polygon3D,break_polygons
+from geomeppy.geom.polygons import Polygon2D, break_polygons, Polygon3D
 from geomeppy import IDF
 from geomeppy.geom import core_perim
 import os
 import shutil
 #import BuildObject.DB_Data as DB_Data
+import BuildObject.GeomUtilities as GeomUtilities
 import re
 import CoreFiles.ProbGenerator as ProbGenerator
-import itertools
 
 import matplotlib.pyplot as plt
 #this class defines the building characteristics regarding available data in the geojson file
@@ -292,12 +292,19 @@ class Building:
                 GrlFct.Write2LogFile(msg, LogFile)
         return BuildID
 
+    # def getMultipolygon(self,DB):
+    #     test = DB.geometry.coordinates[0][0][0]
+    #     if type(test) is list:
+    #         Multipolygon = True
+    #     else:
+    #         Multipolygon = False
+    #     return Multipolygon
     def getMultipolygon(self,DB):
-        test = DB.geometry.coordinates[0][0][0]
-        if type(test) is list:
+        Multipolygon = False
+        try:
+            DB.geometry.poly3rdcoord
             Multipolygon = True
-        else:
-            Multipolygon = False
+        except: pass
         return Multipolygon
 
     def getRefCoord(self):
@@ -351,70 +358,103 @@ class Building:
                         #polycoor.reverse()
                         coord.append(polycoor)
                         BlocHeight.append(round(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]),1))
-            #these following lines are here to highlight holes in footprint and split it into two blocs...
-            #it may appear some errors for other building with several blocs and some with holes (these cases havn't been checked)
-            poly2merge = []
-            for idx, coor in enumerate(coord):
-                for i in range(len(coord)-idx-1):
-                    if Polygon(coor).contains(Polygon(coord[idx+i+1])):
-                        poly2merge.append([idx,idx+i+1])
-            try:
-                for i,idx in enumerate(poly2merge):
-                    new_surfaces = break_polygons(Polygon3D(coord[idx[0]]), Polygon3D(coord[idx[1]]))
-                    xs,ys,zs = zip(*list(new_surfaces[0]))
-                    coord[idx[0]] = [(xs[nbv],ys[nbv]) for nbv in range(len(xs))]
-                    xs,ys,zs = zip(*list(new_surfaces[1]))
-                    coord[idx[1]] = [(xs[nbv],ys[nbv]) for nbv in range(len(xs))]
-                    BlocHeight[idx[1]] = BlocHeight[idx[0]]
-                    msg ='[Geom Cor] There is a hole that will split the main surface in two blocs \n'
-                    GrlFct.Write2LogFile(msg, LogFile)
-            except:
-                msg = '[Poly Error] Some error are present in the polygon parts. Some are identified as being inside others...\n'
-                print(msg[:-1])
-                if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
-                import matplotlib.pyplot as plt
-                fig = plt.figure(0)
-                for i in coord:
-                    xs,ys = zip(*i)
-                    plt.plot(xs,ys,'-.')
-                #titre = 'FormularId : '+str(DB.properties['FormularId'])+'\n 50A_UUID : '+str(DB.properties['50A_UUID'])
-                # plt.title(titre)
-                # plt.savefig(self.name+ '.png')
-                # plt.close(fig)
-
-            #we need to clean the footprint from the node2remove but not if there are part of another bloc
-            newbloccoor= []
-            for idx,coor in enumerate(coord):
-                newcoor = []
-                FilteredNode2remove = []
-                single = False
-                for node in node2remove[idx]:
-                    single = True
-                    for idx1,coor1 in enumerate(coord):
-                        if idx!=idx1:
-                            if coor[node] in coor1 and coor[node] not in [n for i,n in enumerate(coor1[idx1]) if i in node2remove[idx1]]:
-                                single =False
-                    if single:
-                        FilteredNode2remove.append(node)
-                for nodeIdx,node in enumerate(coor):
-                    if not nodeIdx in FilteredNode2remove:
-                        newcoor.append(node)
-                newbloccoor.append(newcoor)
-            coord = newbloccoor
         else:
             #for dealing with 2D files
+            singlepoly = False
             for j in DB.geometry.coordinates[0]:
-                new = (j[0], j[1])
-                new_coor = new#[]
-                # for ii in range(len(self.RefCoord)):
-                #     new_coor.append((new[ii] - self.RefCoord[ii]))
-                coord.append(tuple(new_coor))
-            BlocNbFloor.append(nbfloor)
-            BlocHeight.append(self.height)
-            newpolycoor, node = core_perim.CheckFootprintNodes(coord, 5)
-            coord= [newpolycoor]
-        #before submitting the full coordinates, we need to check correspondance in case of multibloc
-        coord, validFootprint = CheckMultiBlocFootprint(coord,tol = DistTol)
+                if len(j)==2:
+                    new = (j[0], j[1])
+                    coord.append(tuple(new))
+                    singlepoly = True
+                else:
+                    new = []
+                    for jj in j:
+                        new.append(tuple(jj))
+                    # even before skewed angle, we need to check for tiny edge below the tolerance onsdered aftward (0.5m)
+                    pt2remove = []
+                    for edge in Polygon2D(new).edges:
+                        if edge.length < DistTol:
+                            pt2remove.append(edge.p2)
+                    for pt in pt2remove:
+                        if len(new) > 3:
+                            new.remove(pt)
+                    newpolycoor, node = core_perim.CheckFootprintNodes(new, 5)
+                    coord.append(new)
+                    node2remove.append(node)
+            if singlepoly:
+                newpolycoor, node = core_perim.CheckFootprintNodes(coord, 5)
+                node2remove.append(node)
+                coord = [coord]
+            for i in range(len(coord)):
+                BlocNbFloor.append(nbfloor)
+                BlocHeight.append(self.height)
+
+        # we need to clean the footprint from the node2remove but not if there are part of another bloc
+        newbloccoor = []
+        for idx, coor in enumerate(coord):
+            newcoor = []
+            FilteredNode2remove = []
+            single = False
+            for node in node2remove[idx]:
+                single = True
+                for idx1, coor1 in enumerate(coord):
+                    if idx != idx1:
+                        if coor[node] in coor1 and coor[node] not in [n for i, n in enumerate(coor1[idx1]) if
+                                                                      i in node2remove[idx1]]:
+                            single = False
+                if single:
+                    FilteredNode2remove.append(node)
+            for nodeIdx, node in enumerate(coor):
+                if not nodeIdx in FilteredNode2remove:
+                    newcoor.append(node)
+            newbloccoor.append(newcoor)
+        coord = newbloccoor
+        # these following lines are here to highlight holes in footprint and split it into two blocs...
+        # it may appear some errors for other building with several blocs and some with holes (these cases havn't been checked)
+        poly2merge = []
+        for idx, coor in enumerate(coord):
+            for i in range(len(coord) - idx - 1):
+                if Polygon(coor).contains(Polygon(coord[idx + i + 1])):
+                    poly2merge.append([idx, idx + i + 1])
+        try:
+            for i, idx in enumerate(poly2merge):
+                newtry = False
+                if newtry :
+
+                    newSurface = GeomUtilities.mergeHole(coord[idx[0]],coord[idx[1]])
+                    coord[idx[0]] = newSurface[0]
+                    coord[idx[1]] = newSurface[1]
+                else:
+                    new_surfaces = GeomUtilities.mergeGeomeppy(coord[idx[0]], coord[idx[1]])
+                    #new_surfaces = break_polygons(Polygon3D(coord[idx[0]]), Polygon3D(coord[idx[1]]))
+                    xs, ys, zs = zip(*list(new_surfaces[0]))
+                    coord[idx[0]] = [(xs[nbv], ys[nbv]) for nbv in range(len(xs))]
+                    if len(new_surfaces) > 1:
+                        xs, ys, zs = zip(*list(new_surfaces[1]))
+                        coord[idx[1]] = [(xs[nbv], ys[nbv]) for nbv in range(len(xs))]
+                        BlocHeight[idx[1]] = BlocHeight[idx[0]]
+                    else:
+                        coord.pop(idx[1])
+                        BlocHeight.pop(idx[1])
+
+
+                msg = '[Geom Cor] There is a hole that will split the main surface in two blocs \n'
+                GrlFct.Write2LogFile(msg, LogFile)
+        except:
+            msg = '[Poly Error] Some error are present in the polygon parts. Some are identified as being inside others...\n'
+            print(msg[:-1])
+            GrlFct.Write2LogFile(msg, LogFile)
+            import matplotlib.pyplot as plt
+            fig = plt.figure(0)
+            for i in coord:
+                xs, ys = zip(*i)
+                plt.plot(xs, ys, '-.')
+            # titre = 'FormularId : '+str(DB.properties['FormularId'])+'\n 50A_UUID : '+str(DB.properties['50A_UUID'])
+            # plt.title(titre)
+            # plt.savefig(self.name+ '.png')
+            # plt.close(fig)
+    #before submitting the full coordinates, we need to check correspondance in case of multibloc
+        coord, validFootprint = GeomUtilities.CheckMultiBlocFootprint(coord,tol = DistTol)
         if not validFootprint:
             msg = '[Poly Error] The different bloc are not adjacent...\n'
             #print(msg[:-1])
@@ -534,7 +574,7 @@ class Building:
                 if '_key' in key2:
                     try:
                         Meters[key1][key2[:-4]] = DB.properties[EPC[key1][key2]]
-                        Meters[key1][key2[:-4]] = int(DB.properties[EPC[key1][key2]])*EPC[key1][key2[:-4]+'COP']
+                        Meters[key1][key2[:-4]] = int(DB.properties[EPC[key1][key2]])*EPC[key1][key2[:-4]+'COP']*1000 #to convert kW in W
                     except:
                         pass
         return Meters
@@ -612,7 +652,7 @@ class Building:
                 continue
             if ShadeWall[GE['ShadingIdKey']] =='V67656-3':
                 a=1
-            confirmed,currentShadingElement,OverlapCode = checkShadeWithFootprint(RelativeAgregFootprint,currentShadingElement,ShadeWall[GE['ShadingIdKey']],tol = self.DistTol)
+            confirmed,currentShadingElement,OverlapCode = GeomUtilities.checkShadeWithFootprint(RelativeAgregFootprint,currentShadingElement,ShadeWall[GE['ShadingIdKey']],tol = self.DistTol)
             if confirmed:
                 if ShadeWall['height']<=(max(self.BlocHeight)+self.StoreyHeigth):
                     OverlapCode +=1
@@ -709,7 +749,7 @@ class Building:
         try :
             for x in self.EPCMeters['ElecLoad']:
                 if self.EPCMeters['ElecLoad'][x]:
-                    eleval += self.EPCMeters['ElecLoad'][x]*1000 #to convert kW in W
+                    eleval += self.EPCMeters['ElecLoad'][x]
         except:
             pass
         if eleval>0:
@@ -729,149 +769,3 @@ class Building:
                 #print(msg[:-1])
                 if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         return IntLoad
-
-def CheckMultiBlocFootprint(blocs,tol =1):
-    validMultibloc = True
-    if len(blocs)>1:
-        validMultibloc = False
-        for bloc1,bloc2 in itertools.product(blocs,repeat = 2):
-            if bloc1 != bloc2:
-                for ptidx,pt in enumerate(bloc1):
-                    edge = [bloc1[ptidx],bloc1[(ptidx+1)%len(bloc1)]]
-                    comEdges = []
-                    for ptidx1,pt1 in enumerate(bloc2):
-                        edge1 = [bloc2[ptidx1], bloc2[(ptidx1+1)%len(bloc2)]]
-                        if is_parallel(edge,edge1,10) and confirmMatch(edge, edge1, tol):
-                            validMultibloc = True
-                            pt1 = False
-                            pt2 = False
-                            if LineString(edge1).distance(Point(edge[0])) < tol:
-                                edge[0] = point_on_line(edge1[0], edge1[1],edge[0])
-                                edge[0],conf= CoordAdjustement(edge1, edge[0], tol)
-                                pt1 = True
-                            if LineString(edge1).distance(Point(edge[1])) < tol:
-                                edge[1] = point_on_line(edge1[0], edge1[1],edge[1])
-                                edge[1],conf = CoordAdjustement(edge1, edge[1], tol)
-                                pt2 = True
-                            if pt1 and pt2:
-                                if abs(getAngle(edge1, edge) -180) < 5:
-                                    comEdges.append([edge[1],edge[0]])
-                                else:
-                                    comEdges.append(edge)
-                    bloc1[ptidx] = edge[0]
-                    bloc1[(ptidx + 1) % len(bloc1)] = edge[1]
-                    #lets check if these nodes are also on bloc2
-                    #first which bloc is concerned
-                    for comEdge in comEdges:
-                        if comEdge[0] in bloc2 and comEdge[1] not in bloc2:
-                            index = bloc2.index(comEdge[0])+1
-                            bloc2.insert(index,comEdge[1])
-                            #bloc2 = bloc2[:index]+[comEdge[1]]+bloc2[index:]
-                        if comEdge[1] in bloc2 and comEdge[0] not in bloc2:
-                            index = bloc2.index(comEdge[1])
-                            bloc2.insert(index,comEdge[0])
-                            #bloc2 = bloc2[:index]+[comEdge[0]]+bloc2[index:]
-    return blocs,validMultibloc
-
-
-def point_on_line(a, b, p):
-    import numpy as np
-    a = np.array(a)
-    b = np.array(b)
-    p = np.array(p)
-    ap = p - a
-    ab = b - a
-    result = a + np.dot(ap, ab) / np.dot(ab, ab) * ab
-    return tuple(result)
-
-def getAngle(line1,line2):
-    vector_a_x = line1[1][0] - line1[0][0]
-    vector_a_y = line1[1][1] - line1[0][1]
-    vector_b_x = line2[1][0] - line2[0][0]
-    vector_b_y = line2[1][1] - line2[0][1]
-    import numpy as np
-    v = np.array([vector_a_x, vector_a_y])
-    w = np.array([vector_b_x, vector_b_y])
-    return abs(np.rad2deg(np.arccos(round(v.dot(w) / (np.linalg.norm(v) * np.linalg.norm(w)), 4))))
-
-def is_parallel(line1, line2, tol = 5):
-    angledeg = getAngle(line1, line2)
-    if angledeg <tol or abs(angledeg-180) < tol:
-        return True
-    else:
-        return False
-
-def CoordAdjustement(edge,pt,tol):
-    #if one point is closest than 1 m of on edge point, the point is moved to the edge's point
-    coormade = False
-    if Point(pt).distance(Point(edge[0])) < tol:
-        coormade = True
-        pt = edge[0]
-    elif Point(pt).distance(Point(edge[1])) < tol:
-        coormade = True
-        pt = edge[1]
-    return pt,coormade
-
-def confirmMatch(Edge, Edge1,tol):
-    #this should be enough if both edges are already checked being //
-    dist1 = min(LineString(Edge).distance(Point(Edge1[0])),LineString(Edge).distance(Point(Edge1[1])))
-    dist2 = min(LineString(Edge1).distance(Point(Edge[0])), LineString(Edge1).distance(Point(Edge[1])))
-    if dist1 <tol or dist2 < tol:
-        #we want to avoid cases with exactly the same vertexes (shading going from the building edge to the outside)
-        checkNode = [CoordAdjustement(Edge,Edge1[0],1),CoordAdjustement(Edge,Edge1[1],1) or CoordAdjustement(Edge1,Edge[0],1) or CoordAdjustement(Edge1,Edge[1],1)]
-        if True not in [val[1] for val in checkNode]:
-            return True
-    #both shade vertex are on the edge
-    dist1 = LineString(Edge).distance(Point(Edge1[0]))
-    dist2 = LineString(Edge).distance(Point(Edge1[1]))
-    if dist1 <tol and dist2 < tol:
-        return True
-    # both shade vertex are on the edge
-    dist1 = LineString(Edge1).distance(Point(Edge[0]))
-    dist2 = LineString(Edge1).distance(Point(Edge[1]))
-    if dist1 < tol and dist2 < tol:
-        return True
-    return False
-
-
-def checkShadeWithFootprint(AggregFootprint, ShadeWall,ShadeId,tol = 2):
-    if ShadeId == 'V69467-8':
-        a=1
-    # check if some shadingssurfaces are too close to the building
-    # we consider the middle coordinate point fo the shading surface
-    # if less than 1m than lets consider that the boundary conditions should be adiabatique instead of outdoor conditions (adjacent buildings)
-    ShadeMidCoord = ((ShadeWall[0][0] + ShadeWall[1][0]) / 2,
-                     (ShadeWall[0][1] + ShadeWall[1][1]) / 2)
-    #the footprint is closed in order to enable a full loop around all edges (including the last one between first and last veretx
-    #closedFootprint.append(AggregFootprint[0])
-    confirmed = False
-    OverlapCode = 0
-    # this code is 0 for fulloverlap from edge to edge,
-    # 2 for partial overlap with one commun edge and longer shading element,
-    # 4 for partial overlap with no commun edge,
-    # it is further increased by one if the height is below the building
-    if min([Point(ShadeWall[0]).distance(Polygon(AggregFootprint)), Point(ShadeWall[1]).distance(Polygon(AggregFootprint))])< tol:
-        for idx, node in enumerate(AggregFootprint[:-1]):
-            #dist1 = LineString([AggregFootprint[idx], AggregFootprint[idx + 1]]).distance(LineString(ShadeWall))
-            if is_parallel([AggregFootprint[idx], AggregFootprint[idx + 1]], ShadeWall):#if dist1 < 0.1:
-                #first the segment direction shall be compute for the closest point if not equal
-                Edge = [AggregFootprint[idx], AggregFootprint[idx + 1]]
-                if confirmMatch(Edge, ShadeWall,tol): #the tolerance is between points and edge (either from the footprint or the
-                    OverlapCode = 4
-                    confirmed = True
-                    ShadeWall[0] = point_on_line(Edge[0], Edge[1],ShadeWall[0])
-                    ShadeWall[0],CoorPt1 = CoordAdjustement(Edge, ShadeWall[0],tol)   #the tol is about distance bewteen 2 vertexes
-                    if CoorPt1:
-                        OverlapCode = 2
-                    ShadeWall[1] = point_on_line(Edge[0], Edge[1],ShadeWall[1])
-                    ShadeWall[1], CoorPt2 = CoordAdjustement(Edge,ShadeWall[1],tol)   #the tol is about distance bewteen 2 vertexes
-                    if CoorPt2:
-                        OverlapCode = 2
-                    if CoorPt1 and CoorPt2: #it means that the sade's edge is exactly on a footprint's edge, no need to go further
-                        OverlapCode = 0
-                        return confirmed,ShadeWall,OverlapCode
-        #if the middle point isinside the polygon (with a buffer zone of 1m, lets dropp it
-        reduceInsideArea = Polygon(AggregFootprint).buffer(distance = -1, join_style=2)
-        if reduceInsideArea.contains(Point(ShadeMidCoord)):
-            return False, ShadeWall, 999
-    return confirmed,ShadeWall,OverlapCode

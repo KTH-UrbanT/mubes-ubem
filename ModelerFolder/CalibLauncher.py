@@ -55,8 +55,8 @@ if __name__ == '__main__' :
     for line in FileLines:
         Bld2Sim.append(int(line))
 
-    CaseName = 'weeklybasis'
-    BuildNum = [23]#Bld2Sim
+    CaseName = 'monthlybasisnewbis'
+    BuildNum = Bld2Sim
     VarName2Change = ['AirRecovEff','IntLoadCurveShape','wwr','EnvLeak','setTempLoL','AreaBasedFlowRate','WindowUval','WallInsuThick','RoofInsuThick']
     Bounds = [[0.5,0.9],[1,5],[0.2,0.4],[0.5,1.6],[18,22],[0.35,1],[0.7,2],[0.1,0.3],[0.2,0.4]]
     BoundLim = [[0,1],[0.9,9],[0.05,0.7],[0.2,4],[15,25],[0.2,2],[0.5,4],[0.05,0.9],[0.05,0.9]]
@@ -68,7 +68,8 @@ if __name__ == '__main__' :
     PathInputFile = 'HammarbyLast.txt'
     OutputsFile = 'Outputs.txt'
     ZoneOfInterest = ''
-    CalibBasis = 'WeeklyBasis'#'MonthlyBasis' #'WeeklyBasis'#'MonthlyBasis'
+    CalibBasis = 'MonthlyBasis'#'WeeklyBasis'#'YearlyBasis' #'WeeklyBasis'#
+    REMax = 20
 
 ######################################################################################################################
 ########     LAUNCHING MULTIPROCESS PROCESS PART  (nothing should be changed hereafter)   ############################
@@ -118,10 +119,11 @@ if __name__ == '__main__' :
         MainInputs['DataBaseInput'] = DataBaseInput
         File2Launch = {'nbBuild' : []}
         for idx,nbBuild in enumerate(BuildNum2Launch):
+            NbRun = NbRuns
             #First, lets create the folder for the building and simulation processes
             SimDir = GrlFct.CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,Refresh=False)
             #a sample of parameter is generated is needed
-            ParamSample =  GrlFct.SetParamSample(SimDir, NbRuns, VarName2Change, Bounds,SepThreads)
+            ParamSample =  GrlFct.SetParamSample(SimDir, NbRun, VarName2Change, Bounds,SepThreads)
             if idx<len(DataBaseInput['Build']):
                 Finished = False
                 idx_offset = 0
@@ -133,13 +135,13 @@ if __name__ == '__main__' :
                         CB_OAT.LaunchOAT(MainInputs, SimDir, nbBuild, ParamSample[0, :], 0, pythonpath)
                     # lets check whether all the files are to be run or if there's only some to run again
                     NewRuns = []
-                    for i in range(NbRuns):
+                    for i in range(NbRun):
                         if not os.path.isfile(
                                 os.path.join(SimDir, ('Building_' + str(nbBuild) + 'v' + str(i+idx_offset) + '.idf'))):
                             NewRuns.append(i)
                     MainInputs['FirstRun'] = False
                     pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
-                    for i in NewRuns:#range(1,NbRuns):
+                    for i in NewRuns:#range(1,NbRun):
                         pool.apply_async(CB_OAT.LaunchOAT, args=(MainInputs,SimDir,nbBuild,ParamSample[i+idx_offset, :],i+idx_offset,pythonpath))
                     pool.close()
                     pool.join()
@@ -163,24 +165,33 @@ if __name__ == '__main__' :
                     with open(os.path.join(ComputfFilePath, 'Building_' + str(nbBuild) + '_Meas.pickle'),
                               'rb') as handle:
                         Meas = pickle.load(handle)
-                    Matches = CalibUtil.getMatches(Res, Meas, VarName2Change, CalibBasis,ParamSample)
+                    Matches20 = CalibUtil.getMatches(Res, Meas, VarName2Change, CalibBasis,ParamSample,REMax = 20)
+                    Matches10 = CalibUtil.getMatches(Res, Meas, VarName2Change, CalibBasis, ParamSample, REMax=10)
+                    Matches5 = CalibUtil.getMatches(Res, Meas, VarName2Change, CalibBasis, ParamSample, REMax=5)
+                    if len(Matches5[CalibBasis][VarName2Change[0]]) > 30:
+                        Matches = Matches5
+                    elif len(Matches10[CalibBasis][VarName2Change[0]]) > 30:
+                        Matches = Matches10
+                    else:
+                        Matches = Matches20
                     try:
-                        print(len(Matches[CalibBasis][VarName2Change[0]]))
-                        if len(Matches[CalibBasis][VarName2Change[0]]) > 100 or len(ParamSample[:, 0]) >= 2000:
+                        print(len(Matches5[CalibBasis][VarName2Change[0]]), REMax)
+                        if len(ParamSample[:, 0]) >= 2000 or len(Matches5[CalibBasis][VarName2Change[0]]) > 100:
                             Finished = True
                         else:
                             print('New runs loop')
                             if len(Matches[CalibBasis][VarName2Change[0]]) > 10:
+                                NbRun = 100
                                 try:
-                                    NewSample = CalibUtil.getCovarCalibratedParam(Matches[CalibBasis], VarName2Change, NbRuns,
+                                    NewSample = CalibUtil.getCovarCalibratedParam(Matches[CalibBasis], VarName2Change, NbRun,
                                                                         BoundLim)
                                     print('Covariance worked !')
                                 except:
                                     Bounds = CalibUtil.getNewBounds(Bounds, BoundLim)
-                                    NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRuns)
+                                    NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRun)
                             else:
                                 Bounds = CalibUtil.getNewBounds(Bounds, BoundLim)
-                                NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRuns)
+                                NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRun)
                             idx_offset = len(ParamSample[:, 0])
                             ParamSample = np.concatenate((ParamSample, NewSample))
                             Paramfile = os.path.join(SimDir, 'ParamSample.pickle')
@@ -192,7 +203,7 @@ if __name__ == '__main__' :
                             Finished = True
                         else:
                             Bounds = CalibUtil.getNewBounds(Bounds, BoundLim)
-                            NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRuns)
+                            NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRun)
                             idx_offset = len(ParamSample[:, 0])
                             ParamSample = np.concatenate((ParamSample, NewSample))
                             Paramfile = os.path.join(SimDir, 'ParamSample.pickle')

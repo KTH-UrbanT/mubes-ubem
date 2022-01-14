@@ -27,6 +27,7 @@ SIM:
         CPUusage : 0.8
         ZoneOfInterest : ''
         DebugMode : False
+        API : False
     
     SimuData :
         Begin_Day_of_Month : 1

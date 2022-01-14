@@ -63,7 +63,7 @@ def getPeriodError(Res,NewMeas,idx,NbSample):
     # if error<Relerror:
     #     return Res['SimNum'][idx]
 
-def getMatches(Res,Meas,VarName2Change,CalibrationBasis,ParamSample):
+def getMatches(Res,Meas,VarName2Change,CalibrationBasis,ParamSample,REMax = 5, CVRMSMax = 15):
     YearlyMatchSimIdx = []
     MonthlyMatchSimIdx = []
     WeeklyMatchSimIdx = []
@@ -71,8 +71,8 @@ def getMatches(Res,Meas,VarName2Change,CalibrationBasis,ParamSample):
     if 'YearlyBasis' in CalibrationBasis:
         YearleError, EPHeat = getYearlyError(Res, Meas)
         YearlyMatchSimIdx = [idx for idx in range(len(Res['SimNum'])) if
-                           YearleError[idx] < 5]  # number of simulation that gave matched results
-        YearMatcherror = [val for val in YearleError if val < 5]
+                           YearleError[idx] < REMax]  # number of simulation that gave matched results
+        YearMatcherror = [val for val in YearleError if val < REMax]
 
     elif 'MonthlyBasis' in CalibrationBasis:
         MonthlyMatcherror = []
@@ -80,7 +80,7 @@ def getMatches(Res,Meas,VarName2Change,CalibrationBasis,ParamSample):
         for idx in range(len(Res['SimNum'])):
             SampleEr,CVRMSEro = getPeriodError(Res, Meas, idx, 12)
             getmonthEr.append(SampleEr)
-            if CVRMSEro <15:
+            if CVRMSEro <CVRMSMax:
                 MonthlyMatchSimIdx.append(idx) #number of simulation that gave matched results
                 MonthlyMatcherror.append(CVRMSEro)
 
@@ -90,7 +90,7 @@ def getMatches(Res,Meas,VarName2Change,CalibrationBasis,ParamSample):
         for idx in range(len(Res['SimNum'])):
             SampleEr, CVRMSEro = getPeriodError(Res, Meas, idx, 52)
             getweekEr.append(SampleEr)
-            if CVRMSEro < 15:
+            if CVRMSEro < CVRMSMax:
                 WeeklyMatchSimIdx.append(idx)  # number of simulation that gave matched results
                 WeeklyMatcherror.append(CVRMSEro)
 
@@ -100,7 +100,7 @@ def getMatches(Res,Meas,VarName2Change,CalibrationBasis,ParamSample):
         for idx in range(len(Res['SimNum'])):
             SampleEr, CVRMSEro = getPeriodError(Res, Meas, idx, 365)
             getdayEr.append(SampleEr)
-            if CVRMSEro < 15:
+            if CVRMSEro < CVRMSMax:
                 DailyMatchSimIdx.append(idx) #number of simulation that gave matched results
                 DailyMatcherror.append(CVRMSEro)
 
@@ -109,12 +109,16 @@ def getMatches(Res,Meas,VarName2Change,CalibrationBasis,ParamSample):
     DailyMatchedParam = {}
     WeeklyMatchedParam= {}
     for idx, par in enumerate(VarName2Change):
+        YearlyMatchedParam[par] = []
         if YearlyMatchSimIdx:
             YearlyMatchedParam[par] = ParamSample[[Res['SimNum'][i] for i in YearlyMatchSimIdx], idx]
+        MonthlyMatchedParam[par] = []
         if MonthlyMatchSimIdx:
             MonthlyMatchedParam[par] = ParamSample[[Res['SimNum'][i] for i in MonthlyMatchSimIdx], idx]
+        WeeklyMatchedParam[par] = []
         if WeeklyMatchSimIdx:
             WeeklyMatchedParam[par] = ParamSample[[Res['SimNum'][i] for i in WeeklyMatchSimIdx], idx]
+        DailyMatchedParam[par] = []
         if DailyMatchSimIdx:
             DailyMatchedParam[par] = ParamSample[[Res['SimNum'][i] for i in DailyMatchSimIdx], idx]
 

@@ -184,7 +184,15 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
         # add some extra energy loads like domestic Hot water
         # start = time.time()
         GrlFct.setExtraEnergyLoad(idf,building)
-
+    except:
+        msg = '[Error] The setExtraEnergyLoad definition failed...\n'
+        print(msg[:-1])
+        os.chdir(MainPath)
+        if FirstRun:
+            GrlFct.Write2LogFile(msg, LogFile)
+            GrlFct.Write2LogFile('##############################################################\n', LogFile)
+            return
+    try:
         #lets add the main gloval variable : Mean temperautre over the heated areas and the total building power consumption
         #and if present, the heating needs for DHW production as heated by direct heating
         #these are added using EMS option of EnergyPlus, and used for the FMU option

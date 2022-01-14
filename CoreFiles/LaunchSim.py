@@ -79,17 +79,15 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,API,withFMU = Fal
         res2export.append(
             ['ATemp (m2),EP_Heated_Area (m2) : ', building.ATemp,round(building.EPHeatedArea,1)])
         Write2file(res2export, os.path.join(ResSimpath, building.BuildID['50A_UUID'] + '.txt'))
-
     else:
         #the resultst are read with html table and energyplus eso files. The html could be avoid, but then some information will have to computes in the building object (could be)
         if withFMU:
             Res = Set_Outputs.Read_Outputhtml(os.path.join(RunDir, CaseName + 'Table.htm'))
             ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir, CaseName + '.eso'), Res['OutdoorSurfacesNames'], ZoneOutput=False)
-
         else:
-            Res  = Set_Outputs.Read_Outputhtml(os.path.join(RunDir,CaseName+'tbl.htm'))
-            ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir,CaseName+'out.eso'), Res['OutdoorSurfacesNames'], ZoneOutput=False)
-
+            Res = Set_Outputs.Read_Outputhtml(os.path.join(RunDir, CaseName + 'tbl.htm'))
+            ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir, CaseName + 'out.eso'), Res['OutdoorSurfacesNames'],
+                                                 ZoneOutput=False)
         Res['BuildDB'] = building
         for key1 in ResEso:
             # if not 'Environ' in key1:
@@ -99,17 +97,16 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,API,withFMU = Fal
                 Res[key1]['TimeStep_' + key2] = ResEso[key1][key2]['TimeStep']
                 Res[key1]['Unit_' + key2] = ResEso[key1][key2]['Unit']
         if withFMU:
-            shutil.copyfile(os.path.join(RunDir,CaseName+'.err'), os.path.join(ResSimpath,file[:-4] + '.err'))
-            shutil.copyfile(os.path.join(RunDir,CaseName+'Table.htm'), os.path.join(ResSimpath,file[:-4] + '.html'))
+            shutil.copyfile(os.path.join(RunDir, CaseName + '.err'), os.path.join(ResSimpath, file[:-4] + '.err'))
+            shutil.copyfile(os.path.join(RunDir, CaseName + 'Table.htm'), os.path.join(ResSimpath, file[:-4] + '.html'))
         else:
             shutil.copyfile(os.path.join(RunDir, 'Runout.err'), os.path.join(ResSimpath, file[:-4] + '.err'))
-            shutil.copyfile(os.path.join(RunDir, 'Runtbl.htm'), os.path.join(ResSimpath, file[:-4] + '.html'))
-        #shutil.copyfile(RunDir + '\\' + 'Runout.csv', ResSimpath + file[:-4] + '.csv')
-        with open(os.path.join(ResSimpath, file[:-4]+'.pickle'), 'wb') as handle:
+            # shutil.copyfile(os.path.join(RunDir, 'Runtbl.htm'), os.path.join(ResSimpath, file[:-4] + '.html'))
+        # shutil.copyfile(RunDir + '\\' + 'Runout.csv', ResSimpath + file[:-4] + '.csv')
+        with open(os.path.join(ResSimpath, file[:-4] + '.pickle'), 'wb') as handle:
             pickle.dump(Res, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        #csv2tabdelim.convert(ResSimpath + file[:-4] + '.csv')
+        # csv2tabdelim.convert(ResSimpath + file[:-4] + '.csv')
         #csv2tabdelim.WriteCSVFile(ResSimpath+'\\'+file[:-4] + '.csv', ResEso)
-
     os.chdir(filepath)
     if not building.SaveLogFiles:
         for i in os.listdir(RunDir):
