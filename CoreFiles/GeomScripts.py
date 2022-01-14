@@ -5,6 +5,7 @@ from geomeppy import geom
 from shapely.geometry import Polygon
 from shapely.ops import cascaded_union
 import CoreFiles.Envelope_Param as Envelope_Param
+import CoreFiles.GeneralFunctions as GrlFct
 import itertools
 
 def BuildBloc(idf,perim,bloc,bloc_coord,Height,nbstories,nbBasementstories,BasementstoriesHeight,Perim_depth):
@@ -31,7 +32,7 @@ def BuildBloc(idf,perim,bloc,bloc_coord,Height,nbstories,nbBasementstories,Basem
             below_ground_storey_height=BasementstoriesHeight if nbBasementstories > 0 else 0
         )
 
-def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
+def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False,DebugMode = False):
     #here, the building geometry is created and extruded for each bloc composing the builing, it uses the function above as well
     Full_coord = building.footprint
     Nb_blocs = len(Full_coord)
@@ -49,18 +50,12 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
                 matched = True
             except:
                 Perim_depth = Perim_depth/2
-                print('I reduce half the perim depth')
-                try:
-                    LogFile.write('I reduce half the perim depth\n')
-                except:
-                    pass
+                msg = '[Core Perimeter] the given perimeter depth had to be reduced by 2...\n'
+                if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
             if Perim_depth<0.5:
-                try:
-                    LogFile.write(
-                    'Sorry, but this building cannot have Perim/Core option..it failed with perim below 0.75m\n')
-                except:
-                    pass
-                return print('Sorry, but this building cannot have Perim/Core option..it failed with perim below 0.75m')
+                msg = '[Core Perimeter] This building cannot have Perim/Core option..it failed with perimeter depth below 0.5m\n'
+                if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+                return
 
     # the shading walls around the building are created with the function below
     # these are used in the function that defines the boundary conditions
@@ -73,11 +68,12 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
         # end = time.time()
         # print('[Time Report] : The intersect_match function took : ', round(end - start, 2), ' sec')
         if MatchedShade:
-            LogFile.write('[Nb Adjacent_Surfaces] This building has ' + str(len(MatchedShade)) + ' adiabatic surfaces\n')
+            msg = '[Nb Adjacent_Surfaces] This building has ' + str(len(MatchedShade)) + ' adiabatic surfaces\n'
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
     except:
-        LogFile.write('[Error - Boundary] function intersect_match() failed....\n')
-        print('[Error - Boundary] function intersect_match() failed....')
-        #this is to generate an erro as it'shandles elswhere
+        msg ='[Error - Boundary] function intersect_match() failed....\n'
+        if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+        #this is to generate an error as it's handles else where
         int('process failded')
 
     # this last function on the Geometry is here to split the non convex surfaces
@@ -87,11 +83,8 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False):
         if not ForPlots:
             split2convex(idf)
     except:
-        try:
-            LogFile.write('[Error] The Split2convex function failed for this building....\n')
-        except:
-            pass
-        print('The Split2convex function failed for this building....')
+        msg ='[Error - Convex] The Split2convex function failed for this building....\n'
+        if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         pass
 
 def createRapidGeomElem(idf,building):

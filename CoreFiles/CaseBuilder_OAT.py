@@ -27,7 +27,7 @@ def LaunchOAT(MainInputs,SimDir,keypath,nbBuild,ParamVal,currentRun,pythonpath=[
         LaunchProcess(SimDir, MainInputs['FirstRun'], MainInputs['TotNbRun'], currentRun,
                                   keypath, nbBuild, MainInputs['CorePerim'],
                                   MainInputs['FloorZoning'], ParamVal,MainInputs['VarName2Change'],MainInputs['CreateFMU'],
-                                    MainInputs['OutputsFile'],DataBaseInput = MainInputs['DataBaseInput'])
+                                    MainInputs['OutputsFile'],DataBaseInput = MainInputs['DataBaseInput'], DebugMode = MainInputs['DebugMode'])
     # if willing to launch each run in seperate terminals, all arguments must be given in text form and the pythonpath is required
     else:
         if platform.system() == "Windows":
@@ -61,7 +61,7 @@ def LaunchOAT(MainInputs,SimDir,keypath,nbBuild,ParamVal,currentRun,pythonpath=[
         check_call(cmdline,stdout=open(os.devnull, "w"))
 
 def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,FloorZoning,ParamVal,VarName2Change,
-                  CreateFMU,OutputsFile,DataBaseInput = []):
+                  CreateFMU,OutputsFile,DataBaseInput = [], DebugMode = False):
     #This function builds the idf file, a log file is generated if the buildiung is run for the first time,
     #the idf file will be saved as well as the building object as a pickle. the latter could be commented as not required
     MainPath = os.getcwd()
@@ -92,11 +92,11 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
     if FirstRun:
         StudiedCase = BuildingList()
         #lets build the two main object we'll be playing with in the following : the idf and the building
-        idf, building = GrlFct.appendBuildCase(StudiedCase, epluspath, nbcase, DataBaseInput, MainPath,LogFile)
+        idf, building = GrlFct.appendBuildCase(StudiedCase, epluspath, nbcase, DataBaseInput, MainPath,LogFile, DebugMode = DebugMode)
         #Rounds of check if we continue with this building or not, see DB_Filter4Simulation.py if other filter are to add
-        CaseOK = checkBldFilter(building)
+        CaseOK = checkBldFilter(building,LogFile,DebugMode = DebugMode)
         if not CaseOK:
-            msg =  '[Error] This Building/bloc is not valid to continue, please check DB_Filter4Simulation.py to see what is of concerned\n'
+            msg =  '[Error] This Building/bloc is not valid to continue, please check DB_Filter4Simulation.py to see what is of concerned or turn on DebugMode\n'
             print(msg[:-1])
             os.chdir(MainPath)
             if FirstRun:
@@ -109,7 +109,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
         # The geometry is assigned here
         try:
             # start = time.time()
-            GrlFct.setBuildingLevel(idf, building,LogFile,CorePerim,FloorZoning)
+            GrlFct.setBuildingLevel(idf, building,LogFile,CorePerim,FloorZoning,DebugMode = DebugMode)
             # end = time.time()
             # print('[Time Report] : The setBuildingLevel took : ',round(end-start,2),' sec')
         except:
@@ -203,7 +203,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
         # print('[Time Report] : The setOutputLevel took : ', round(end - start, 2), ' sec')
         #special ending process if FMU is wanted
         if CreateFMU:
-            GrlFct.CreatFMU(idf,building,nbcase,epluspath,SimDir, currentRun,EMSOutputs,LogFile)
+            GrlFct.CreatFMU(idf,building,nbcase,epluspath,SimDir, currentRun,EMSOutputs,LogFile,DebugMode)
         else:
              # saving files and objects
             idf.saveas('Building_' + str(nbcase) +  'v'+str(currentRun)+'.idf')

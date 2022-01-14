@@ -87,13 +87,13 @@ class BuildingList:
     def __init__(self):
         self.building = []
 
-    def addBuilding(self,name,DataBaseInput,nbcase,MainPath,epluspath,LogFile,PlotOnly):
+    def addBuilding(self,name,DataBaseInput,nbcase,MainPath,epluspath,LogFile,PlotOnly, DebugMode):
         #idf object is created here
         IDF.setiddname(os.path.join(epluspath,"Energy+.idd"))
         idf = IDF(os.path.normcase(os.path.join(epluspath,"ExampleFiles/Minimal.idf")))
         idf.idfname = name
         #building object is created here
-        building = Building(name, DataBaseInput, nbcase, MainPath,LogFile,PlotOnly)
+        building = Building(name, DataBaseInput, nbcase, MainPath,LogFile,PlotOnly, DebugMode)
         #both are append as dict in the globa studied case list
         self.building.append({
             'BuildData' : building,
@@ -103,7 +103,7 @@ class BuildingList:
 
 class Building:
 
-    def __init__(self,name,DataBaseInput,nbcase,MainPath,LogFile,PlotOnly):
+    def __init__(self,name,DataBaseInput,nbcase,MainPath,LogFile,PlotOnly,DebugMode):
         Buildingsfile = DataBaseInput['Build']
         Shadingsfile = DataBaseInput['Shades']
         DB = Buildingsfile[nbcase]
@@ -126,37 +126,37 @@ class Building:
         self.name = name
         self.BuildID = self.getBuildID(DB, GE,LogFile)
         self.Multipolygon = self.getMultipolygon(DB)
-        self.nbfloor = self.getnbfloor(DB, DBL,LogFile)
+        self.nbfloor = self.getnbfloor(DB, DBL,LogFile,DebugMode)
         self.nbBasefloor = self.getnbBasefloor(DB, DBL)
         self.height = self.getheight(DB, DBL)
         self.DistTol = GE['DistanceTolerance']
-        self.footprint,  self.BlocHeight, self.BlocNbFloor = self.getfootprint(DB,LogFile,self.nbfloor)
+        self.footprint,  self.BlocHeight, self.BlocNbFloor = self.getfootprint(DB,LogFile,self.nbfloor,DebugMode)
         self.AggregFootprint = self.getAggregatedFootprint()
         self.RefCoord = self.getRefCoord()
-        self.ATemp = self.getsurface(DB, DBL,LogFile)
-        self.SharedBld, self.VolumeCorRatio = self.IsSameFormularIdBuilding(Buildingsfile, nbcase, LogFile, DBL)
-        self.BlocHeight, self.BlocNbFloor, self.StoreyHeigth = self.EvenFloorCorrection(self.BlocHeight, self.nbfloor, self.BlocNbFloor, self.footprint, LogFile)
-        self.EPHeatedArea = self.getEPHeatedArea(LogFile)
+        self.ATemp = self.getsurface(DB, DBL,LogFile,DebugMode)
+        self.SharedBld, self.VolumeCorRatio = self.IsSameFormularIdBuilding(Buildingsfile, nbcase, LogFile, DBL,DebugMode)
+        self.BlocHeight, self.BlocNbFloor, self.StoreyHeigth = self.EvenFloorCorrection(self.BlocHeight, self.nbfloor, self.BlocNbFloor, self.footprint, LogFile,DebugMode)
+        self.EPHeatedArea = self.getEPHeatedArea(LogFile,DebugMode)
         self.MaxShadingDist = GE['MaxShadingDist']
         self.AdjacentWalls = [] #this will be appended in the getshade function if any present
-        self.shades = self.getshade(DB,Shadingsfile,Buildingsfile,GE,LogFile)
+        self.shades = self.getshade(DB,Shadingsfile,Buildingsfile,GE,LogFile,DebugMode)
         self.Materials = config['SIM']['BaseMaterial']
         self.InternalMass = config['SIM']['InternalMass']
         self.MakeRelativeCoord() # we need to convert into local coordinate in order to compute adjacencies with more precision than keeping thousand of km for x and y
         if not PlotOnly:
             #the attributres above are needed in all case, the one below are needed only if energy simulation is asked for
-            self.VentSyst = self.getVentSyst(DB, config['SIM']['VentSyst'], LogFile)
+            self.VentSyst = self.getVentSyst(DB, config['SIM']['VentSyst'], LogFile,DebugMode)
             self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB, DBL, BE)
-            self.OccupType = self.getOccupType(DB, config['SIM']['OccupType'], LogFile)
+            self.OccupType = self.getOccupType(DB, config['SIM']['OccupType'], LogFile,DebugMode)
             self.nbStairwell = self.getnbStairwell(DB, DBL)
             self.WeatherDataFile = config['SIM']['WeatherFile']['Loc']
             self.year = self.getyear(DB, DBL)
-            self.EPCMeters = self.getEPCMeters(DB, EPC, LogFile)
+            self.EPCMeters = self.getEPCMeters(DB, EPC, LogFile,DebugMode)
             if len(self.SharedBld) > 0:
-                self.CheckAndCorrEPCs(Buildingsfile, LogFile, nbcase, EPC)
+                self.CheckAndCorrEPCs(Buildingsfile, LogFile, nbcase, EPC,DebugMode)
             self.nbAppartments = self.getnbAppartments(DB, DBL)
             #we define the internal load only if it's not for making picture
-            self.IntLoad = self.getIntLoad(MainPath,LogFile)
+            self.IntLoad = self.getIntLoad(MainPath,LogFile,DebugMode)
             self.DHWInfos = self.getExtraEnergy(ExEn, MainPath)
             #if there are no cooling comsumption, lets considerer a set point at 50deg max
             # for key in self.EPCMeters['Cooling']:
@@ -182,12 +182,12 @@ class Building:
             newcoord = [(round(node[0] - self.RefCoord[0],roundfactor), round(node[1] - self.RefCoord[1],roundfactor)) for node in Wall['geometries']]
             Wall['geometries'] = newcoord
 
-    def CheckAndCorrEPCs(self,Buildingsfile,LogFile,nbcase,EPC):
+    def CheckAndCorrEPCs(self,Buildingsfile,LogFile,nbcase,EPC,DebugMode):
         totHeat = []
         tocheck = [nbcase]+self.SharedBld
         for share in tocheck:
             val = 0
-            Meas = self.getEPCMeters(Buildingsfile[share],EPC,[])
+            Meas = self.getEPCMeters(Buildingsfile[share],EPC)
             for key in Meas['Heating'].keys():
                 val += Meas['Heating'][key]
             totHeat.append(val)
@@ -204,13 +204,13 @@ class Building:
                     if 'Heating' == keyType:
                         newval += self.EPCMeters['Heating'][key]
             msg = '[EPCs correction] The EPCs total heat needs for the each shared buildings is :'+str(totHeat)+'\n'
-            GrlFct.Write2LogFile(msg, LogFile)
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
             msg = '[EPCs correction] All EPCs metrix will be modified by the Volume ratio as for ATemp\n'
-            GrlFct.Write2LogFile(msg, LogFile)
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
             msg = '[EPCs correction] For example, the Heat needs is corrected from : '+ str(totHeat[0])+ ' to : '+ str(newval)+'\n'
-            GrlFct.Write2LogFile(msg, LogFile)
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
 
-    def IsSameFormularIdBuilding(self,Buildingsfile,nbcase,LogFile,DBL):
+    def IsSameFormularIdBuilding(self,Buildingsfile,nbcase,LogFile,DBL,DebugMode):
         SharedBld = []
         VolumeCorRatio = 1
         Correction = False
@@ -226,8 +226,8 @@ class Building:
         ATemp = [self.ATemp]
         Volume = [sum([Polygon(foot).area * self.BlocHeight[idx] for idx,foot in enumerate(self.footprint)])]
         for nb in SharedBld:
-            ATemp.append(self.getsurface(Buildingsfile[nb], DBL,[]))
-            floors.append(self.getnbfloor(Buildingsfile[nb],DBL,[]))
+            ATemp.append(self.getsurface(Buildingsfile[nb], DBL))
+            floors.append(self.getnbfloor(Buildingsfile[nb],DBL))
             Bldfootprint,  BldBlocHeight, BldBlocNbFloor = self.getfootprint(Buildingsfile[nb],[],floors[-1])
             maxHeight.append(max(BldBlocHeight))
             Volume.append(sum([Polygon(foot).area * BldBlocHeight[idx] for idx,foot in enumerate(Bldfootprint)]))
@@ -235,11 +235,11 @@ class Building:
             #some correction is needed on the nb of floor because a higher one, with the same FormularId is higher
             newfloor = max(int(floors[maxHeight.index(max(maxHeight))] / (max(maxHeight) / maxHeight[0])),1)
             msg = '[Shared EPC] Buildings are found with same FormularId: '+str(SharedBld)+'\n'
-            GrlFct.Write2LogFile(msg, LogFile)
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
             msg = '[Nb Floor Cor] The nb of floors will be corrected by the height ratio of this building with the highests one with same FormularId (but cannot be lower than 1)\n'
-            GrlFct.Write2LogFile(msg, LogFile)
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
             msg = '[Nb Floor Cor] nb of floors is thus corrected from : '+ str(self.nbfloor)+ ' to : '+ str(newfloor)+'\n'
-            GrlFct.Write2LogFile(msg, LogFile)
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
             self.nbfloor = newfloor
             #correction on the ATemp if it is the same on all (should be)
             Adiff = [ATemp[idx+1]-A for idx,A in enumerate(ATemp[:-1])]
@@ -247,9 +247,9 @@ class Building:
                 VolumeCorRatio = Volume[0] / sum(Volume)
                 newATemp = self.ATemp * VolumeCorRatio
                 msg = '[ATemp Cor] The ATemp will also be modified by the volume ratio of this building over the volume sum of all concerned building \n'
-                GrlFct.Write2LogFile(msg, LogFile)
+                if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
                 msg = '[ATemp Cor] The ATemp is thus corrected from : '+ str(self.ATemp)+ ' to : '+ str(newATemp)+'\n'
-                GrlFct.Write2LogFile(msg, LogFile)
+                if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
                 self.ATemp  = newATemp
         return SharedBld, VolumeCorRatio
 
@@ -316,7 +316,7 @@ class Building:
         ref = (x-offset, y-offset) #there might be not a true need for suche precision....
         return ref
 
-    def getfootprint(self,DB,LogFile=[],nbfloor=0):
+    def getfootprint(self,DB,LogFile=[],nbfloor=0,DebugMode = False):
         "get the footprint coordinate and the height of each building bloc"
         DistTol = self.DistTol
         coord = []
@@ -371,7 +371,7 @@ class Building:
             except:
                 msg = '[Poly Error] Some error are present in the polygon parts. Some are identified as being inside others...\n'
                 print(msg[:-1])
-                GrlFct.Write2LogFile(msg, LogFile)
+                if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
                 import matplotlib.pyplot as plt
                 fig = plt.figure(0)
                 for i in coord:
@@ -418,7 +418,7 @@ class Building:
         if not validFootprint:
             msg = '[Poly Error] The different bloc are not adjacent...\n'
             #print(msg[:-1])
-            GrlFct.Write2LogFile(msg, LogFile)
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
             return
         # multibloc should share at least one edge and not a polygon as bld:a3848e24-d29e-44bc-a395-a25b5fd26598 in area : 0180C3170 of Sodermalm_V4
         SmallEdge = False
@@ -428,10 +428,10 @@ class Building:
         if SmallEdge:
             msg = '[Geom Warning] This building has at least one edge length below 2m\n'
             #print(msg[:-1])
-            GrlFct.Write2LogFile(msg, LogFile)
+            if DebugMode : GrlFct.Write2LogFile(msg, LogFile)
         return coord, BlocHeight, BlocNbFloor
 
-    def EvenFloorCorrection(self,BlocHeight,nbfloor,BlocNbFloor,coord,LogFile):
+    def EvenFloorCorrection(self,BlocHeight,nbfloor,BlocNbFloor,coord,LogFile,DebugMode=False):
         # we compute a storey height as well to choosen the one that correspond to the highest part of the building afterward
         BlocNbFloor=[] #the number of blocks is reset to comply with the old 2D geojson files is anyway empty for multipolygons files
         StoreyHeigth = 3
@@ -447,9 +447,9 @@ class Building:
                 storeyRatio = 0
             msg = '[Geom Info] The max bloc height is : ' + str(round(max(BlocHeight), 2)) + ' for ' + str(
                 nbfloor) + ' floors computed from max bloc height\n'
-        GrlFct.Write2LogFile(msg, LogFile)
+        if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         msg = '[Geom Cor] A ratio of ' + str(storeyRatio) + ' will be applied on each bloc height\n'
-        GrlFct.Write2LogFile(msg, LogFile)
+        if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
 
         for height in range(len(BlocHeight)):
             BlocHeight[height] *= storeyRatio
@@ -458,9 +458,9 @@ class Building:
             BlocNbFloor.append(max(1, val))  # the height is ed to the closest 10cm
             BlocHeight[idx] = BlocNbFloor[-1] * StoreyHeigth
             msg = '[Geom Info] Bloc height : ' + str(BlocHeight[idx]) + ' with ' + str(BlocNbFloor[-1]) + ' nb of floors\n'
-            GrlFct.Write2LogFile(msg, LogFile)
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
             msg = '[Geom Info] This bloc has a footprint with : ' + str(len(coord[idx])) + ' vertexes\n'
-            GrlFct.Write2LogFile(msg, LogFile)
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
             if val == 0:
                 try:
                     LogFile.write(
@@ -469,7 +469,7 @@ class Building:
                     pass
         return BlocHeight, BlocNbFloor, StoreyHeigth
 
-    def getEPHeatedArea(self,LogFile):
+    def getEPHeatedArea(self,LogFile,DebugMode):
         "get the heated area based on the footprint and the number of floors"
         self.BlocFootprintArea=[]
         EPHeatedArea = 0
@@ -477,29 +477,29 @@ class Building:
             EPHeatedArea += Polygon(foot).area*self.BlocNbFloor[i]
             self.BlocFootprintArea.append(Polygon(foot).area)
         msg = '[Geom Info] Blocs footprint areas : '+ str(self.BlocFootprintArea)+'\n'
-        GrlFct.Write2LogFile(msg, LogFile)
+        if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         msg = '[Geom Info] The total heated area is : ' + str(EPHeatedArea)+' for a declared ATemp of : '+str(self.ATemp)+' --> discrepancy of : '+str(round((self.ATemp-EPHeatedArea)/self.ATemp*100,2))+'\n'
-        GrlFct.Write2LogFile(msg, LogFile)
+        if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         return EPHeatedArea
 
-    def getsurface(self,DB, DBL,LogFile):
+    def getsurface(self,DB, DBL,LogFile = [],DebugMode = False):
         "Get the surface from the input file, ATemp"
         try: ATemp = int(getDBValue(DB.properties, DBL['surface_key']))
         except: ATemp = 1
         if ATemp == 1:
             msg = '[Geom Error] Atemp not recognized as number, fixed to 1\n'
-            GrlFct.Write2LogFile(msg, LogFile)
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         ATemp = checkLim(ATemp,DBL['surface_lim'][0],DBL['surface_lim'][1])
         self.ATempOr= ATemp     #this is to keep the original value as some correction might done afterward if more then 1 bld is present in 1 Id
         return ATemp
 
-    def getnbfloor(self,DB, DBL,LogFile):
+    def getnbfloor(self,DB, DBL,LogFile, DebugMode):
         "Get the number of floor above ground"
         try: nbfloor=int(getDBValue(DB.properties, DBL['nbfloor_key']))
         except: nbfloor = 0
         if nbfloor == 0:
             msg = '[EPCs Warning] The nb of floors is 0. It will be defined using the max bloc height and a storey height of 3m\n'
-            GrlFct.Write2LogFile(msg, LogFile)
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         nbfloor = checkLim(nbfloor,DBL['nbfloor_lim'][0],DBL['nbfloor_lim'][1])
         return nbfloor
 
@@ -525,7 +525,7 @@ class Building:
         year = checkLim(year,DBL['year_lim'][0],DBL['year_lim'][1])
         return year
 
-    def getEPCMeters(self,DB,EPC,LogFile):
+    def getEPCMeters(self,DB,EPC,LogFile = [], DebugMode = False):
         "Get the EPC meters values"
         Meters = {}
         for key1 in EPC:
@@ -572,7 +572,7 @@ class Building:
             AggregFootprint.append(AggregFootprint[0])
         return AggregFootprint
 
-    def getshade(self, DB,Shadingsfile,Buildingsfile,GE,LogFile,PlotOnly = True):
+    def getshade(self, DB,Shadingsfile,Buildingsfile,GE,LogFile,PlotOnly = True,DebugMode = False):
         "Get all the shading surfaces to be build for surrounding building effect"
         shades = {}
         try:
@@ -607,7 +607,7 @@ class Building:
             edgelength = LineString(currentShadingElement).length
             if edgelength<2:
                 msg = '[Shading Info] This one is dropped, less than 2m wide ('+str(round(edgelength,2))+'m), shading Id : '+ ShadeWall[GE['ShadingIdKey']] +'\n'
-                GrlFct.Write2LogFile(msg, LogFile)
+                if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
                 #print(msg[:-1])
                 continue
             if ShadeWall[GE['ShadingIdKey']] =='V67656-3':
@@ -628,13 +628,13 @@ class Building:
                 msg = '[Adjacent Wall] This Shading wall is considered as adjacent with an overlap code of '+str(OverlapCode)+', shading Id : ' + ShadeWall[
                     GE['ShadingIdKey']] + '\n'
                 #print(msg[:-1])
-                GrlFct.Write2LogFile(msg, LogFile)
+                if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
                 continue
             if OverlapCode== 999:
                 msg = '[Shading Error] This Shading wall goes inside the building...It is dropped, shading Id : ' + ShadeWall[
                           GE['ShadingIdKey']] + '\n'
                 #print(msg[:-1])
-                GrlFct.Write2LogFile(msg, LogFile)
+                if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
                 continue
             dist = (abs(meanPx - Meancoordx) ** 2 + abs(meanPy - Meancoordy) ** 2) ** 0.5
             shades[wallId] = {}
@@ -644,7 +644,7 @@ class Building:
         return shades
 
 
-    def getVentSyst(self, DB,VentSystDict,LogFile):
+    def getVentSyst(self, DB,VentSystDict,LogFile,DebugMode):
         "Get ventilation system type"
         VentSyst = {}
         for key in VentSystDict:
@@ -657,10 +657,10 @@ class Building:
                             VentSyst[key] and key[-1] == 'X']
         if len(nbVentSyst) > 1:
             msg = '[Vent Warning] This building has '+str(len(nbVentSyst))+' ventilation systems declared\n'
-            GrlFct.Write2LogFile(msg, LogFile)
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         if len(nbVentSystWithHR)>1:
             msg = '[Vent Warning] This building has '+str(len(nbVentSystWithHR))+' ventilation systems with heat recovery\n'
-            GrlFct.Write2LogFile(msg, LogFile)
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         return VentSyst
 
     def getAreaBasedFlowRate(self, DB, DBL, BE):
@@ -670,7 +670,7 @@ class Building:
         AreaBasedFlowRate = checkLim(AreaBasedFlowRate,DBL['AreaBasedFlowRate_lim'][0],DBL['AreaBasedFlowRate_lim'][1])
         return AreaBasedFlowRate
 
-    def getOccupType(self,DB,OccupTypeDict,LogFile):
+    def getOccupType(self,DB,OccupTypeDict,LogFile,DebugMode):
         "get the occupency type of the building"
         OccupType = {}
         self.OccupRate = {}
@@ -683,7 +683,7 @@ class Building:
             if '_Rate' in key:
                 self.OccupRate[key[:-5]] = OccupTypeDict[key]
         msg = '[Usage Info] This building has ' + str(1 - OccupType['Residential']) + ' % of none residential occupancy type\n'
-        GrlFct.Write2LogFile(msg, LogFile)
+        if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         return OccupType
 
     def isInputDir(self):
@@ -693,7 +693,7 @@ class Building:
             os.mkdir(AbsInputFileDir)
         return AbsInputFileDir,AbsInputFileDir #both values are identicial since the relative path was still creating issues with FMUs afterward...
 
-    def getIntLoad(self, MainPath,LogFile):
+    def getIntLoad(self, MainPath,LogFile,DebugMode):
         "get the internal load profil or value"
         #we should integrate the loads depending on the number of appartemnent in the building
         type = self.IntLoadType
@@ -727,7 +727,7 @@ class Building:
             except:
                 msg = '[Int Load Error] Unable to write the internal load file...\n'
                 #print(msg[:-1])
-                GrlFct.Write2LogFile(msg, LogFile)
+                if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         return IntLoad
 
 def CheckMultiBlocFootprint(blocs,tol =1):

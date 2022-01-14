@@ -30,8 +30,15 @@ def check4localConfig(config,path):
                     config[Mainkey] = localConfig[Mainkey]
     #lets check for the paths
     if not is_tool(os.path.join(config['APP']['PATH_TO_ENERGYPLUS'],'energyplus')):
-        print('It sems that the path to EnergyPlus is missing, please specify it in your local.yml')
+        print(' /!\ ERROR /!\ ')
+        print('It seems that the path to EnergyPlus is missing, please specify it in your local.yml')
         return 'EnergyPlus path'
+    #lets check for the weather file needed for EnergyPlus
+    if not os.path.isfile(os.path.join(os.path.abspath(config['APP']['PATH_TO_ENERGYPLUS']),config['SIM']['WeatherFile']['Loc'])):
+        print(' /!\ ERROR /!\ ')
+        print('It seems that the given Weatherfile to EnergyPlus is missing')
+        print('Please check if : '+config['SIM']['WeatherFile']['Loc'] +' is present in : '+os.path.abspath(config['DATA']['Buildingsfile']))
+        return 'EnergyPlus Weather path'
     #lets check for the geojsonfile:
     ok = []
     if os.path.isdir(os.path.abspath(config['DATA']['Buildingsfile'])):

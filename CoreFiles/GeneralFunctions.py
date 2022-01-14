@@ -15,8 +15,8 @@ import shutil
 import pickle
 import pyproj
 
-def appendBuildCase(StudiedCase,epluspath,nbcase,DataBaseInput,MainPath,LogFile,PlotOnly = False):
-    StudiedCase.addBuilding('Building'+str(nbcase),DataBaseInput,nbcase,MainPath,epluspath,LogFile,PlotOnly)
+def appendBuildCase(StudiedCase,epluspath,nbcase,DataBaseInput,MainPath,LogFile,PlotOnly = False, DebugMode = False):
+    StudiedCase.addBuilding('Building'+str(nbcase),DataBaseInput,nbcase,MainPath,epluspath,LogFile,PlotOnly, DebugMode)
     idf = StudiedCase.building[-1]['BuildIDF']
     building = StudiedCase.building[-1]['BuildData']
     return idf, building
@@ -28,12 +28,12 @@ def setSimLevel(idf,building):
     Sim_param.Location_and_weather(idf,building)
     Sim_param.setSimparam(idf,building)
 
-def setBuildingLevel(idf,building,LogFile,CorePerim = False,FloorZoning = False,ForPlots = False):
+def setBuildingLevel(idf,building,LogFile,CorePerim = False,FloorZoning = False,ForPlots = False,DebugMode = False):
     ######################################################################################
     #Building Level
     ######################################################################################
     #this is the function that requires the longest time
-    GeomScripts.createBuilding(LogFile,idf,building, perim = CorePerim,FloorZoning = FloorZoning,ForPlots=ForPlots)
+    GeomScripts.createBuilding(LogFile,idf,building, perim = CorePerim,FloorZoning = FloorZoning,ForPlots=ForPlots,DebugMode = DebugMode)
 
 
 def setEnvelopeLevel(idf,building):
@@ -215,15 +215,15 @@ def getParamSample(VarName2Change,Bounds,nbruns):
         Param = latin.sample(problem, nbruns)
     return Param
 
-def CreatFMU(idf,building,nbcase,epluspath,SimDir, i,varOut,LogFile):
+def CreatFMU(idf,building,nbcase,epluspath,SimDir, i,varOut,LogFile,DebugMode):
     print('Building FMU under process...Please wait around 30sec')
     #get the heated zones first and set them into a zonelist
     BuildFMUs.setFMUsINOut(idf, building,varOut)
     idf.saveas('Building_' + str(nbcase) + 'v' + str(i) + '.idf')
     BuildFMUs.buildEplusFMU(epluspath, building.WeatherDataFile, os.path.join(SimDir,'Building_' + str(nbcase) + 'v' + str(i) + '.idf'))
     print('FMU created for this building')
-    Write2LogFile('FMU created for this building\n',LogFile)
-    Write2LogFile('##############################################################\n',LogFile)
+    if DebugMode: Write2LogFile('FMU created for this building\n',LogFile)
+    if DebugMode: Write2LogFile('##############################################################\n',LogFile)
 
 def ReadGeojsonKeyNames(GeojsonProperties):
     #this is currently ot used....

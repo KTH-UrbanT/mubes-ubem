@@ -118,7 +118,7 @@ if __name__ == '__main__' :
     config = setConfig.check4localConfig(config,os.getcwd())
     if type(config) != dict:
         print('Something seems wrong in : ' + config)
-        print('Please check if there is a local.yml with your specific path')
+        print('Please check if there is a local.yml')
         sys.exit()
     epluspath = config['APP']['PATH_TO_ENERGYPLUS']
     #a first keypath dict needs to be defined to comply with the current paradigme along the code
@@ -141,13 +141,17 @@ if __name__ == '__main__' :
             print('/!\ It is asked to ceate FMUs but the number of runs for each building is above 1...')
             print('/!\ Please, check you inputs as this case is not allowed yet')
             sys.exit()
+        if not CaseChoices['VarName2Change'] or not CaseChoices['Bounds']:
+            print('###  INPUT ERROR ### ')
+            print('/!\ It is asked to make several runs but no variable is specified or bound of variation...')
+            print('/!\ Please, check you inputs VarName2Change and Bounds')
+            sys.exit()
     else:
         SepThreads = False
     nbcpu = max(mp.cpu_count() * CaseChoices['CPUusage'], 1)
 
     nbBuild = 0
-    idx = 0
-    #all argument are packed in a dictionnarie, as parallel process is used, the arguments shall be strictly kept for each
+    #all argument are packed in a dictionnaru, as parallel process is used, the arguments shall be strictly kept for each
     #no moving object of dictionnary values that should change between two processes.
     FigCenter = []
     CurrentPath = os.getcwd()
@@ -158,11 +162,12 @@ if __name__ == '__main__' :
     MainInputs['TotNbRun'] = CaseChoices['NbRuns']
     MainInputs['OutputsFile'] = CaseChoices['OutputsFile']
     MainInputs['VarName2Change'] = CaseChoices['VarName2Change']
+    MainInputs['DebugMode'] = CaseChoices['DebugMode']
     MainInputs['DataBaseInput'] = []
     File2Launch = []
     pythonpath = keyPath['pythonpath']
 
-    for Case in Pool2Launch:
+    for idx,Case in enumerate(Pool2Launch):
         keypath = Case['keypath']
         nbBuild = Case['BuildNum2Launch'] #this will be used in case the file has to be read again (launched through prompt cmd)
 
