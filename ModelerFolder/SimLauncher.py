@@ -52,7 +52,10 @@ if __name__ == '__main__' :
     Bld2Sim = []
     for line in FileLines:
         Bld2Sim.append(int(line))
-                  'WallInsuThick', 'RoofInsuThick']
+    CaseName = 'ForTestAPI'
+    BuildNum = []
+    VarName2Change = ['wwr']# ['AirRecovEff', 'IntLoadCurveShape', 'wwr', 'EnvLeak', 'setTempLoL', 'AreaBasedFlowRate', 'WindowUval',
+        # 'WallInsuThick', 'RoofInsuThick']
     Bounds = [[0.2,0.4]]#[[0.5, 0.9], [1, 5], [0.2, 0.4], [0.5, 1.6], [18, 22], [0.35, 1], [0.7, 2], [0.1, 0.3], [0.2, 0.4]]
     NbRuns = 1
     CPUusage = 0.8
@@ -60,6 +63,7 @@ if __name__ == '__main__' :
     CorePerim = False
     FloorZoning = False
     RefreshFolder = True
+    PathInputFile = 'MinnebergLast.txt'#
     OutputsFile = 'Outputs_Template.txt'#'Outputs_detailed.txt'#_withlosses.txt'#
     ZoneOfInterest = ''#'HSS_Network.txt'
 
