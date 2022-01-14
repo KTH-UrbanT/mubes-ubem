@@ -205,7 +205,7 @@ def plotIndex(GlobRes,FigName,name):
 
 if __name__ == '__main__' :
 
-    CaseName= 'toto' #Name of the case study to post-process
+    CaseName= 'ForTest' #Name of the case study to post-process
 
     #Names (attributes) wanted to be taken in the pickle files for post-processing. The time series are agrregated into HeatedArea, NonHeatedArea and OutdoorSite
     extraVar=['height','StoreyHeigth','nbfloor','BlocHeight','BlocFootprintArea','BlocNbFloor','HeatedArea','NonHeatedArea','OutdoorSite']
