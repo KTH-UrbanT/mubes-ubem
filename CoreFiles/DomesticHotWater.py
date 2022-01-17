@@ -31,6 +31,8 @@ def CallCorrectionFactor(building):
     try:
         Cp = 4200 #J/Kg/K water specific heat
         Waterdensity = 1000 #kg/m3
+        try: multiplier = eval(building.DHWInfos['WaterTapsMultiplier'])
+        except: multiplier = building.DHWInfos['WaterTapsMultiplier']
         #lets comput the cumulative value and make it match with thr EPC data of DHW consumption
         watertaps, waterList = getVal(building.DHWInfos['WatertapsFile'])
         coldTemp, coldTempList = getVal(building.DHWInfos['ColdWaterTempFile'])
@@ -38,7 +40,7 @@ def CallCorrectionFactor(building):
         DHWfromEPC = getDHW_EPC(building.EPCMeters['DHW'])
         targetTemp = [targetTemp]*len(watertaps)
         #from now we know that water taps and cold temp are from file, so in the futur there should be some check to make the floowing operation !
-        TotalDHW = sum([val * Waterdensity * building.nbAppartments * building.DHWInfos['WaterTapsMultiplier'] * Cp * (targetTemp[idx]-coldTemp[idx]) for idx,val in enumerate(watertaps)])
+        TotalDHW = sum([val * Waterdensity * building.nbAppartments * multiplier * Cp * (targetTemp[idx]-coldTemp[idx]) for idx,val in enumerate(watertaps)])
         return DHWfromEPC/TotalDHW
     except:
         return 1
