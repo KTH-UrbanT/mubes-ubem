@@ -1,10 +1,13 @@
 # @Author  : Xavier Faure
 # @Email   : xavierf@kth.se
 
+import os
 from scipy import stats, linalg
 from SALib.sample import latin
 import numpy as np
 from ReadResults import Utilities
+import pickle
+import CoreFiles.GeneralFunctions as GrlFct
 
 def getYearlyError(Res,NewMeas):
     #definition of the reference for comparison
@@ -186,6 +189,60 @@ def getNewBounds(Bounds,BoundLim):
                 [max(bd[0] - 0.1 * (bd[1] - bd[0]),BoundLim[idx][0]), min(BoundLim[idx][1], bd[1] + 0.1 * (bd[1] - bd[0]))])
     return newBounds
 
+def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change,CalibBasis,MeasPath,ParamSample,Bounds,BoundLim,NbRun):
+    # once every run has been computed, lets get the matche and compute the covariance depending on the number of matches
+    extraVar = ['nbAppartments', 'ATempOr', 'SharedBld', 'height', 'StoreyHeigth', 'nbfloor','BlocHeight','BlocFootprintArea','BlocNbFloor',
+                'HeatedArea', 'AreaBasedFlowRate','NonHeatedArea', 'Other']
+    Res = Utilities.GetData(os.path.join(SimDir, 'Sim_Results'), extraVar)
+    os.chdir(CurrentPath)
+    ComputfFilePath = os.path.normcase(MeasPath)
+    #'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\ComputedElem4Calibration')
+    with open(os.path.join(ComputfFilePath, 'Building_' + str(nbBuild) + '_Meas.pickle'),
+              'rb') as handle:
+        Meas = pickle.load(handle)
+    Matches20 = getMatches(Res, Meas, VarName2Change, CalibBasis, ParamSample, REMax=20)
+    Matches10 = getMatches(Res, Meas, VarName2Change, CalibBasis, ParamSample, REMax=10)
+    Matches5 = getMatches(Res, Meas, VarName2Change, CalibBasis, ParamSample, REMax=5)
+    if len(Matches5[CalibBasis][VarName2Change[0]]) > 30:
+        Matches = Matches5
+    elif len(Matches10[CalibBasis][VarName2Change[0]]) > 30:
+        Matches = Matches10
+    else:
+        Matches = Matches20
+    try:
+        if len(ParamSample[:, 0]) >= 2000 or len(Matches5[CalibBasis][VarName2Change[0]]) > 100:
+            Finished = True
+        else:
+            print('New runs loop')
+            if len(Matches[CalibBasis][VarName2Change[0]]) > 10:
+                try:
+                    NewSample = getCovarCalibratedParam(Matches[CalibBasis], VarName2Change, NbRun,
+                                                                  BoundLim)
+                    print('Covariance worked !')
+                except:
+                    Bounds = getNewBounds(Bounds, BoundLim)
+                    NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRun)
+            else:
+                Bounds = getNewBounds(Bounds, BoundLim)
+                NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRun)
+            idx_offset = len(ParamSample[:, 0])
+            ParamSample = np.concatenate((ParamSample, NewSample))
+            Paramfile = os.path.join(SimDir, 'ParamSample.pickle')
+            with open(Paramfile, 'wb') as handle:
+                pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    except:
+        print('No matches at all from now...')
+        if len(ParamSample[:, 0]) >= 2000:
+            Finished = True
+        else:
+            Bounds = getNewBounds(Bounds, BoundLim)
+            NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRun)
+            idx_offset = len(ParamSample[:, 0])
+            ParamSample = np.concatenate((ParamSample, NewSample))
+            Paramfile = os.path.join(SimDir, 'ParamSample.pickle')
+            with open(Paramfile, 'wb') as handle:
+                pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    return Finished,idx_offset,ParamSample
 
 if __name__ == '__main__' :
     print('CalibUtilities.py')

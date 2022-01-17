@@ -18,6 +18,7 @@ SIM:
         DESO : []
         VarName2Change : []
         Bounds : []
+        BoundsLim : []
         NbRuns : 1
         CreateFMU : False
         CorePerim : False
@@ -28,6 +29,9 @@ SIM:
         ZoneOfInterest : ''
         DebugMode : False
         API : False
+        Calibration : False
+        CalibTimeBasis : ['MonthlyBasis','WeeklyBasis','YearlyBasis']
+        MeasurePath4Calibration : 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\ComputedElem4Calibration'
     
     SimuData :
         Begin_Day_of_Month : 1

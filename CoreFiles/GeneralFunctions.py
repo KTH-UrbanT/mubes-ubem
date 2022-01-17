@@ -291,6 +291,41 @@ def CleanUpLogFiles(MainPath):
         os.remove(os.path.join(MainPath,file))
     MainLogFile.close()
 
+def AppendLogFiles(MainPath):
+    file2del = []
+    try:
+        with open(os.path.join(MainPath, 'AllLogs.log'), 'r') as file:
+            Lines = file.readlines()
+        file2del = 'AllLogs.log'
+    except:
+        Liste = os.listdir(MainPath)
+        for file in Liste:
+            if 'Logs.log' in file:
+                with open(os.path.join(MainPath, file), 'r') as extrafile:
+                    Lines = extrafile.readlines()
+                file2del = file
+                break
+    if file2del:
+        NewLines = []
+        flagON = False
+        for line in Lines:
+            NewLines.append(line)
+            if '[Bld ID] 50A_UUID : ' in line:
+                flagON = True
+                id = line[20:-1]
+                with open(os.path.join(MainPath,'Sim_Results', id + '.txt'), 'r') as file:
+                    extralines = file.readlines()
+            if '[Reported Time]' in line and flagON:
+                for extraline in extralines:
+                    NewLines.append(extraline)
+                flagON = False
+        FinalLogFile = open(os.path.join(MainPath, 'FinalLogsCompiled.log'), 'w')
+        for line in NewLines:
+            Write2LogFile(line, FinalLogFile)
+        FinalLogFile.close()
+        os.remove(os.path.join(MainPath, file2del))
+
+
 def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shadingsfile,nbcase,DB_Data,LogFile=[]):
     #there is a loop file along the variable name to change and if specific ation are required it should be define here
     # if the variable to change are embedded into several layer of dictionnaries than there is a need to make checks and change accordingly to the correct element

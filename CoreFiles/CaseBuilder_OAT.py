@@ -78,10 +78,10 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
     Shadingsfile = DataBaseInput['Shades']
     epluspath = keyPath['epluspath']
     os.chdir(SimDir)
+    start = time.time()
     #Creating the log file for this building if it's his frist run
     if FirstRun:
         LogFile = open(os.path.join(SimDir, 'Build_'+str(nbcase)+'_Logs.log'), 'w')
-        start = time.time()
         msg = 'Building ' + str(nbcase) + ' is starting\n'
         print(msg[:-1])
         GrlFct.Write2LogFile(msg,LogFile)
@@ -224,7 +224,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
         msg = 'Building_' + str(nbcase)+' IDF file ' + str(currentRun+1)+ '/'  + str(TotNbRun)+ ' is done\n'
         print(msg[:-1])
         end = time.time()
-        GrlFct.Write2LogFile('[Reported Time] The input took : '+str(round(end-start,2))+' seconds\n',LogFile)
+        GrlFct.Write2LogFile('[Reported Time] Input File : '+str(round(end-start,2))+' seconds\n',LogFile)
         GrlFct.Write2LogFile('##############################################################\n', LogFile)
         if FirstRun:
             LogFile.close()

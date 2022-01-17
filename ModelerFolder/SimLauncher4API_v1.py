@@ -4,6 +4,7 @@
 import os
 import sys
 import re
+
 # #add the required path for geomeppy special branch
 path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 sys.path.append(path2addgeom)
@@ -13,9 +14,11 @@ MUBES_Paths = os.path.normcase(os.path.join(os.path.dirname(os.path.dirname(os.g
 sys.path.append(MUBES_Paths)
 
 import CoreFiles.GeneralFunctions as GrlFct
-from CoreFiles import LaunchSim as LaunchSim
-from CoreFiles import CaseBuilder_OAT as CB_OAT
-from CoreFiles import setConfig as setConfig
+import CoreFiles.LaunchSim as LaunchSim
+import CoreFiles.CaseBuilder_OAT as CB_OAT
+import CoreFiles.setConfig as setConfig
+import CoreFiles.CalibUtilities as CalibUtil
+
 import multiprocessing as mp
 import platform
 
@@ -110,6 +113,7 @@ if __name__ == '__main__' :
 
     config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()),'CoreFiles','DefaultConfig.yml'))
     CaseChoices = config['SIM']['CaseChoices']
+    Calibration = config['SIM']['CaseChoices']
     if UUID:
         CaseChoices['UUID'] = UUID
     if DESO:
@@ -148,6 +152,9 @@ if __name__ == '__main__' :
             sys.exit()
     else:
         SepThreads = False
+        CaseChoices['VarName2Change'] = []
+        CaseChoices['Bounds'] = []
+
     nbcpu = max(mp.cpu_count() * CaseChoices['CPUusage'], 1)
 
     nbBuild = 0
@@ -178,35 +185,48 @@ if __name__ == '__main__' :
         ParamSample =  GrlFct.SetParamSample(SimDir, CaseChoices['NbRuns'], CaseChoices['VarName2Change'], CaseChoices['Bounds'],SepThreads)
         #lets check if there are several simulation for one building or not
         if CaseChoices['NbRuns'] > 1:
-            # lets check if this building is already present in the folder (means Refresh = False in CreateSimDir() above)
-            if not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + '_template.idf'))):
-                #there is a need to launch the first one that will also create the template for all the others
-                CB_OAT.LaunchOAT(MainInputs,SimDir,keypath,nbBuild,ParamSample[0, :],0,pythonpath)
-            # lets check whether all the files are to be run or if there's only some to run again
-            NewRuns = []
-            for i in range(CaseChoices['NbRuns']):
-                if not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + 'v'+str(i)+'.idf'))):
-                    NewRuns.append(i)
-            #now the pool can be created changing the FirstRun key to False for all other runs
-            MainInputs['FirstRun'] = False
-            pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
-            for i in NewRuns:
-                pool.apply_async(CB_OAT.LaunchOAT, args=(MainInputs,SimDir,keypath,nbBuild,ParamSample[i, :],i,pythonpath))
-            pool.close()
-            pool.join()
+            Finished = False
+            idx_offset = 0
+            NbRun = CaseChoices['NbRuns']
+            while not Finished:
+                # lets check if this building is already present in the folder (means Refresh = False in CreateSimDir() above)
+                if not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + '_template.idf'))):
+                    #there is a need to launch the first one that will also create the template for all the others
+                    CB_OAT.LaunchOAT(MainInputs,SimDir,keypath,nbBuild,ParamSample[0, :],0,pythonpath)
+                # lets check whether all the files are to be run or if there's only some to run again
+                NewRuns = []
+                for i in range(NbRun):
+                    if not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + 'v'+str(i+idx_offset)+'.idf'))):
+                        NewRuns.append(i)
+                #now the pool can be created changing the FirstRun key to False for all other runs
+                MainInputs['FirstRun'] = False
+                pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
+                for i in NewRuns:
+                    pool.apply_async(CB_OAT.LaunchOAT, args=(MainInputs,SimDir,keypath,nbBuild,ParamSample[i+idx_offset, :],i+idx_offset,pythonpath))
+                pool.close()
+                pool.join()
+                #the simulation are launched below using a pool of the earlier created idf files
+                if  not CaseChoices['CreateFMU']:
+                    file2run = LaunchSim.initiateprocess(SimDir)
+                    nbcpu = max(mp.cpu_count()*CaseChoices['CPUusage'],1)
+                    pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
+                    for i in range(len(file2run)):
+                        pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath, CaseChoices['API']), callback=giveReturnFromPool)
+                    pool.close()
+                    pool.join()
+                    GrlFct.AppendLogFiles(SimDir)
+                if not CaseChoices['Calibration']:
+                    Finished = True
+                else:
+                    Finished,idx_offset,ParamSample = CalibUtil.CompareSample(Finished,idx_offset, SimDir, CurrentPath, nbBuild, CaseChoices['VarName2Change'],
+                                CaseChoices['CalibTimeBasis'], CaseChoices['MeasurePath4Calibration'],ParamSample,
+                                CaseChoices['Bounds'], CaseChoices['BoundsLim'], NbRun)
+                    print('Offset is :'+ str(idx_offset))
+
         # lets check if this building is already present in the folder (means Refresh = False in CreateSimDir() above)
         elif not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + 'v0.idf'))):
-            #if not, then the building number will be appended to alist that will be used afterward
-            File2Launch.append({'nbBuild' : nbBuild,'keypath': keypath})
-        #the simulation are launched below using a pool of the earlier created idf files
-        if SepThreads and not CaseChoices['CreateFMU']:
-            file2run = LaunchSim.initiateprocess(SimDir)
-            nbcpu = max(mp.cpu_count()*CaseChoices['CPUusage'],1)
-            pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
-            for i in range(len(file2run)):
-                pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath, CaseChoices['API']), callback=giveReturnFromPool)
-            pool.close()
-            pool.join()
+            # if not, then the building number will be appended to alist that will be used afterward
+            File2Launch.append({'nbBuild': nbBuild, 'keypath': keypath})
 
     if not SepThreads and not CaseChoices['CreateFMU']:
         #lets launch the idf file creation process using the listed created above
@@ -224,6 +244,7 @@ if __name__ == '__main__' :
             pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath,CaseChoices['API']), callback=giveReturnFromPool)
         pool.close()
         pool.join()
+        GrlFct.AppendLogFiles(SimDir)
     elif CaseChoices['CreateFMU']:
         # now that all the files are created, we can aggregate all the log files into a single one.
         GrlFct.CleanUpLogFiles(SimDir)

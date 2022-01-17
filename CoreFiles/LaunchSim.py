@@ -3,7 +3,7 @@
 
 
 #this program laucnhes all the simulation
-import os, sys, stat, platform
+import os, sys, stat, platform, time
 import pickle
 import shutil
 import CoreFiles.Set_Outputs as Set_Outputs
@@ -53,13 +53,16 @@ def runcase(file,filepath, epluspath, API = False):
     weatherpath = os.path.join(epluspath,building.WeatherDataFile)
     cmd = [eplus_exe, '--weather',os.path.normcase(weatherpath),'--output-directory',RunDir, \
            '--idd',os.path.join(epluspath,'Energy+.idd'),'--expandobjects','-r','--output-prefix',CaseName,Runfile]
+    start = time.time()
     check_call(cmd, stdout=open(os.devnull, "w"))
+    computeTime = time.time()-start
     #once the simulation has ended, the results are saved
     #savecase(CaseName, RunDir, building, ResSimpath,file,idf,filepath)
-    savecase(CaseName, RunDir, building, ResSimpath, file, filepath, API)
+    savecase(CaseName, RunDir, building, ResSimpath, file, filepath, API = API,CTime = computeTime)
     return (file[:-4] + ' is finished')
 
-def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,API,withFMU = False):
+def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,API = False,CTime = [],withFMU = False):
+    start = time.time()
     if API:
         res2export = []
         res2export.append(['UUID : ', building.BuildID['50A_UUID']])
@@ -78,6 +81,11 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,API,withFMU = Fal
         res2export.append(['Total Space Cooling Energy Needs (MWh) : ', round(SpaceCooling / 1e3/building.EPHeatedArea, 3)])
         res2export.append(
             ['ATemp (m2),EP_Heated_Area (m2) : ', building.ATemp,round(building.EPHeatedArea,1)])
+        resTime = time.time()-start
+        res2export.append(
+            ['Total computational time : ', round(CTime, 1), ' seconds'])
+        res2export.append(
+            ['Total results reporting : ', round(resTime, 1), ' seconds'])
         Write2file(res2export, os.path.join(ResSimpath, building.BuildID['50A_UUID'] + '.txt'))
     else:
         #the resultst are read with html table and energyplus eso files. The html could be avoid, but then some information will have to computes in the building object (could be)
@@ -96,6 +104,7 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,API,withFMU = Fal
                 Res[key1]['Data_' + key2] = ResEso[key1][key2]['GlobData']
                 Res[key1]['TimeStep_' + key2] = ResEso[key1][key2]['TimeStep']
                 Res[key1]['Unit_' + key2] = ResEso[key1][key2]['Unit']
+        resTime = time.time() - start
         if withFMU:
             shutil.copyfile(os.path.join(RunDir, CaseName + '.err'), os.path.join(ResSimpath, file[:-4] + '.err'))
             shutil.copyfile(os.path.join(RunDir, CaseName + 'Table.htm'), os.path.join(ResSimpath, file[:-4] + '.html'))
@@ -107,6 +116,14 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,API,withFMU = Fal
             pickle.dump(Res, handle, protocol=pickle.HIGHEST_PROTOCOL)
         # csv2tabdelim.convert(ResSimpath + file[:-4] + '.csv')
         #csv2tabdelim.WriteCSVFile(ResSimpath+'\\'+file[:-4] + '.csv', ResEso)
+        if 'v0' in file[-6:-4]:
+            res2export = []
+            res2export.append(
+                '[Reported Time] Full Computation : '+ str(round(CTime, 2)) + ' seconds')
+            res2export.append(
+                '[Reported Time] Read and Save Results : '+ str(round(resTime, 2))+ ' seconds')
+            Write2file(res2export, os.path.join(ResSimpath, building.BuildID['50A_UUID']+'.txt'))
+
     os.chdir(filepath)
     if not building.SaveLogFiles:
         for i in os.listdir(RunDir):

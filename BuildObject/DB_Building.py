@@ -533,7 +533,7 @@ class Building:
         self.ATempOr= ATemp     #this is to keep the original value as some correction might done afterward if more then 1 bld is present in 1 Id
         return ATemp
 
-    def getnbfloor(self,DB, DBL,LogFile, DebugMode):
+    def getnbfloor(self,DB, DBL,LogFile = [], DebugMode = False):
         "Get the number of floor above ground"
         try: nbfloor=int(getDBValue(DB.properties, DBL['nbfloor_key']))
         except: nbfloor = 0
@@ -733,7 +733,7 @@ class Building:
             os.mkdir(AbsInputFileDir)
         return AbsInputFileDir,AbsInputFileDir #both values are identicial since the relative path was still creating issues with FMUs afterward...
 
-    def getIntLoad(self, MainPath,LogFile,DebugMode):
+    def getIntLoad(self, MainPath,LogFile,DebugMode = False):
         "get the internal load profil or value"
         #we should integrate the loads depending on the number of appartemnent in the building
         type = self.IntLoadType
