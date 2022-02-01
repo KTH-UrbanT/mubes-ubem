@@ -61,7 +61,7 @@ def getPeriodError(Res,NewMeas,idx,NbSample):
         SampleError.append(abs(SampleEnergySim[-1]-SampleEnergyMeas[-1])/SampleEnergyMeas[-1]*100)
         SampleVal.append(i+1)
     error = max(SampleError)
-    error = (sum([(SampleEnergyMeas[i]-SampleEnergySim[i])**2 /NbSample for i in range(NbSample)])**0.5/np.mean(SampleEnergyMeas))*100
+    error = (sum([(SampleEnergyMeas[i]-SampleEnergySim[i])**2 /(NbSample-1) for i in range(NbSample)])**0.5/np.mean(SampleEnergyMeas))*100
     return SampleError, error
     # if error<Relerror:
     #     return Res['SimNum'][idx]
@@ -203,14 +203,25 @@ def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change
     Matches20 = getMatches(Res, Meas, VarName2Change, CalibBasis, ParamSample, REMax=20)
     Matches10 = getMatches(Res, Meas, VarName2Change, CalibBasis, ParamSample, REMax=10)
     Matches5 = getMatches(Res, Meas, VarName2Change, CalibBasis, ParamSample, REMax=5)
-    if len(Matches5[CalibBasis][VarName2Change[0]]) > 30:
+    if len(Matches5[CalibBasis][VarName2Change[0]]) > 20:
         Matches = Matches5
-    elif len(Matches10[CalibBasis][VarName2Change[0]]) > 30:
+        print('We are in the 5% range')
+        print('Nb of matches at 5% is : ' + str(len(Matches5[CalibBasis][VarName2Change[0]])))
+    elif len(Matches10[CalibBasis][VarName2Change[0]]) > 20:
         Matches = Matches10
+        print('We are in the 10% range')
+        print('Nb of matches at 10% is : ' + str(len(Matches10[CalibBasis][VarName2Change[0]])))
+        print('Nb of matches at 5% is : ' + str(len(Matches5[CalibBasis][VarName2Change[0]])))
     else:
         Matches = Matches20
+        print('We are in the 20% range')
+        print('Nb of matches at 20% is : '+str(len(Matches20[CalibBasis][VarName2Change[0]])))
+        print('Nb of matches at 10% is : ' + str(len(Matches10[CalibBasis][VarName2Change[0]])))
+        print('Nb of matches at 5% is : ' + str(len(Matches5[CalibBasis][VarName2Change[0]])))
     try:
         if len(ParamSample[:, 0]) >= 2000 or len(Matches5[CalibBasis][VarName2Change[0]]) > 100:
+            Finished = True
+        elif len(ParamSample[:, 0]) >= 1000 and len(Matches5[CalibBasis][VarName2Change[0]]) < 10:
             Finished = True
         else:
             print('New runs loop')
@@ -220,6 +231,7 @@ def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change
                                                                   BoundLim)
                     print('Covariance worked !')
                 except:
+                    print('Covariance did not work...')
                     Bounds = getNewBounds(Bounds, BoundLim)
                     NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRun)
             else:

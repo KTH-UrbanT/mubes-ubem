@@ -29,6 +29,8 @@ def Read_Arguments():
     #these are defaults values:
     UUID = []
     DESO = []
+    CaseName = []
+    DataPath = []
     # Get command-line options.
     lastIdx = len(sys.argv) - 1
     currIdx = 1
@@ -40,11 +42,17 @@ def Read_Arguments():
         elif (currArg.startswith('-DESO')):
             currIdx += 1
             DESO = int(sys.argv[currIdx])
+        elif (currArg.startswith('-CaseName')):
+            currIdx += 1
+            CaseName = sys.argv[currIdx]
+        elif (currArg.startswith('-DataPath')):
+            currIdx += 1
+            DataPath = sys.argv[currIdx]
         currIdx += 1
 
     ListUUID = re.findall("[^,]+", UUID) if UUID else []
 
-    return ListUUID,DESO
+    return ListUUID,DESO,CaseName,DataPath
 
 def ListAvailableFiles(keyPath):
     # reading the pathfiles and the geojsonfile
@@ -109,7 +117,7 @@ if __name__ == '__main__' :
     # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
     #these are default values :
-    UUID,DESO = Read_Arguments()
+    UUID,DESO,CaseName,DataPath = Read_Arguments()
 
     config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()),'CoreFiles','DefaultConfig.yml'))
     CaseChoices = config['SIM']['CaseChoices']
@@ -118,6 +126,10 @@ if __name__ == '__main__' :
         CaseChoices['UUID'] = UUID
     if DESO:
         CaseChoices['DESO'] = DESO
+    if CaseName:
+        CaseChoices['CaseName'] = CaseName
+    if DataPath:
+        CaseChoices['Buildingsfile'] = DataPath
     CaseChoices['OutputsFile'] = 'Outputs4API.txt'
     config = setConfig.check4localConfig(config,os.getcwd())
     if type(config) != dict:
