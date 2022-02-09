@@ -14,6 +14,7 @@ from SALib.sample import latin
 import shutil
 import pickle
 import pyproj
+import numpy as np
 
 def appendBuildCase(StudiedCase,epluspath,nbcase,DataBaseInput,MainPath,LogFile,PlotOnly = False, DebugMode = False):
     StudiedCase.addBuilding('Building'+str(nbcase),DataBaseInput,nbcase,MainPath,epluspath,LogFile,PlotOnly, DebugMode)
@@ -206,13 +207,15 @@ def getParamSample(VarName2Change,Bounds,nbruns):
     # Sampling process if someis define int eh function's arguments
     # It is currently using the latin hyper cube methods for the sampling generation (latin.sample)
     Param = [1]
-    if len(VarName2Change) > 0:
-        problem = {}
-        problem['names'] = VarName2Change
-        problem['bounds'] = Bounds  # ,
-        problem['num_vars'] = len(VarName2Change)
-        # problem = read_param_file(MainPath+'\\liste_param.txt')
-        Param = latin.sample(problem, nbruns)
+    try:
+        if len(VarName2Change) > 0:
+            problem = {}
+            problem['names'] = VarName2Change
+            problem['bounds'] = Bounds  # ,
+            problem['num_vars'] = len(VarName2Change)
+            # problem = read_param_file(MainPath+'\\liste_param.txt')
+            Param = latin.sample(problem, nbruns)
+    except: pass
     return Param
 
 def CreatFMU(idf,building,nbcase,epluspath,SimDir, i,varOut,LogFile,DebugMode):
@@ -368,8 +371,11 @@ def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shad
             except:
                 print('This one needs special care : '+var)
 
-def SetParamSample(SimDir,nbruns,VarName2Change,Bounds,SepThreads):
+def SetParamSample(SimDir,CaseChoices,SepThreads):
     #the parameter are constructed. the oupute gives a matrix ofn parameter to change with nbruns values to simulate
+    nbruns = CaseChoices['NbRuns']
+    VarName2Change = CaseChoices['VarName2Change']
+    Bounds = CaseChoices['Bounds']
     if SepThreads:
         Paramfile = os.path.join(SimDir, 'ParamSample.pickle')#os.path.join(os.path.dirname(SimDir), 'ParamSample.pickle')
         if os.path.isfile(Paramfile):
@@ -390,7 +396,52 @@ def SetParamSample(SimDir,nbruns,VarName2Change,Bounds,SepThreads):
             if nbruns > 1:
                 with open(Paramfile, 'wb') as handle:
                     pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    return ParamSample
+    #lets add a sepcial case for making a sample from posteriors
+    if CaseChoices['FromPosteriors']:
+        CaseChoices['VarName2Change'] = []
+        posteriors = getInputFile(os.path.join(CaseChoices['PosteriorsDataPath'],'yearlybasis_FinalPosteriors_Bld'+SimDir[-2:]+'.csv'), ';')
+        for paramName in posteriors.keys():
+            CaseChoices['VarName2Change'].append(paramName)
+        ParamSample = []
+        for i in range(len(posteriors[paramName])):
+            ParamSample.append([float(posteriors[key][i]) for key in posteriors.keys()])
+        ParamSample = np.array(ParamSample)
+        CaseChoices['NbRuns'] = len(ParamSample[:,0])
+        with open(Paramfile, 'wb') as handle:
+            pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    return ParamSample,CaseChoices
+
+def ReadData(line,seperator,header = False):
+    Val = [line[:line.index(seperator)]]
+    remainline = line[line.index(seperator) + 1:]
+    stillhere = 1
+    while stillhere == 1:
+        try:
+            Val.append(remainline[:remainline.index(seperator)])
+            remainline = remainline[remainline.index(seperator) + 1:]
+        except:
+            stillhere = 0
+    Val.append(remainline[:-1])
+    if header:
+        Outputs = {}
+        for i in Val:
+            Outputs[i] =[]
+    else:
+        Outputs = Val
+    return Outputs
+
+def getInputFile(path,seperator):
+    with open(path, 'r') as handle:
+        FileLines = handle.readlines()
+    Header = ReadData(FileLines[0],seperator,header=True)
+    for i,line in enumerate(FileLines[1:]):
+            Val = ReadData(line,seperator)
+            try: float(Val[0].replace(',','.'))
+            except: break
+            for id,key in enumerate(Header.keys()):
+                Header[key].append(Val[id].replace(',','.'))
+    return Header
+
 
 if __name__ == '__main__' :
     print('GeneralFunctions.py')

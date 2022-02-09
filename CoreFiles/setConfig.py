@@ -15,19 +15,27 @@ def read_yaml(file_path):
 
 def check4localConfig(config,path):
     Liste = os.listdir(path)
+    new_config = config
     for file in Liste:
         if '.yml' in file:
             localConfig = read_yaml(os.path.join(path,file))
-            for Mainkey in localConfig.keys():
-                if type(localConfig[Mainkey]) == dict:
-                    for subkey1 in localConfig[Mainkey].keys():
-                        if type(localConfig[Mainkey][subkey1]) == dict:
-                            for subkey2 in localConfig[Mainkey][subkey1].keys():
-                                config[Mainkey][subkey1][subkey2] = localConfig[Mainkey][subkey1][subkey2]
-                        else:
-                            config[Mainkey][subkey1] = localConfig[Mainkey][subkey1]
+            new_config = ChangeConfigOption(config,localConfig)
+    return new_config
+
+def ChangeConfigOption(config,localConfig):
+    for Mainkey in localConfig.keys():
+        if type(localConfig[Mainkey]) == dict:
+            for subkey1 in localConfig[Mainkey].keys():
+                if type(localConfig[Mainkey][subkey1]) == dict:
+                    for subkey2 in localConfig[Mainkey][subkey1].keys():
+                        config[Mainkey][subkey1][subkey2] = localConfig[Mainkey][subkey1][subkey2]
                 else:
-                    config[Mainkey] = localConfig[Mainkey]
+                    config[Mainkey][subkey1] = localConfig[Mainkey][subkey1]
+        else:
+            config[Mainkey] = localConfig[Mainkey]
+    return config
+
+def checkGlobalConfig(config):
     #lets check for the paths
     if not is_tool(os.path.join(config['APP']['PATH_TO_ENERGYPLUS'],'energyplus')):
         print(' /!\ ERROR /!\ ')

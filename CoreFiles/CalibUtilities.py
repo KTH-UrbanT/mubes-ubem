@@ -11,14 +11,17 @@ import CoreFiles.GeneralFunctions as GrlFct
 
 def getYearlyError(Res,NewMeas):
     #definition of the reference for comparison
-    EPCHeatArea = Res['EPC_Heat']
-    EPCHeat = [val*Res['ATemp'][0] for val in Res['EPC_Heat']]
+    # EPCHeatArea = Res['EPC_Heat']
+    # EPCHeat = [val*Res['ATemp'][0] for val in Res['EPC_Heat']]
     EPHeat = []
     for idx in range(len(Res['EP_Heat'])):
         Heat2treat = Res['HeatedArea'][idx]['Data_Zone Ideal Loads Supply Air Total Heating Rate']
         HeatPower = Utilities.Average(Heat2treat, int(len(Heat2treat) / 8760))
         try:
-            Data2treat = Res['Other'][idx]['Data_Water Use Equipment Heating Rate']
+            if 'Data_Total DHW Heating Power' in Res['Other'][idx].keys():
+                Data2treat = Res['Other'][idx]['Data_Total DHW Heating Power']
+            else:
+                Data2treat = Res['Other'][idx]['Data_Water Use Equipment Heating Rate']
             DHWPower = Utilities.Average(Data2treat, int(len(Data2treat) / 8760))
             EPHeat.append(sum([(val + DHWPower[i]) for i, val in enumerate(HeatPower)])/1000)
         except:
@@ -28,7 +31,7 @@ def getYearlyError(Res,NewMeas):
     varx = [i for i in range(len(Res['SimNum']))]
     MeasArea = sum(NewMeas['EnergySurfRatio']) / NewMeas['Atemp.DHSurfRatio']
     Meas = sum(NewMeas['EnergySurfRatio'])
-    error = [abs( val - Meas) / Meas * 100 for val in EPHeat]
+    error = [( val - Meas) / Meas * 100 for val in EPHeat]
     #Matche = [val for idx,val in enumerate(Res['SimNum']) if (abs(EPHeat[idx]-Meas)/Meas*100)<Relerror]
     return error,EPHeat
 
@@ -74,8 +77,8 @@ def getMatches(Res,Meas,VarName2Change,CalibrationBasis,ParamSample,REMax = 5, C
     if 'YearlyBasis' in CalibrationBasis:
         YearleError, EPHeat = getYearlyError(Res, Meas)
         YearlyMatchSimIdx = [idx for idx in range(len(Res['SimNum'])) if
-                           YearleError[idx] < REMax]  # number of simulation that gave matched results
-        YearMatcherror = [val for val in YearleError if val < REMax]
+                           abs(YearleError[idx]) < REMax]  # number of simulation that gave matched results
+        YearMatcherror = [val for val in YearleError if abs(val) < REMax]
 
     elif 'MonthlyBasis' in CalibrationBasis:
         MonthlyMatcherror = []

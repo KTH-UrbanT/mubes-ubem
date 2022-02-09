@@ -21,11 +21,12 @@ import CoreFiles.CalibUtilities as CalibUtil
 
 import multiprocessing as mp
 import platform
+import json
 
 def giveReturnFromPool(results):
     print('This is given by the pool : ', results)
 
-def Read_Arguments():
+def Read_Arguments_Old():
     #these are defaults values:
     UUID = []
     DESO = []
@@ -53,6 +54,20 @@ def Read_Arguments():
     ListUUID = re.findall("[^,]+", UUID) if UUID else []
 
     return ListUUID,DESO,CaseName,DataPath
+
+def Read_Arguments():
+    #these are defaults values:
+    Config2Launch = []
+    # Get command-line options.
+    lastIdx = len(sys.argv) - 1
+    currIdx = 1
+    while (currIdx < lastIdx):
+        currArg = sys.argv[currIdx]
+        if (currArg.startswith('-CONFIG')):
+            currIdx += 1
+            Config2Launch = json.loads(sys.argv[currIdx])
+        currIdx += 1
+    return Config2Launch
 
 def ListAvailableFiles(keyPath):
     # reading the pathfiles and the geojsonfile
@@ -117,21 +132,16 @@ if __name__ == '__main__' :
     # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
     #these are default values :
-    UUID,DESO,CaseName,DataPath = Read_Arguments()
-
+    #UUID,DESO,CaseName,DataPath = Read_Arguments()
+    ConfigFromAPI = Read_Arguments()
     config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()),'CoreFiles','DefaultConfig.yml'))
     CaseChoices = config['SIM']['CaseChoices']
     Calibration = config['SIM']['CaseChoices']
-    if UUID:
-        CaseChoices['UUID'] = UUID
-    if DESO:
-        CaseChoices['DESO'] = DESO
-    if CaseName:
-        CaseChoices['CaseName'] = CaseName
-    if DataPath:
-        CaseChoices['Buildingsfile'] = DataPath
-    CaseChoices['OutputsFile'] = 'Outputs4API.txt'
     config = setConfig.check4localConfig(config,os.getcwd())
+    if ConfigFromAPI:
+        config = setConfig.ChangeConfigOption(config, ConfigFromAPI)
+        CaseChoices['OutputsFile'] = 'Outputs4API.txt'
+    config = setConfig.checkGlobalConfig(config)
     if type(config) != dict:
         print('Something seems wrong in : ' + config)
         print('Please check if there is a local.yml')
@@ -152,16 +162,17 @@ if __name__ == '__main__' :
     ######################################################################################################################
     if CaseChoices['NbRuns']>1:
         SepThreads = True
-        if CaseChoices['CreateFMU']:
+        if CaseChoices['CreateFMU'] :
             print('###  INPUT ERROR ### ' )
             print('/!\ It is asked to ceate FMUs but the number of runs for each building is above 1...')
             print('/!\ Please, check you inputs as this case is not allowed yet')
             sys.exit()
         if not CaseChoices['VarName2Change'] or not CaseChoices['Bounds']:
-            print('###  INPUT ERROR ### ')
-            print('/!\ It is asked to make several runs but no variable is specified or bound of variation...')
-            print('/!\ Please, check you inputs VarName2Change and Bounds')
-            sys.exit()
+            if not CaseChoices['FromPosteriors']:
+                print('###  INPUT ERROR ### ')
+                print('/!\ It is asked to make several runs but no variable is specified or bound of variation...')
+                print('/!\ Please, check you inputs VarName2Change and Bounds')
+                sys.exit()
     else:
         SepThreads = False
         CaseChoices['VarName2Change'] = []
@@ -189,12 +200,13 @@ if __name__ == '__main__' :
     for idx,Case in enumerate(Pool2Launch):
         keypath = Case['keypath']
         nbBuild = Case['BuildNum2Launch'] #this will be used in case the file has to be read again (launched through prompt cmd)
-
         MainInputs['FirstRun'] = True
         #First, lets create the folder for the building and simulation processes
         SimDir = GrlFct.CreateSimDir(CurrentPath, CaseChoices['CaseName'], SepThreads, nbBuild, idx, Refresh=CaseChoices['RefreshFolder'])
         #a sample of parameter is generated is needed
-        ParamSample =  GrlFct.SetParamSample(SimDir, CaseChoices['NbRuns'], CaseChoices['VarName2Change'], CaseChoices['Bounds'],SepThreads)
+        ParamSample,CaseChoices =  GrlFct.SetParamSample(SimDir, CaseChoices, SepThreads)
+        MainInputs['TotNbRun'] = CaseChoices['NbRuns']
+        MainInputs['VarName2Change'] = CaseChoices['VarName2Change']
         #lets check if there are several simulation for one building or not
         if CaseChoices['NbRuns'] > 1:
             Finished = False

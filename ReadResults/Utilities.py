@@ -316,6 +316,7 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
                     with open(file, 'rb') as handle:
                         ResBld[SimNumb[-1]] = pickle.load(handle)
                 except:
+                    import pickle5
                     with open(file, 'rb') as handle:
                         ResBld[SimNumb[-1]] = pickle5.load(handle)
                 try:
