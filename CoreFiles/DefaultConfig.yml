@@ -23,7 +23,7 @@ SIM:
         CreateFMU : False
         CorePerim : False
         FloorZoning : True
-        OutputFile : 'Output_Template.txt'
+        OutputFile : 'Outputs_Template.txt'
         RefreshFolder : True
         CPUusage : 0.8
         ZoneOfInterest : ''

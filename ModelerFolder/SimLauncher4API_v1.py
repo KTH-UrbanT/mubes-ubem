@@ -137,10 +137,12 @@ if __name__ == '__main__' :
     config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()),'CoreFiles','DefaultConfig.yml'))
     CaseChoices = config['SIM']['CaseChoices']
     Calibration = config['SIM']['CaseChoices']
-    config = setConfig.check4localConfig(config,os.getcwd())
+
     if ConfigFromAPI:
         config = setConfig.ChangeConfigOption(config, ConfigFromAPI)
-        CaseChoices['OutputsFile'] = 'Outputs4API.txt'
+        CaseChoices['OutputFile'] = 'Outputs4API.txt'
+    else:
+        config = setConfig.check4localConfig(config, os.getcwd())
     config = setConfig.checkGlobalConfig(config)
     if type(config) != dict:
         print('Something seems wrong in : ' + config)
@@ -190,7 +192,7 @@ if __name__ == '__main__' :
     MainInputs['FloorZoning'] = CaseChoices['FloorZoning']
     MainInputs['CreateFMU'] = CaseChoices['CreateFMU']
     MainInputs['TotNbRun'] = CaseChoices['NbRuns']
-    MainInputs['OutputsFile'] = CaseChoices['OutputsFile']
+    MainInputs['OutputsFile'] = CaseChoices['OutputFile']
     MainInputs['VarName2Change'] = CaseChoices['VarName2Change']
     MainInputs['DebugMode'] = CaseChoices['DebugMode']
     MainInputs['DataBaseInput'] = []

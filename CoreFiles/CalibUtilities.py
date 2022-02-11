@@ -40,7 +40,10 @@ def getPeriodError(Res,NewMeas,idx,NbSample):
     Heat2treat = Res['HeatedArea'][idx]['Data_Zone Ideal Loads Supply Air Total Heating Rate']
     HeatPower = Utilities.Average(Heat2treat, int(len(Heat2treat) / 8760))
     try:
-        Data2treat = Res['Other'][idx]['Data_Water Use Equipment Heating Rate']
+        if 'Data_Total DHW Heating Power' in Res['Other'][idx].keys():
+            Data2treat = Res['Other'][idx]['Data_Total DHW Heating Power']
+        else:
+            Data2treat = Res['Other'][idx]['Data_Water Use Equipment Heating Rate']
         DHWPower = Utilities.Average(Data2treat, int(len(Data2treat) / 8760))
         SimPower = [(val + DHWPower[i]) / Res['EP_Area'][idx] for i, val in enumerate(HeatPower)]
         SimPower = [(val + DHWPower[i]) for i, val in enumerate(HeatPower)]
