@@ -146,7 +146,6 @@ if __name__ == '__main__' :
     config = setConfig.checkGlobalConfig(config)
     if type(config) != dict:
         print('Something seems wrong in : ' + config)
-        print('Please check if there is a local.yml')
         sys.exit()
     epluspath = config['APP']['PATH_TO_ENERGYPLUS']
     #a first keypath dict needs to be defined to comply with the current paradigme along the code

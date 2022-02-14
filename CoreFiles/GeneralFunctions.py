@@ -316,8 +316,11 @@ def AppendLogFiles(MainPath):
             if '[Bld ID] 50A_UUID : ' in line:
                 flagON = True
                 id = line[20:-1]
-                with open(os.path.join(MainPath,'Sim_Results', id + '.txt'), 'r') as file:
-                    extralines = file.readlines()
+                try:
+                    with open(os.path.join(MainPath,'Sim_Results', id + '.txt'), 'r') as file:
+                        extralines = file.readlines()
+                except:
+                    extralines = ['ERROR : No simulations found for this building\n']
             if '[Reported Time]' in line and flagON:
                 for extraline in extralines:
                     NewLines.append(extraline)

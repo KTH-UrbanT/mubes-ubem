@@ -54,12 +54,16 @@ def runcase(file,filepath, epluspath, API = False):
     cmd = [eplus_exe, '--weather',os.path.normcase(weatherpath),'--output-directory',RunDir, \
            '--idd',os.path.join(epluspath,'Energy+.idd'),'--expandobjects','-r','--output-prefix',CaseName,Runfile]
     start = time.time()
-    check_call(cmd, stdout=open(os.devnull, "w"))
-    computeTime = time.time()-start
-    #once the simulation has ended, the results are saved
-    #savecase(CaseName, RunDir, building, ResSimpath,file,idf,filepath)
-    savecase(CaseName, RunDir, building, ResSimpath, file, filepath, API = API,CTime = computeTime)
-    return (file[:-4] + ' is finished')
+    try:
+        if building.SaveLogFiles:
+            check_call(cmd, stdout=open(os.path.join(RunDir,'ConsolOutput.log'), "w"), stderr=open(os.devnull, "w"))
+        else:
+            check_call(cmd, stdout=open(os.devnull, "w"), stderr=open(os.devnull, "w"))
+        computeTime = time.time()-start
+        #once the simulation has ended, the results are saved
+        savecase(CaseName, RunDir, building, ResSimpath, file, filepath, API = API,CTime = computeTime)
+        return (file[:-4] + ' is finished')
+    except: return (file[:-4] + ' has failed')
 
 def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,API = False,CTime = [],withFMU = False):
     start = time.time()
