@@ -120,7 +120,7 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,API = False,CTime
             pickle.dump(Res, handle, protocol=pickle.HIGHEST_PROTOCOL)
         # csv2tabdelim.convert(ResSimpath + file[:-4] + '.csv')
         #csv2tabdelim.WriteCSVFile(ResSimpath+'\\'+file[:-4] + '.csv', ResEso)
-        if 'v0' in file[-6:-4]:
+        if 'v0' in file[-6:-4] and not withFMU:
             res2export = []
             res2export.append(
                 '[Reported Time] Full Computation : '+ str(round(CTime, 2)) + ' seconds')

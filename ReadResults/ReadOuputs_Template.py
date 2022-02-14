@@ -208,7 +208,7 @@ if __name__ == '__main__' :
     CaseName= 'ForTest' #Name of the case study to post-process
 
     #Names (attributes) wanted to be taken in the pickle files for post-processing. The time series are agrregated into HeatedArea, NonHeatedArea and OutdoorSite
-    extraVar=['height','StoreyHeigth','nbfloor','BlocHeight','BlocFootprintArea','BlocNbFloor','HeatedArea','NonHeatedArea','OutdoorSite']
+    extraVar=['height','StoreyHeigth','nbfloor','BlocHeight','BlocFootprintArea','BlocNbFloor','HeatedArea','NonHeatedArea','Other']
     Names4Plots = [CaseName] #because we can have several path for several studies we want to overplot.
     mainpath = os.path.dirname(os.path.dirname(os.getcwd()))
     if os.path.exists(mainpath + os.path.normcase('/MUBES_SimResults/'+CaseName+'/Sim_Results')):
@@ -260,7 +260,7 @@ if __name__ == '__main__' :
     for i,serie in enumerate(TimeSerieList):
         try:
             Timecomp[i] = Utilities.createMultilFig('',2,linked=False)
-            plotTimeSeries(Res,Timecomp[i],Names4Plots,'HeatedArea',serie,SimNum =[])
+            plotTimeSeries(Res,Timecomp[i],Names4Plots,'HeatedArea',serie,SimNum =[0])
         except:
             pass
 

@@ -428,7 +428,8 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
     #Finaly lets reorder the results by the number of the SimNum :
     sorted_idx = np.argsort(Res['SimNum'])
     for key in Res.keys():
-        Res[key] = [Res[key][idx] for idx in sorted_idx]
+        if Res[key]:
+            Res[key] = [Res[key][idx] for idx in sorted_idx]
     return Res
 
 
