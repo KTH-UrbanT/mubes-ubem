@@ -3,6 +3,8 @@ MUBES_UBEM propose a workflow that creates automatic building energy models for 
 Several thermal zoning options are proposed from single heated and non heated zones up to core and perimeter zones for each building floor.
 It can launch simulations using parallel computing or can automatically creates FMUs of each building in order to make co-simulation afterward (the co-simulation process, using FMPy, is validated in Windows, Mac and Linux (Ubuntu)).  
 The main input file is in a geojson format. It contains the footprint including height (3D vertexes) of each building's surface as well as some propreties taken from several databases (EPCs, and others).  
+__Rq__:  Some new methods, more user-oriented are currently being developed in the ForAPI branch. The input file is dealt with .yml file and the Simlauncher can be launched using json format as argument. Some updates will come soon (you can still be informed by following the project in git).  
+ 
 
 ![Minneberg](Minneberg.png)
 
