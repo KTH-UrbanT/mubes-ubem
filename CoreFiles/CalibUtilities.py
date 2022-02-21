@@ -181,6 +181,7 @@ def getCovarCalibratedParam(Data, VarName2Change, nbruns, BoundLim):
     y_transformed = []
     for i in range(len(y[:, 0])):
         full_range = ParamSample[i, :].max() - ParamSample[i, :].min()
+        full_range = BoundLim[i][1]-BoundLim[i][0]
         y_transformed.append(np.interp(y[i], (y[i].min(), y[i].max()), (
         max(BoundLim[i][0], ParamSample[i, :].min() - 0.1 * full_range),
         min(BoundLim[i][1], ParamSample[i, :].max() + 0.1 * full_range))))
@@ -206,9 +207,9 @@ def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change
     with open(os.path.join(ComputfFilePath, 'Building_' + str(nbBuild) + '_Meas.pickle'),
               'rb') as handle:
         Meas = pickle.load(handle)
-    Matches20 = getMatches(Res, Meas, VarName2Change, CalibBasis, ParamSample, REMax=20)
-    Matches10 = getMatches(Res, Meas, VarName2Change, CalibBasis, ParamSample, REMax=10)
-    Matches5 = getMatches(Res, Meas, VarName2Change, CalibBasis, ParamSample, REMax=5)
+    Matches20 = getMatches(Res, Meas, VarName2Change, CalibBasis, ParamSample, REMax=20, CVRMSMax = 30)
+    Matches10 = getMatches(Res, Meas, VarName2Change, CalibBasis, ParamSample, REMax=10, CVRMSMax = 20)
+    Matches5 = getMatches(Res, Meas, VarName2Change, CalibBasis, ParamSample, REMax=5, CVRMSMax = 15)
     if len(Matches5[CalibBasis][VarName2Change[0]]) > 20:
         Matches = Matches5
         print('We are in the 5% range')
@@ -233,8 +234,15 @@ def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change
             print('New runs loop')
             if len(Matches[CalibBasis][VarName2Change[0]]) > 10:
                 try:
-                    NewSample = getCovarCalibratedParam(Matches[CalibBasis], VarName2Change, NbRun,
+                    NBskewedRuns = min(NbRun,len(Matches[CalibBasis][VarName2Change[0]])+90)
+                    NbNewRuns = NbRun-NBskewedRuns
+                    NewSample1 = getCovarCalibratedParam(Matches[CalibBasis], VarName2Change, NBskewedRuns,
                                                                   BoundLim)
+                    if NbNewRuns > 0:
+                        NewSample2 = GrlFct.getParamSample(VarName2Change, Bounds, NbNewRuns)
+                        NewSample = np.append(NewSample1, NewSample2, axis=0)
+                    else:
+                        NewSample = NewSample1
                     print('Covariance worked !')
                 except:
                     print('Covariance did not work...')

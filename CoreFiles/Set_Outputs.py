@@ -51,6 +51,11 @@ def AddOutputs(idf,building,path,EMSOutputs,OutputsFile):
         setEMS4TotHeatPow(idf, building,zonelist, OutputsVar['Reportedfrequency'], EMSOutputs[1])
         if len(EMSOutputs)>2:
             setEMS4TotDHWPow(idf, building, zonelist, OutputsVar['Reportedfrequency'], EMSOutputs[2])
+
+    # idf.newidfobject("OUTPUT:SQLITE",
+    #                  Option_Type = 'SimpleAndTabular') # could be 'Simple' as well
+
+
     return idf
 
 def getHeatedZones(idf):

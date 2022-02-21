@@ -114,7 +114,7 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,API = False,CTime
             #shutil.copyfile(os.path.join(RunDir, CaseName + 'Table.htm'), os.path.join(ResSimpath, file[:-4] + '.html'))
         else:
             shutil.copyfile(os.path.join(RunDir, 'Runout.err'), os.path.join(ResSimpath, file[:-4] + '.err'))
-            shutil.copyfile(os.path.join(RunDir, 'Runtbl.htm'), os.path.join(ResSimpath, file[:-4] + '.html'))
+            #shutil.copyfile(os.path.join(RunDir, 'Runtbl.htm'), os.path.join(ResSimpath, file[:-4] + '.html'))
         # shutil.copyfile(RunDir + '\\' + 'Runout.csv', ResSimpath + file[:-4] + '.csv')
         with open(os.path.join(ResSimpath, file[:-4] + '.pickle'), 'wb') as handle:
             pickle.dump(Res, handle, protocol=pickle.HIGHEST_PROTOCOL)

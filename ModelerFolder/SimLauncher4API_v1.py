@@ -231,7 +231,7 @@ if __name__ == '__main__' :
                 pool.close()
                 pool.join()
                 #the simulation are launched below using a pool of the earlier created idf files
-                if  not CaseChoices['CreateFMU']:
+                if not CaseChoices['CreateFMU']:
                     file2run = LaunchSim.initiateprocess(SimDir)
                     nbcpu = max(mp.cpu_count()*CaseChoices['CPUusage'],1)
                     pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
