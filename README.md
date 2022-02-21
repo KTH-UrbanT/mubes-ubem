@@ -6,7 +6,7 @@ The main input file is in a geojson format. It contains the footprint including 
 __Rq__:  Some new methods, more user-oriented are currently being developed in the ForAPI branch. The input file is dealt with .yml file and the Simlauncher can be launched using json format as argument. Some updates will come soon (you can still be informed by following the project in git).  
  
 
-![Minneberg](Minneberg.png)
+![Minneberg](Minneberg.jpg)
 
 ## Environments
 It is a python script based UBEM simulation tool using EnergyPlus (EP) as the core engine.
