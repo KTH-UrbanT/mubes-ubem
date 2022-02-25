@@ -24,7 +24,8 @@ import platform
 import json
 
 def giveReturnFromPool(results):
-    print('This is given by the pool : ', results)
+    donothing = 0
+    #print('This is given by the pool : ', results)
 
 def Read_Arguments_Old():
     #these are defaults values:
@@ -68,23 +69,6 @@ def Read_Arguments():
             Config2Launch = json.loads(sys.argv[currIdx])
         currIdx += 1
     return Config2Launch
-
-def ListAvailableFiles(keyPath):
-    # reading the pathfiles and the geojsonfile
-    GlobKey = [keyPath]
-    # lets see if the input file is a dir with several geojson files
-    multipleFiles = False
-    BuildingFiles, WallFiles = GrlFct.ReadGeoJsonDir(GlobKey[0])
-    if BuildingFiles:
-        multipleFiles = True
-        MainRootPath = GlobKey[0]['Buildingsfile']
-        GlobKey[0]['Buildingsfile'] = os.path.join(MainRootPath, BuildingFiles[0])
-        GlobKey[0]['Shadingsfile'] = os.path.join(MainRootPath, WallFiles[0])
-        for nb, file in enumerate(BuildingFiles[1:]):
-            GlobKey.append(GlobKey[-1].copy())
-            GlobKey[-1]['Buildingsfile'] = os.path.join(MainRootPath, file)
-            GlobKey[-1]['Shadingsfile'] = os.path.join(MainRootPath, WallFiles[nb + 1])
-    return GlobKey, multipleFiles
 
 def CreatePool2Launch(UUID,GlobKey):
     Pool2Launch = []
@@ -153,7 +137,7 @@ if __name__ == '__main__' :
     Shadingsfile = os.path.abspath(config['DATA']['Shadingsfile'])
     keyPath =  {'epluspath': epluspath, 'Buildingsfile': Buildingsfile, 'Shadingsfile': Shadingsfile,'pythonpath': '','GeojsonProperties':''}
     #this function makes the list of dictionnary with single input files if several are present inthe sample folder
-    GlobKey, MultipleFiles = ListAvailableFiles(keyPath)
+    GlobKey, MultipleFiles = GrlFct.ListAvailableFiles(keyPath)
     #this function creates the full pool to launch afterward, including the file name and which buildings to simulate
     Pool2Launch = CreatePool2Launch(CaseChoices['UUID'],GlobKey)
 
@@ -201,11 +185,14 @@ if __name__ == '__main__' :
     for idx,Case in enumerate(Pool2Launch):
         keypath = Case['keypath']
         nbBuild = Case['BuildNum2Launch'] #this will be used in case the file has to be read again (launched through prompt cmd)
+        if nbBuild not in [42]:
+            continue
         MainInputs['FirstRun'] = True
         #First, lets create the folder for the building and simulation processes
         SimDir = GrlFct.CreateSimDir(CurrentPath, CaseChoices['CaseName'], SepThreads, nbBuild, idx, Refresh=CaseChoices['RefreshFolder'])
         #a sample of parameter is generated is needed
         ParamSample,CaseChoices =  GrlFct.SetParamSample(SimDir, CaseChoices, SepThreads)
+        ParamSample = ParamSample[:200,:]
         MainInputs['TotNbRun'] = CaseChoices['NbRuns']
         MainInputs['VarName2Change'] = CaseChoices['VarName2Change']
         #lets check if there are several simulation for one building or not
@@ -225,6 +212,7 @@ if __name__ == '__main__' :
                         NewRuns.append(i)
                 #now the pool can be created changing the FirstRun key to False for all other runs
                 MainInputs['FirstRun'] = False
+                print('Input files are being written...')
                 pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
                 for i in NewRuns:
                     pool.apply_async(CB_OAT.LaunchOAT, args=(MainInputs,SimDir,keypath,nbBuild,ParamSample[i+idx_offset, :],i+idx_offset,pythonpath))
@@ -232,6 +220,7 @@ if __name__ == '__main__' :
                 pool.join()
                 #the simulation are launched below using a pool of the earlier created idf files
                 if not CaseChoices['CreateFMU']:
+                    print('Simulation runs have begun...')
                     file2run = LaunchSim.initiateprocess(SimDir)
                     nbcpu = max(mp.cpu_count()*CaseChoices['CPUusage'],1)
                     pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage

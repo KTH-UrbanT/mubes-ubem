@@ -8,6 +8,8 @@ import numpy as np
 from ReadResults import Utilities
 import pickle
 import CoreFiles.GeneralFunctions as GrlFct
+import openturns as ot
+ot.ResourceMap.SetAsBool("ComposedDistribution-UseGenericCovarianceAlgorithm", True)
 
 def getYearlyError(Res,NewMeas):
     #definition of the reference for comparison
@@ -72,106 +74,111 @@ def getPeriodError(Res,NewMeas,idx,NbSample):
     # if error<Relerror:
     #     return Res['SimNum'][idx]
 
-def getMatches(Res,Meas,VarName2Change,CalibrationBasis,ParamSample,REMax = 5, CVRMSMax = 15):
-    YearlyMatchSimIdx = []
-    MonthlyMatchSimIdx = []
-    WeeklyMatchSimIdx = []
-    DailyMatchSimIdx = []
+def getErrorMatches(Res,Meas,CalibrationBasis):
+    Error = []
     if 'YearlyBasis' in CalibrationBasis:
-        YearleError, EPHeat = getYearlyError(Res, Meas)
-        YearlyMatchSimIdx = [idx for idx in range(len(Res['SimNum'])) if
-                           abs(YearleError[idx]) < REMax]  # number of simulation that gave matched results
-        YearMatcherror = [val for val in YearleError if abs(val) < REMax]
+        Error, EPHeat = getYearlyError(Res, Meas)
 
     elif 'MonthlyBasis' in CalibrationBasis:
-        MonthlyMatcherror = []
-        getmonthEr = []
         for idx in range(len(Res['SimNum'])):
             SampleEr,CVRMSEro = getPeriodError(Res, Meas, idx, 12)
-            getmonthEr.append(SampleEr)
-            if CVRMSEro <CVRMSMax:
-                MonthlyMatchSimIdx.append(idx) #number of simulation that gave matched results
-                MonthlyMatcherror.append(CVRMSEro)
+            Error.append(CVRMSEro)
 
     elif 'WeeklyBasis' in CalibrationBasis:
-        WeeklyMatcherror = []
-        getweekEr = []
         for idx in range(len(Res['SimNum'])):
             SampleEr, CVRMSEro = getPeriodError(Res, Meas, idx, 52)
-            getweekEr.append(SampleEr)
-            if CVRMSEro < CVRMSMax:
-                WeeklyMatchSimIdx.append(idx)  # number of simulation that gave matched results
-                WeeklyMatcherror.append(CVRMSEro)
+            Error.append(CVRMSEro)
 
     elif 'DailyBasis' in CalibrationBasis:
-        DailyMatcherror = []
-        getdayEr = []
         for idx in range(len(Res['SimNum'])):
             SampleEr, CVRMSEro = getPeriodError(Res, Meas, idx, 365)
-            getdayEr.append(SampleEr)
-            if CVRMSEro < CVRMSMax:
-                DailyMatchSimIdx.append(idx) #number of simulation that gave matched results
-                DailyMatcherror.append(CVRMSEro)
+            Error.append(CVRMSEro)
+    return Error
 
-    YearlyMatchedParam = {}
-    MonthlyMatchedParam = {}
-    DailyMatchedParam = {}
-    WeeklyMatchedParam= {}
-    for idx, par in enumerate(VarName2Change):
-        YearlyMatchedParam[par] = []
-        if YearlyMatchSimIdx:
-            YearlyMatchedParam[par] = ParamSample[[Res['SimNum'][i] for i in YearlyMatchSimIdx], idx]
-        MonthlyMatchedParam[par] = []
-        if MonthlyMatchSimIdx:
-            MonthlyMatchedParam[par] = ParamSample[[Res['SimNum'][i] for i in MonthlyMatchSimIdx], idx]
-        WeeklyMatchedParam[par] = []
-        if WeeklyMatchSimIdx:
-            WeeklyMatchedParam[par] = ParamSample[[Res['SimNum'][i] for i in WeeklyMatchSimIdx], idx]
-        DailyMatchedParam[par] = []
-        if DailyMatchSimIdx:
-            DailyMatchedParam[par] = ParamSample[[Res['SimNum'][i] for i in DailyMatchSimIdx], idx]
+def getGoodParamList(Error,CalibBasis, VarName2Change, ParamSample, REMax=5, CVRMSMax = 15):
+    Matches = {}
+    Criteria = CVRMSMax
+    if 'YearlyBasis' in CalibBasis:
+        Criteria = REMax
+    for idx,key in enumerate(VarName2Change):
+        Matches[key] = [ParamSample[x,idx] for x,val in enumerate(Error) if abs(val) < Criteria]
+    return Matches
 
-    return {'YearlyBasis' : YearlyMatchedParam,'MonthlyBasis' : MonthlyMatchedParam,'WeeklyBasis' : WeeklyMatchedParam,
-            'DailyBasis' : DailyMatchedParam}
+def getOpenTurnsCorrelated(Data, VarName2Change, nbruns, BoundLim):
+    # this is taken form https://se.mathworks.com/matlabcentral/fileexchange/56384-lhsgeneral-pd-correlation-n
+    # and implemented in python by a proposeal in https://openturns.discourse.group/t/generate-multivariate-joint-distribution/182/3
+    ParamSample = []
+    pd = []
+    for idx,key in enumerate(VarName2Change):
+        ParamSample.append(Data[key])
+        full_range = BoundLim[idx][1] - BoundLim[idx][0]
+        pd.append(ot.Uniform(max(BoundLim[idx][0],Data[key].min() - 0.1*full_range),
+                                min(BoundLim[idx][1],Data[key].max() + 0.1*full_range)))
+    ParamSample = np.array(ParamSample)
+    #pd = [ot.Normal(0.0, 20.0), ot.Triangular(0.0, 100.0, 150.0)]
+    covMat = np.cov(ParamSample.transpose(), rowvar=False)
+    correlation = ot.CorrelationMatrix(idx+1,[float(val) for val in list(np.reshape(covMat, ((idx+1)**2, 1)))] )
+    n = nbruns
+    return np.array(lhsgeneral(pd, correlation, n))
+
+def getOpenTurnsCorrelatedFromSample(Data, VarName2Change, nbruns, BoundLim):
+    ParamSample = []
+    for idx, key in enumerate(VarName2Change):
+        ParamSample.append(Data[key])
+    ParamSample = np.array(ParamSample)
+    data = ot.Sample(ParamSample.transpose())
+    # Identify the associated normal copula
+    copula = ot.NormalCopulaFactory().build(data)
+    # Identify the marginal distributions
+    pd = [ot.HistogramFactory().build(data.getMarginal(i)) for i in range(data.getDimension())]
+    # Build the joint distribution
+    dist = ot.ComposedDistribution(pd, copula)
+    # Generate a new sample
+    correlatedSamples = dist.getSample(n)
+    #R = correlatedSamples.computeLinearCorrelation()
+    return np.array(correlatedSamples)
+
+def lhsgeneral(pd, correlation, n):
+    dim = len(pd)
+    RStar = correlation
+    unifND = [ot.Uniform(0.0, 1.0)]*dim
+    normND = [ot.Normal(0.0, 1.0)]*dim
+    lhsDOE = ot.LHSExperiment(ot.ComposedDistribution(unifND), n)
+    x = lhsDOE.generate()
+    independent_sample = ot.MarginalTransformationEvaluation(unifND, normND)(x)
+    R = independent_sample.computeLinearCorrelation()
+    P = RStar.computeCholesky()
+    Q = R.computeCholesky()
+    M = P * Q.solveLinearSystem(ot.IdentityMatrix(dim))
+    lin = ot.LinearEvaluation([0.0]*dim, [0.0]*dim, M.transpose())
+    dependent_sample = lin(independent_sample)
+    transformed_sample = ot.MarginalTransformationEvaluation(normND, pd)(dependent_sample)
+    return transformed_sample
 
 def getCovarCalibratedParam(Data, VarName2Change, nbruns, BoundLim):
-    # if len(Data[VarName2Change[0]]) > 10:
+    # the method below follows the one describe in :
+    # https://scipy-cookbook.readthedocs.io/items/CorrelatedRandomSamples.html
+    # with the exception that as we on't have the former distribution type, the new sample are kept uniform
+    # this should be enhanced further
     ParamSample = []
     for key in VarName2Change:
         ParamSample.append(Data[key])
     ParamSample = np.array(ParamSample)
-    covariance_matrix = np.cov(ParamSample.transpose(), rowvar=False)
+    RStar = np.cov(ParamSample.transpose(), rowvar=False)
     problemnew = {
         'num_vars': len(VarName2Change),
         'names': VarName2Change,
         'bounds': [[0, 1]] * len(VarName2Change)
     }
     xx = latin.sample(problemnew, nbruns)
-    # z = []
-    # for i in range(xx.shape[1]):
-    #     # but it is possible to transform xx values to a normal distribution by percent point function
-    #     # eric.univ-lyon2.fr/~ricco/tanagra/fichiers/en_Tanagra_Calcul_P_Value.pdf
-    #     xx[:, i] = stats.norm.ppf(xx[:, i], 0, 1)
-    #     tmp = xx[:, i]
-    #     z.append(tmp)
-    # xx = np.array(z)  # this is used to change dimension array from n,m to m,n
-    cholesky = False
-
-    try:  # cholesky:
-        # Compute the Cholesky decomposition.
-        c = linalg.cholesky(covariance_matrix, lower=True)
-        print('cholesky worked!!')
-    # else:
-    except:
-        # Compute the eigenvalues and eigenvectors.
-        evals, evecs = linalg.eigh(covariance_matrix)
-        evals = [val if val > 0 else 0 for val in evals]
-        # Construct c, so c*c^T = r.
-        c = np.dot(evecs, np.diag(np.sqrt(evals)))
-
-    # Convert the data to correlated random variables
-    y = np.dot(c, xx.transpose())
-    # y = xx
+    z = []
+    for i in range(xx.shape[1]):
+        tmp = stats.norm.ppf(xx[:, i], 0, 1)
+        z.append(tmp)
+    xx = np.array(z)  # this is used to change dimension array from n,m to m,n
+    P = linalg.cholesky(RStar, lower=True)
+    x_xcorrelated = np.dot(P,xx)
+    y = stats.norm.cdf(x_xcorrelated)
 
     if y.shape[0] != len(VarName2Change):
         y = y.transpose()
@@ -180,14 +187,49 @@ def getCovarCalibratedParam(Data, VarName2Change, nbruns, BoundLim):
     # their real ranges example: temperature samples from -4 to 4 -> 19 to 22.
     y_transformed = []
     for i in range(len(y[:, 0])):
-        full_range = ParamSample[i, :].max() - ParamSample[i, :].min()
+        #full_range = ParamSample[i, :].max() - ParamSample[i, :].min()
         full_range = BoundLim[i][1]-BoundLim[i][0]
         y_transformed.append(np.interp(y[i], (y[i].min(), y[i].max()), (
         max(BoundLim[i][0], ParamSample[i, :].min() - 0.1 * full_range),
         min(BoundLim[i][1], ParamSample[i, :].max() + 0.1 * full_range))))
-    Param2keep = list(np.array(y_transformed).transpose())
 
-    return np.array(Param2keep)
+    Param2keep =  np.array(y_transformed)
+    return Param2keep.transpose()
+
+def getBootStrapedParam(Data, VarName2Change, nbruns, BoundLim):
+    import openturns as ot
+    ParamSample = []
+    NormalizedParam = []
+    for key in VarName2Change:
+        ParamSample.append(Data[key])
+        NormalizedParam.append((Data[key]-Data[key].min())/(Data[key].max()-Data[key].min()))
+    ParamSample = np.array(ParamSample).transpose()
+    NormalizedParam = np.array(NormalizedParam).transpose()
+    BottObject = ot.BootstrapExperiment(NormalizedParam)
+    NewSampleAsArray = []
+    finished = False
+    while not finished:
+        NewSample = BottObject.generate()
+        try:
+            if not NewSampleAsArray:
+                NewSampleAsArray = np.array(list(NewSample))
+        except:
+            NewSampleAsArray = np.append(NewSampleAsArray,np.array(list(NewSample)),axis = 0)
+        if NewSampleAsArray.shape[0]>nbruns:
+            finished = True
+    y = np.array([NewSampleAsArray[i,:] for i in np.random.randint(0, NewSampleAsArray.shape[0], nbruns)])
+    y_transformed = []
+    for i in range(y.shape[1]):
+        #full_range = ParamSample[i, :].max() - ParamSample[i, :].min()
+        full_range = BoundLim[i][1]-BoundLim[i][0]
+        y_transformed.append(np.interp(y[:,i], (y[:,i].min(), y[:,i].max()), (
+        max(BoundLim[i][0], ParamSample[:, i].min() - 0.1 * full_range),
+        min(BoundLim[i][1], ParamSample[:, i].max() + 0.1 * full_range))))
+
+    Param2keep =  np.array(y_transformed)
+
+    return Param2keep.transpose()
+
 
 def getNewBounds(Bounds,BoundLim):
     newBounds = []
@@ -195,6 +237,49 @@ def getNewBounds(Bounds,BoundLim):
         newBounds.append(
                 [max(bd[0] - 0.1 * (bd[1] - bd[0]),BoundLim[idx][0]), min(BoundLim[idx][1], bd[1] + 0.1 * (bd[1] - bd[0]))])
     return newBounds
+
+def getTheWinners(VarName2Change,Matches20, Matches10, Matches5):
+    if len(Matches5[VarName2Change[0]]) > 20:
+        Matches = Matches5
+        print('We are in the 5% range')
+        print('Nb of matches at 5% is : ' + str(len(Matches5[VarName2Change[0]])))
+    elif len(Matches10[VarName2Change[0]]) > 20:
+        Matches = Matches10
+        print('We are in the 10% range')
+        print('Nb of matches at 10% is : ' + str(len(Matches10[VarName2Change[0]])))
+        print('Nb of matches at 5% is : ' + str(len(Matches5[VarName2Change[0]])))
+    else:
+        Matches = Matches20
+        print('We are in the 20% range')
+        print('Nb of matches at 20% is : '+str(len(Matches20[VarName2Change[0]])))
+        print('Nb of matches at 10% is : ' + str(len(Matches10[VarName2Change[0]])))
+        print('Nb of matches at 5% is : ' + str(len(Matches5[VarName2Change[0]])))
+    return Matches, len(Matches[VarName2Change[0]])
+
+def getTheWeightedWinners(VarName2Change,Matches20, Matches10, Matches5):
+    Matches = {}
+    #the number of winners taken for defning the sample size is kept as for the non weighted function
+    if len(Matches5[VarName2Change[0]]) > 20:
+        nbwinners = len(Matches5[VarName2Change[0]])
+        for key in VarName2Change:
+            Matches[key] = np.array(Matches5[key])
+    elif len(Matches10[VarName2Change[0]]) > 20:
+        for key in VarName2Change:
+            Matches[key] = np.array(Matches10[key])
+            for weigth in range(2):
+                Matches[key] = np.append(Matches[key], Matches5[key])
+        nbwinners = max(10,len(Matches10[VarName2Change[0]])/2)
+    else:
+        nbwinners = 10 #len(Matches20[CalibBasis][VarName2Change[0]]) this way, there will be half of the next sample
+        for key in VarName2Change:
+            Matches[key] = np.array(Matches20[key])
+            # a weight of 3 is applied to 10% matches (the good ones are also in 20% so there is the need to add only 2)
+            for weigth in range(2):
+                Matches[key] = np.append(Matches[key], Matches10[key])
+            # a weight of 5 is applied to 5% matches (the good ones are also in 20% and 10% so there is the need to add only 3)
+            for weigth in range(3):
+                Matches[key] = np.append(Matches[key], Matches5[key])
+    return Matches, int(nbwinners)
 
 def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change,CalibBasis,MeasPath,ParamSample,Bounds,BoundLim,NbRun):
     # once every run has been computed, lets get the matche and compute the covariance depending on the number of matches
@@ -207,39 +292,42 @@ def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change
     with open(os.path.join(ComputfFilePath, 'Building_' + str(nbBuild) + '_Meas.pickle'),
               'rb') as handle:
         Meas = pickle.load(handle)
-    Matches20 = getMatches(Res, Meas, VarName2Change, CalibBasis, ParamSample, REMax=20, CVRMSMax = 30)
-    Matches10 = getMatches(Res, Meas, VarName2Change, CalibBasis, ParamSample, REMax=10, CVRMSMax = 20)
-    Matches5 = getMatches(Res, Meas, VarName2Change, CalibBasis, ParamSample, REMax=5, CVRMSMax = 15)
-    if len(Matches5[CalibBasis][VarName2Change[0]]) > 20:
-        Matches = Matches5
-        print('We are in the 5% range')
-        print('Nb of matches at 5% is : ' + str(len(Matches5[CalibBasis][VarName2Change[0]])))
-    elif len(Matches10[CalibBasis][VarName2Change[0]]) > 20:
-        Matches = Matches10
-        print('We are in the 10% range')
-        print('Nb of matches at 10% is : ' + str(len(Matches10[CalibBasis][VarName2Change[0]])))
-        print('Nb of matches at 5% is : ' + str(len(Matches5[CalibBasis][VarName2Change[0]])))
-    else:
-        Matches = Matches20
-        print('We are in the 20% range')
-        print('Nb of matches at 20% is : '+str(len(Matches20[CalibBasis][VarName2Change[0]])))
-        print('Nb of matches at 10% is : ' + str(len(Matches10[CalibBasis][VarName2Change[0]])))
-        print('Nb of matches at 5% is : ' + str(len(Matches5[CalibBasis][VarName2Change[0]])))
+
+    Error = getErrorMatches(Res, Meas, CalibBasis)
+    Matches20 = getGoodParamList(Error,CalibBasis, VarName2Change, ParamSample, REMax=20, CVRMSMax = 30)
+    Matches10 = getGoodParamList(Error,CalibBasis, VarName2Change, ParamSample, REMax=10, CVRMSMax = 20)
+    Matches5 = getGoodParamList(Error, CalibBasis, VarName2Change, ParamSample, REMax=5, CVRMSMax=15)
+    print('Nb of matches at 20% is : ' + str(len(Matches20[VarName2Change[0]])))
+    print('Nb of matches at 10% is : ' + str(len(Matches10[VarName2Change[0]])))
+    print('Nb of matches at 5% is : ' + str(len(Matches5[VarName2Change[0]])))
+    #Matches, NbWinners = getTheWinners(VarName2Change,Matches20, Matches10, Matches5)
+    Matches, NbWinners = getTheWeightedWinners(VarName2Change, Matches20, Matches10, Matches5)
+
     try:
-        if len(ParamSample[:, 0]) >= 2000 or len(Matches5[CalibBasis][VarName2Change[0]]) > 100:
+        if len(ParamSample[:, 0]) >= 2000 or len(Matches5[VarName2Change[0]]) > 100:
             Finished = True
-        elif len(ParamSample[:, 0]) >= 1000 and len(Matches5[CalibBasis][VarName2Change[0]]) < 10:
+        elif len(ParamSample[:, 0]) >= 1000 and len(Matches5[VarName2Change[0]]) < 10:
             Finished = True
         else:
             print('New runs loop')
-            if len(Matches[CalibBasis][VarName2Change[0]]) > 10:
+            if len(Matches[VarName2Change[0]]) > 10:
                 try:
-                    NBskewedRuns = min(NbRun,len(Matches[CalibBasis][VarName2Change[0]])+90)
+                    NBskewedRuns = min(NbRun,NbWinners+90)
+                    print('Nd of skewed runs : '+str(NBskewedRuns))
                     NbNewRuns = NbRun-NBskewedRuns
-                    NewSample1 = getCovarCalibratedParam(Matches[CalibBasis], VarName2Change, NBskewedRuns,
-                                                                  BoundLim)
+                    #NewSample1 = getBootStrapedParam(Matches, VarName2Change, NBskewedRuns, BoundLim)
+                    #NewSample1 = getOpenTurnsCorrelated(Matches, VarName2Change, NBskewedRuns, BoundLim)
+                    NewSample1 = getOpenTurnsCorrelatedFromSample(Matches, VarName2Change, NBskewedRuns, BoundLim)
+
+                    #NewSample1 = getCovarCalibratedParam(Matches, VarName2Change, NBskewedRuns, BoundLim)
+
                     if NbNewRuns > 0:
-                        NewSample2 = GrlFct.getParamSample(VarName2Change, Bounds, NbNewRuns)
+                        #lets make new bounds for non correlated sample, being in the same range as for correlated ones
+                        ModifiedBounds = []
+                        for i in range(len(NewSample1[0,:])):
+                            ModifiedBounds.append([max(BoundLim[i][0], NewSample1[:, i].min()),
+                                                   min(BoundLim[i][1], NewSample1[:, i].max())])
+                        NewSample2 = GrlFct.getParamSample(VarName2Change, ModifiedBounds, NbNewRuns)
                         NewSample = np.append(NewSample1, NewSample2, axis=0)
                     else:
                         NewSample = NewSample1

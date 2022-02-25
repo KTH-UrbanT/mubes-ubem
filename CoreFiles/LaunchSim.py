@@ -30,7 +30,7 @@ def runcase(file,filepath, epluspath, API = False):
     building = loadB['BuildData'] #the building object is loaded in order to be saved afterward with the simulation results
     Runfile = os.path.join(filepath,file)
     RunDir = os.path.join(filepath,file[:-4])
-    print('Launching :'+file)
+    #print('Launching :'+file)
     if not os.path.exists(RunDir):
         os.mkdir(RunDir)
     os.chdir(RunDir)

@@ -222,7 +222,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
             pickle.dump(Case, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         msg = 'Building_' + str(nbcase)+' IDF file ' + str(currentRun+1)+ '/'  + str(TotNbRun)+ ' is done\n'
-        print(msg[:-1])
+        #print(msg[:-1])
         end = time.time()
         GrlFct.Write2LogFile('[Reported Time] Input File : '+str(round(end-start,2))+' seconds\n',LogFile)
         GrlFct.Write2LogFile('##############################################################\n', LogFile)

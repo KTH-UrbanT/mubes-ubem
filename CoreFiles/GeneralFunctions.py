@@ -86,6 +86,23 @@ def ReadGeoJsonFile(keyPath):
         Shadingsfile = checkRefCoordinates(Shadingsfile)
         return {'Build': Buildingsfile, 'Shades': Shadingsfile}
 
+def ListAvailableFiles(keyPath):
+    # reading the pathfiles and the geojsonfile
+    GlobKey = [keyPath]
+    # lets see if the input file is a dir with several geojson files
+    multipleFiles = False
+    BuildingFiles, WallFiles = ReadGeoJsonDir(GlobKey[0])
+    if BuildingFiles:
+        multipleFiles = True if len(BuildingFiles)>1 else False
+        MainRootPath = GlobKey[0]['Buildingsfile']
+        GlobKey[0]['Buildingsfile'] = os.path.join(MainRootPath, BuildingFiles[0])
+        GlobKey[0]['Shadingsfile'] = [] if not WallFiles else os.path.join(MainRootPath, WallFiles[0])
+        for nb, file in enumerate(BuildingFiles[1:]):
+            GlobKey.append(GlobKey[-1].copy())
+            GlobKey[-1]['Buildingsfile'] = os.path.join(MainRootPath, file)
+            GlobKey[-1]['Shadingsfile'] = [] if not WallFiles else os.path.join(MainRootPath, WallFiles[nb + 1])
+    return GlobKey, multipleFiles
+
 def ReadGeoJsonDir(keyPath):
     #print('Reading Input dir,...')
     BuildingFiles = []

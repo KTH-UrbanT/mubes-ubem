@@ -310,7 +310,7 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
     for file in liste:
         if '.pickle' in file:
             try:
-                print(file)
+                #print(file)
                 SimNumb.append(int(file[file.index(idxF[0]) + len(idxF[0]):file.index(idxF[1])]))
                 try:
                     with open(file, 'rb') as handle:

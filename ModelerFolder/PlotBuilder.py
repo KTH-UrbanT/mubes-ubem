@@ -8,6 +8,7 @@ path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'geom
 sys.path.append(path2addgeom)
 sys.path.append("..")
 import CoreFiles.GeneralFunctions as GrlFct
+import CoreFiles.setConfig as setConfig
 from BuildObject.DB_Building import BuildingList
 import BuildObject.DB_Data as DB_Data
 from BuildObject.DB_Filter4Simulations import checkBldFilter
@@ -122,21 +123,40 @@ if __name__ == '__main__':
     # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
     import numpy as np
-    BuildNum = [30]#,14]#,15]#16,17,18,19,20]#,12,13,14,15]#,26,28,34,35]#[int(i) for i in np.linspace(5,10,6)]#[int(i) for i in np.linspace(0,3,4)]#[40,41,42,43,44,45,46,47,48,49]##[52]#,51,52,53]#[40,41,42,43,44,45,46,47,48,49]#[30,31,32,33,34,35,36,37,38,39]#[20,21,22,23,24,25,26,27,28,29]#[10,11,12,13,14,15,16,17,18,19]#[0,1,2,3,4,5,6,7,8,9]#[50,51,52,53]#
-    PathInputFile = 'HammarbyLast.txt'#'Pathways_Template.txt'#'HammarbyLast.txt'#'ExergiProject.txt'#'Pathways_Template.txt'##'Hammarby0401.txt'#'Pathways_Template.txt'#'Sodermalm4.txt'  #'MinnebergLast.txt'#'Minneberg2D.txt'#'Sodermalm4.txt'##
+    BuildNum = []#,14]#,15]#16,17,18,19,20]#,12,13,14,15]#,26,28,34,35]#[int(i) for i in np.linspace(5,10,6)]#[int(i) for i in np.linspace(0,3,4)]#[40,41,42,43,44,45,46,47,48,49]##[52]#,51,52,53]#[40,41,42,43,44,45,46,47,48,49]#[30,31,32,33,34,35,36,37,38,39]#[20,21,22,23,24,25,26,27,28,29]#[10,11,12,13,14,15,16,17,18,19]#[0,1,2,3,4,5,6,7,8,9]#[50,51,52,53]#
     CorePerim = False
     FloorZoning = False
-    PlotBuilding = False
+    PlotBuilding = True
     ZoneOfInterest = ''#'HSS_Network.txt'
+
+    config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfig.yml'))
+    CaseChoices = config['SIM']['CaseChoices']
+    Calibration = config['SIM']['CaseChoices']
+
+    config = setConfig.check4localConfig(config, os.getcwd())
+    config = setConfig.checkGlobalConfig(config)
+    if type(config) != dict:
+        print('Something seems wrong in : ' + config)
+        sys.exit()
+    epluspath = config['APP']['PATH_TO_ENERGYPLUS']
+    # a first keypath dict needs to be defined to comply with the current paradigme along the code
+    Buildingsfile = os.path.abspath(config['DATA']['Buildingsfile'])
+    Shadingsfile = os.path.abspath(config['DATA']['Shadingsfile'])
+    keyPath = {'epluspath': epluspath, 'Buildingsfile': Buildingsfile, 'Shadingsfile': Shadingsfile, 'pythonpath': '',
+               'GeojsonProperties': ''}
+    # this function makes the list of dictionnary with single input files if several are present inthe sample folder
+
+    # this function creates the full pool to launch afterward, including the file name and which buildings to simulate
+
+
 
     ######################################################################################################################
     ########     LAUNCHING MULTIPROCESS PROCESS PART     #################################################################
     ######################################################################################################################
     CaseName = 'ForTest'
     # reading the pathfiles and the geojsonfile
-    GlobKey =[GrlFct.readPathfile(PathInputFile)]
     # lets see if the input file is a dir with several geojson files
-    multipleFiles = False
+    GlobKey, MultipleFiles =GrlFct.ListAvailableFiles(keyPath)
     BuildingFiles,WallFiles = GrlFct.ReadGeoJsonDir(GlobKey[0])
     if BuildingFiles:
         multipleFiles = True
@@ -151,7 +171,7 @@ if __name__ == '__main__':
     for nbfile, keyPath in enumerate(GlobKey):
         # if nbfile not in [0]:
         #     continue
-        if multipleFiles:
+        if MultipleFiles:
             nb = len(GlobKey)
             print('File number : '+str(nbfile) + ' which correspond to Area Ref : '+BuildingFiles[nbfile][:-18])
         DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
@@ -175,7 +195,7 @@ if __name__ == '__main__':
                 WindSize = 50
                 SimDir = CurrentPath
                 LogFile = open(os.path.join(SimDir, CaseName+'_Logs.log'), 'w')
-            if multipleFiles:
+            if MultipleFiles:
                 msg = '[New AREA] A new goejson file is open (num '+str(nbfile)+'), Area Id : '+BuildingFiles[nbfile][:-18]+'\n'
                 print(msg[:-1])
                 GrlFct.Write2LogFile(msg, LogFile)

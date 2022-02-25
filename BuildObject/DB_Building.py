@@ -449,6 +449,7 @@ class Building:
             for i in coord:
                 xs, ys = zip(*i)
                 plt.plot(xs, ys, '-.')
+            plt.show()
             # titre = 'FormularId : '+str(DB.properties['FormularId'])+'\n 50A_UUID : '+str(DB.properties['50A_UUID'])
             # plt.title(titre)
             # plt.savefig(self.name+ '.png')
