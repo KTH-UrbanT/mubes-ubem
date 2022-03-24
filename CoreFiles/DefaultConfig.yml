@@ -34,6 +34,8 @@ SIM:
         MeasurePath4Calibration : 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\ComputedElem4Calibration'
         FromPosteriors : False
         PosteriorsDataPath : ''
+        ECMParam : False
+        ECMChange : ''
     
     SimuData :
         Begin_Day_of_Month : 1

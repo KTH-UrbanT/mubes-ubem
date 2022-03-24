@@ -107,9 +107,7 @@ class Building:
         Buildingsfile = DataBaseInput['Build']
         Shadingsfile = DataBaseInput['Shades']
         DB = Buildingsfile[nbcase]
-        config = setConfig.read_yaml(os.path.join(os.path.dirname(MainPath), 'CoreFiles', 'DefaultConfig.yml'))
-        config = setConfig.check4localConfig(config, MainPath)
-
+        config = setConfig.read_yaml('ConfigFile.yml')
         DBL = config['SIM']['DBLimits']
         BE = config['SIM']['BasisElement']
         GE = config['SIM']['GeomElement']

@@ -190,8 +190,9 @@ def createMultilDblFig(title,nbFigx,nbFigy,linked=True):
             totfig+=1
             if i>0 and j>0 and linked:
                 ax[i].sharex(ax[0])
+            if i==0 and j==0:
+                plt.title(title)
     #plt.tight_layout()
-    plt.title(title)
     return {'fig_name' : fig_name, 'ax': ax}
 
 #this function enable to create a single graph areas
@@ -206,12 +207,12 @@ def createSimpleFig():
     return {'fig_name' : fig_name, 'ax0': ax0}
 
 #basic plots
-def plotBasicGraph(fig_name,ax0,varx,vary,varxname,varyname,title,sign,legend = True, markersize = 5, xlim =[], ylim = []):
+def plotBasicGraph(fig_name,ax0,varx,vary,varxname,varyname,title,sign,color = 'black', legend = True, markersize = 5, xlim =[], ylim = [], mfc = 'none'):
     plt.figure(fig_name)
 
     if len(varyname)>0:
         for nb,var in enumerate(vary):
-            ax0.plot(varx,var,sign,label= varyname[nb], mfc='none',markersize=markersize)
+            ax0.plot(varx,var,sign,label= varyname[nb], mfc=mfc,markersize=markersize,color = color)
         ax0.set_xlabel(varxname)
         ax0.set_ylabel(title)
         if xlim:
@@ -222,7 +223,7 @@ def plotBasicGraph(fig_name,ax0,varx,vary,varxname,varyname,title,sign,legend = 
             ax0.legend()
     else:
         for nb,var in enumerate(vary):
-            ax0.plot(varx,var,sign, mfc='none',markersize=markersize)
+            ax0.plot(varx,var,sign, mfc=mfc,markersize=markersize,color = color)
         ax0.set_xlabel(varxname)
         ax0.set_ylabel(title)
         if xlim:
@@ -274,7 +275,7 @@ def plotHist(fig_name,ax0,vary,varyname):
     ax0.hist(vary,normed=True,label = varyname)
     ax0.legend()
 
-def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
+def GetData(path,extravariables = [], Timeseries = [],BuildNum=[],BldList = []):
     os.chdir(path)
     liste = os.listdir()
     ResBld = {}
@@ -307,11 +308,16 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
     else:
         idxF = ['_'+str(BuildNum[0])+'v','.']
     #now that we found this index, lets go along alll the files
+
     for file in liste:
         if '.pickle' in file:
+            NbRun = int(file[file.index(idxF[0]) + len(idxF[0]):file.index(idxF[1])])
+            if BldList:
+                if NbRun not in BldList:
+                    continue
             try:
                 #print(file)
-                SimNumb.append(int(file[file.index(idxF[0]) + len(idxF[0]):file.index(idxF[1])]))
+                SimNumb.append(NbRun)
                 try:
                     with open(file, 'rb') as handle:
                         ResBld[SimNumb[-1]] = pickle.load(handle)

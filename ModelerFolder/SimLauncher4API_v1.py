@@ -18,10 +18,12 @@ import CoreFiles.LaunchSim as LaunchSim
 import CoreFiles.CaseBuilder_OAT as CB_OAT
 import CoreFiles.setConfig as setConfig
 import CoreFiles.CalibUtilities as CalibUtil
-
+import shutil
 import multiprocessing as mp
 import platform
 import json
+import yaml
+import copy
 
 def giveReturnFromPool(results):
     donothing = 0
@@ -120,7 +122,6 @@ if __name__ == '__main__' :
     ConfigFromAPI = Read_Arguments()
     config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()),'CoreFiles','DefaultConfig.yml'))
     CaseChoices = config['SIM']['CaseChoices']
-    Calibration = config['SIM']['CaseChoices']
 
     if ConfigFromAPI:
         config = setConfig.ChangeConfigOption(config, ConfigFromAPI)
@@ -185,16 +186,27 @@ if __name__ == '__main__' :
     for idx,Case in enumerate(Pool2Launch):
         keypath = Case['keypath']
         nbBuild = Case['BuildNum2Launch'] #this will be used in case the file has to be read again (launched through prompt cmd)
-        if nbBuild not in [42]:
+        if nbBuild not in [5]:
             continue
+        print('here is build ' + str(nbBuild))
         MainInputs['FirstRun'] = True
         #First, lets create the folder for the building and simulation processes
         SimDir = GrlFct.CreateSimDir(CurrentPath, CaseChoices['CaseName'], SepThreads, nbBuild, idx, Refresh=CaseChoices['RefreshFolder'])
-        #a sample of parameter is generated is needed
+        #a sample of parameter is generated if needed
         ParamSample,CaseChoices =  GrlFct.SetParamSample(SimDir, CaseChoices, SepThreads)
-        ParamSample = ParamSample[:200,:]
+        #if a simulation is asked to be done from posterriors that does not exist, the process will skip this building
+        if len(ParamSample) == 0 :
+            shutil.rmtree(SimDir)
+            continue
         MainInputs['TotNbRun'] = CaseChoices['NbRuns']
         MainInputs['VarName2Change'] = CaseChoices['VarName2Change']
+        #lest create the local yml file that will be used afterward
+        if not os.path.isfile((os.path.join(SimDir,'ConfigFile.yml'))):
+            LocalConfigFile = copy.deepcopy(config)
+            LocalConfigFile['SIM']['CaseChoices']['UUID'] = LocalConfigFile['SIM']['CaseChoices']['UUID'][idx]
+            with open(os.path.join(SimDir,'ConfigFile.yml'), 'w') as file:
+                documents = yaml.dump(LocalConfigFile, file)
+
         #lets check if there are several simulation for one building or not
         if CaseChoices['NbRuns'] > 1:
             Finished = False

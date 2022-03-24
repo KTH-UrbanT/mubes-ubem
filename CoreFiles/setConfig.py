@@ -28,7 +28,11 @@ def ChangeConfigOption(config,localConfig):
             for subkey1 in localConfig[Mainkey].keys():
                 if type(localConfig[Mainkey][subkey1]) == dict:
                     for subkey2 in localConfig[Mainkey][subkey1].keys():
-                        config[Mainkey][subkey1][subkey2] = localConfig[Mainkey][subkey1][subkey2]
+                        if type(localConfig[Mainkey][subkey1][subkey2]) == dict:
+                            for subkey3 in localConfig[Mainkey][subkey1][subkey2].keys():
+                                config[Mainkey][subkey1][subkey2][subkey3] = localConfig[Mainkey][subkey1][subkey2][subkey3]
+                        else:
+                            config[Mainkey][subkey1][subkey2] = localConfig[Mainkey][subkey1][subkey2]
                 else:
                     config[Mainkey][subkey1] = localConfig[Mainkey][subkey1]
         else:

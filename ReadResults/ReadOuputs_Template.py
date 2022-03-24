@@ -205,12 +205,13 @@ def plotIndex(GlobRes,FigName,name):
 
 if __name__ == '__main__' :
 
-    CaseName= 'ForTest' #Name of the case study to post-process
+    CaseName= 'ecmnewcalibweekly' #Name of the case study to post-process
 
     #Names (attributes) wanted to be taken in the pickle files for post-processing. The time series are agrregated into HeatedArea, NonHeatedArea and OutdoorSite
     extraVar=['height','StoreyHeigth','nbfloor','BlocHeight','BlocFootprintArea','BlocNbFloor','HeatedArea','NonHeatedArea','Other']
     Names4Plots = [CaseName] #because we can have several path for several studies we want to overplot.
     mainpath = os.path.dirname(os.path.dirname(os.getcwd()))
+
     if os.path.exists(mainpath + os.path.normcase('/MUBES_SimResults/'+CaseName+'/Sim_Results')):
         path = [mainpath + os.path.normcase('/MUBES_SimResults/'+CaseName+'/Sim_Results')]
     else:
@@ -221,47 +222,54 @@ if __name__ == '__main__' :
             path.append(mainpath + os.path.normcase('/MUBES_SimResults/'+CaseName+'/'+folder+'/Sim_Results'))
             Names4Plots.append(CaseName+'/'+folder)
 
+
+    #path = ['C:/Users/xav77/Documents/FAURE/prgm_python/UrbanT/Eplus4Mubes/MUBES_SimResults/newcalibyearly/build_5/Sim_Results']
+
     Res = {}
     TimeSerieList=[]
     id =0
+    totalconso =0
     for idx, curPath in enumerate(path):
         Res[idx] = Utilities.GetData(curPath,extraVar)
         #lets grab the time series name (the chossen ouputs from EP).
         # /!\ the data are taken from the building number 0, thus if for example not an office type, the will be no occupant. Choose another building if needed
-        blfRef=0
-        if idx==0:
-            for key in Res[idx]['HeatedArea'][blfRef].keys():
-                if type(Res[idx]['HeatedArea'][blfRef][key])==list:
-                    TimeSerieList.append(key)
-
-
-    #The opening order does not follows the building simulation number while opening the data. Thus, this first graphs provides the correspondance between the other plots, building number and their simulation number
-    IndexFig = Utilities.createSimpleFig()
-    plotIndex(Res, IndexFig, Names4Plots)
-    #this 2nd plot gives the size of the error file. It gives insights if some buildings causses particulary over whole issue in the simulation process
-    ErrorFig = Utilities.createSimpleFig()
-    plotErrorFile(Res, ErrorFig, Names4Plots)
-    #this 3rd graph gives the footprint area and the correspondance between EPCs value if available
-    AreaFig = Utilities.createMultilFig('',2,linked=False)
-    plotAreaVal(Res, AreaFig, Names4Plots)
-    #this one gives geometric values
-    DimFig = Utilities.createMultilFig('', 3)
-    plotDim(Res, DimFig,Names4Plots)
-    # this one gives the energy demand of heating with EPCs values
-    EnergyFig = Utilities.createMultilFig('',2,linked=False)
-    plotEnergy(Res, EnergyFig,Names4Plots)
-
-    EnergyFig = Utilities.createMultilFig('', 2, linked=False)
-    plotDistrictEnergy(Res, EnergyFig, Names4Plots)
-
-
-    #below, some timeseries are plotted, all time series available but only for building Simulation Number 0
-    Timecomp={}
-    for i,serie in enumerate(TimeSerieList):
-        try:
-            Timecomp[i] = Utilities.createMultilFig('',2,linked=False)
-            plotTimeSeries(Res,Timecomp[i],Names4Plots,'HeatedArea',serie,SimNum =[0])
-        except:
-            pass
-
-    plt.show()
+        totalconso += sum(Res[idx]['Other'][0]['Data_Total DHW Heating Power'])/1000000000
+        print(curPath)
+        print(totalconso)
+    #     blfRef=0
+    #     if idx==0:
+    #         for key in Res[idx]['HeatedArea'][blfRef].keys():
+    #             if type(Res[idx]['HeatedArea'][blfRef][key])==list:
+    #                 TimeSerieList.append(key)
+    #
+    #
+    # #The opening order does not follows the building simulation number while opening the data. Thus, this first graphs provides the correspondance between the other plots, building number and their simulation number
+    # IndexFig = Utilities.createSimpleFig()
+    # plotIndex(Res, IndexFig, Names4Plots)
+    # #this 2nd plot gives the size of the error file. It gives insights if some buildings causses particulary over whole issue in the simulation process
+    # ErrorFig = Utilities.createSimpleFig()
+    # plotErrorFile(Res, ErrorFig, Names4Plots)
+    # #this 3rd graph gives the footprint area and the correspondance between EPCs value if available
+    # AreaFig = Utilities.createMultilFig('',2,linked=False)
+    # plotAreaVal(Res, AreaFig, Names4Plots)
+    # #this one gives geometric values
+    # DimFig = Utilities.createMultilFig('', 3)
+    # plotDim(Res, DimFig,Names4Plots)
+    # # this one gives the energy demand of heating with EPCs values
+    # EnergyFig = Utilities.createMultilFig('',2,linked=False)
+    # plotEnergy(Res, EnergyFig,Names4Plots)
+    #
+    # EnergyFig = Utilities.createMultilFig('', 2, linked=False)
+    # plotDistrictEnergy(Res, EnergyFig, Names4Plots)
+    #
+    #
+    # #below, some timeseries are plotted, all time series available but only for building Simulation Number 0
+    # Timecomp={}
+    # for i,serie in enumerate(TimeSerieList):
+    #     try:
+    #         Timecomp[i] = Utilities.createMultilFig('',2,linked=False)
+    #         plotTimeSeries(Res,Timecomp[i],Names4Plots,'HeatedArea',serie,SimNum =[0])
+    #     except:
+    #         pass
+    #
+    # plt.show()

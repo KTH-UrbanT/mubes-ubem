@@ -75,11 +75,11 @@ def CallCorrectionFactor1(building):
         CorFact[int(line[:line.index('\t')])] = float(line[line.index('\t')+1:line.index('\n')])
 
     # #the following lines are added to apply an extra correction factor for year 2014 and 2015 compared to 2012
-    # CorFactPath = os.path.normcase(os.path.join(pth2corfactors, 'DHWCorFact2015.txt'))
-    # with open(CorFactPath, 'r') as handle:
-    #     FileLines = handle.readlines()
-    # ExtraCorFact = {}
-    # for line in FileLines:
-    #     ExtraCorFact[int(line[:line.index('\t')])] = float(line[line.index('\t') + 1:line.index('\n')])
+    CorFactPath = os.path.normcase(os.path.join(pth2corfactors, 'DHWCorFact2014.txt'))
+    with open(CorFactPath, 'r') as handle:
+        FileLines = handle.readlines()
+    ExtraCorFact = {}
+    for line in FileLines:
+        ExtraCorFact[int(line[:line.index('\t')])] = float(line[line.index('\t') + 1:line.index('\n')])
 
-    return CorFact[BuildNumber] #*ExtraCorFact[BuildNumber]
+    return CorFact[BuildNumber] #* ExtraCorFact[BuildNumber]

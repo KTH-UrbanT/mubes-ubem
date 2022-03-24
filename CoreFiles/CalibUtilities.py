@@ -134,7 +134,7 @@ def getOpenTurnsCorrelatedFromSample(Data, VarName2Change, nbruns, BoundLim):
     # Build the joint distribution
     dist = ot.ComposedDistribution(pd, copula)
     # Generate a new sample
-    correlatedSamples = dist.getSample(n)
+    correlatedSamples = dist.getSample(nbruns)
     #R = correlatedSamples.computeLinearCorrelation()
     return np.array(correlatedSamples)
 
@@ -241,19 +241,10 @@ def getNewBounds(Bounds,BoundLim):
 def getTheWinners(VarName2Change,Matches20, Matches10, Matches5):
     if len(Matches5[VarName2Change[0]]) > 20:
         Matches = Matches5
-        print('We are in the 5% range')
-        print('Nb of matches at 5% is : ' + str(len(Matches5[VarName2Change[0]])))
     elif len(Matches10[VarName2Change[0]]) > 20:
         Matches = Matches10
-        print('We are in the 10% range')
-        print('Nb of matches at 10% is : ' + str(len(Matches10[VarName2Change[0]])))
-        print('Nb of matches at 5% is : ' + str(len(Matches5[VarName2Change[0]])))
     else:
         Matches = Matches20
-        print('We are in the 20% range')
-        print('Nb of matches at 20% is : '+str(len(Matches20[VarName2Change[0]])))
-        print('Nb of matches at 10% is : ' + str(len(Matches10[VarName2Change[0]])))
-        print('Nb of matches at 5% is : ' + str(len(Matches5[VarName2Change[0]])))
     return Matches, len(Matches[VarName2Change[0]])
 
 def getTheWeightedWinners(VarName2Change,Matches20, Matches10, Matches5):
@@ -306,7 +297,7 @@ def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change
     try:
         if len(ParamSample[:, 0]) >= 2000 or len(Matches5[VarName2Change[0]]) > 100:
             Finished = True
-        elif len(ParamSample[:, 0]) >= 1000 and len(Matches5[VarName2Change[0]]) < 10:
+        elif len(ParamSample[:, 0]) >= 1000 and len(Matches5[VarName2Change[0]]) < 5:
             Finished = True
         else:
             print('New runs loop')
@@ -318,15 +309,18 @@ def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change
                     #NewSample1 = getBootStrapedParam(Matches, VarName2Change, NBskewedRuns, BoundLim)
                     #NewSample1 = getOpenTurnsCorrelated(Matches, VarName2Change, NBskewedRuns, BoundLim)
                     NewSample1 = getOpenTurnsCorrelatedFromSample(Matches, VarName2Change, NBskewedRuns, BoundLim)
-
                     #NewSample1 = getCovarCalibratedParam(Matches, VarName2Change, NBskewedRuns, BoundLim)
 
                     if NbNewRuns > 0:
                         #lets make new bounds for non correlated sample, being in the same range as for correlated ones
+                        openRange = 0
+                        if len(Matches5[VarName2Change[0]]) < 10:
+                            openRange = 1
                         ModifiedBounds = []
                         for i in range(len(NewSample1[0,:])):
-                            ModifiedBounds.append([max(BoundLim[i][0], NewSample1[:, i].min()),
-                                                   min(BoundLim[i][1], NewSample1[:, i].max())])
+                            fullRange = (BoundLim[i][1]-BoundLim[i][0])*openRange
+                            ModifiedBounds.append([max(BoundLim[i][0], NewSample1[:, i].min() - 0.1*fullRange),
+                                                   min(BoundLim[i][1], NewSample1[:, i].max() + 0.1*fullRange)])
                         NewSample2 = GrlFct.getParamSample(VarName2Change, ModifiedBounds, NbNewRuns)
                         NewSample = np.append(NewSample1, NewSample2, axis=0)
                     else:

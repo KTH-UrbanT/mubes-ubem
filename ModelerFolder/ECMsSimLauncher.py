@@ -43,7 +43,7 @@ if __name__ == '__main__' :
 # OutputsFile = 'String'               #Name of the Outfile with the selected outputs wanted and the associated frequency (see file's template)
 # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
-    CaseName = 'ecmscalibmonthlynew2'
+    CaseName = 'ecmscalibmonthlynewtutu'
     BuildNum = []
     VarName2Change = ['AirRecovEff','IntLoadCurveShape','wwr','EnvLeak','setTempLoL','AreaBasedFlowRate','WindowUval','WallInsuThick','RoofInsuThick']
     Bounds = [[0.5,0.9],[1,5],[0.2,0.4],[0.5,1.6],[18,22],[0.35,1],[0.7,2],[0.1,0.3],[0.2,0.4]]
@@ -106,7 +106,7 @@ if __name__ == '__main__' :
         #to get to matched joint distribution'
         import pickle5
         import numpy as np
-        with open(os.path.join(os.path.dirname(os.path.dirname(CurrentPath)),'MUBES_SimResults','calibmonthly', 'GlobalMatchedParam.pickle'), 'rb') as handle:
+        with open(os.path.join(os.path.dirname(os.path.dirname(CurrentPath)),'MUBES_SimResults','monthlybasis', 'GlobalMatchedParam.pickle'), 'rb') as handle:
             GlobalMatch = pickle5.load(handle)
         #lets simulation the building only if we have a complete joint distribution of 100 matches
         for idx,nbBuild in enumerate(BuildNum2Launch):

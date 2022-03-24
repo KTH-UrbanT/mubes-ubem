@@ -419,16 +419,32 @@ def SetParamSample(SimDir,CaseChoices,SepThreads):
     #lets add a sepcial case for making a sample from posteriors
     if CaseChoices['FromPosteriors']:
         CaseChoices['VarName2Change'] = []
-        posteriors = getInputFile(os.path.join(CaseChoices['PosteriorsDataPath'],'yearlybasis_FinalPosteriors_Bld'+SimDir[-2:]+'.csv'), ';')
-        for paramName in posteriors.keys():
-            CaseChoices['VarName2Change'].append(paramName)
+        BldNum = int(SimDir[-SimDir[::-1].index('_'):])
+        with open(os.path.join(CaseChoices['PosteriorsDataPath'], 'GlobalMatchedParam.pickle'), 'rb') as handle:
+            MatchedData = pickle.load(handle)
+        for paramName in MatchedData[CaseChoices['CalibTimeBasis']][BldNum].keys():
+            if type(MatchedData[CaseChoices['CalibTimeBasis']][BldNum][paramName]) == np.ndarray:
+                CaseChoices['VarName2Change'].append(paramName)
         ParamSample = []
-        for i in range(len(posteriors[paramName])):
-            ParamSample.append([float(posteriors[key][i]) for key in posteriors.keys()])
-        ParamSample = np.array(ParamSample)
-        CaseChoices['NbRuns'] = len(ParamSample[:,0])
-        with open(Paramfile, 'wb') as handle:
-            pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        if CaseChoices['VarName2Change']:
+            nbmatches = len(MatchedData[CaseChoices['CalibTimeBasis']][BldNum][CaseChoices['VarName2Change'][0]])
+            if nbmatches < 100:
+                return ParamSample,CaseChoices
+            else:
+                for i in range(nbmatches):
+                    ParamSet = [float(MatchedData[CaseChoices['CalibTimeBasis']][BldNum][key][i]) for key in CaseChoices['VarName2Change']]
+                    if CaseChoices['ECMParam']:
+                        try: ParamSet[int(CaseChoices['VarName2Change'].index(CaseChoices['ECMParam']))] *= float(CaseChoices['ECMChange'])
+                        except: pass
+                    ParamSample.append(ParamSet)
+                if CaseChoices['ECMParam']:
+                    import random
+                    random.shuffle(ParamSample)
+                    ParamSample = ParamSample[:100]
+                ParamSample = np.array(ParamSample)
+                CaseChoices['NbRuns'] = len(ParamSample[:,0])
+                with open(Paramfile, 'wb') as handle:
+                    pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
     return ParamSample,CaseChoices
 
 def ReadData(line,seperator,header = False):

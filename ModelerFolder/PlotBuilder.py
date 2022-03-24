@@ -91,7 +91,7 @@ def LaunchProcess(SimDir, DataBaseInput, LogFile, bldidx, keyPath, nbcase, CoreP
     # Bld2Sim = []
     # for line in FileLines:
     #     Bld2Sim.append(int(line))
-    # if nbcase in Bld2Sim:
+    # if nbcase in [5,7,39,41]:
     #     RoofSpecialColor = 'limegreen'
 
     idf_ref.view_model(test=PlotBuilding, FigCenter=FigCentroid, WindSize=2 * WindSize, RoofSpecialColor = RoofSpecialColor)
@@ -123,10 +123,10 @@ if __name__ == '__main__':
     # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
     import numpy as np
-    BuildNum = []#,14]#,15]#16,17,18,19,20]#,12,13,14,15]#,26,28,34,35]#[int(i) for i in np.linspace(5,10,6)]#[int(i) for i in np.linspace(0,3,4)]#[40,41,42,43,44,45,46,47,48,49]##[52]#,51,52,53]#[40,41,42,43,44,45,46,47,48,49]#[30,31,32,33,34,35,36,37,38,39]#[20,21,22,23,24,25,26,27,28,29]#[10,11,12,13,14,15,16,17,18,19]#[0,1,2,3,4,5,6,7,8,9]#[50,51,52,53]#
+    BuildNum = [7]#,14]#,15]#16,17,18,19,20]#,12,13,14,15]#,26,28,34,35]#[int(i) for i in np.linspace(5,10,6)]#[int(i) for i in np.linspace(0,3,4)]#[40,41,42,43,44,45,46,47,48,49]##[52]#,51,52,53]#[40,41,42,43,44,45,46,47,48,49]#[30,31,32,33,34,35,36,37,38,39]#[20,21,22,23,24,25,26,27,28,29]#[10,11,12,13,14,15,16,17,18,19]#[0,1,2,3,4,5,6,7,8,9]#[50,51,52,53]#
     CorePerim = False
     FloorZoning = False
-    PlotBuilding = True
+    PlotBuilding = False
     ZoneOfInterest = ''#'HSS_Network.txt'
 
     config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfig.yml'))
@@ -158,6 +158,9 @@ if __name__ == '__main__':
     # lets see if the input file is a dir with several geojson files
     GlobKey, MultipleFiles =GrlFct.ListAvailableFiles(keyPath)
     BuildingFiles,WallFiles = GrlFct.ReadGeoJsonDir(GlobKey[0])
+    import yaml
+    with open('ConfigFile.yml', 'w') as file:
+        documents = yaml.dump(config, file)
     if BuildingFiles:
         multipleFiles = True
         MainRootPath = GlobKey[0]['Buildingsfile']
@@ -217,9 +220,9 @@ if __name__ == '__main__':
                     print('All buildings in the input file have been treated.')
                     print('###################################################')
                     break
-            if not multipleFiles:
+            if not MultipleFiles:
                 LogFile.close()
     plt.show()
-    if multipleFiles:
+    if MultipleFiles:
         LogFile.close()
     sys.path.remove(path2addgeom)
