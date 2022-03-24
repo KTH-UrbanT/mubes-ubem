@@ -67,7 +67,7 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,withFMU = False):
 
     else:
         Res  = Set_Outputs.Read_Outputhtml(os.path.join(RunDir,CaseName+'tbl.htm'))
-        ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir,CaseName+'out.eso'), Res['OutdoorSurfacesNames'], ZoneOutput=False)
+        ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir,CaseName+'out.eso'), Res['OutdoorSurfacesNames'], ZoneOutput=building.ZoneOutput)
 
     Res['BuildDB'] = building
     for key1 in ResEso:

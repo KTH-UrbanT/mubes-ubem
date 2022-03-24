@@ -49,7 +49,7 @@ if __name__ == '__main__' :
     Bounds = []
     NbRuns = 1
     CPUusage = 0.8
-    CreateFMU = True
+    CreateFMU = False
     CorePerim = False
     FloorZoning = True
     RefreshFolder = True

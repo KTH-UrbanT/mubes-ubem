@@ -35,8 +35,6 @@ def plotAreaVal(GlobRes,FigName,name):
         locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
         index_y,varx = Utilities.getSortedIdx(reference,locref)
         varyref = [Res['ATemp'][idx] for idx in index_y]
-        maxpow = [max(Res['HeatedArea'][idx]['Data_Zone Ideal Loads Supply Air Total Heating Rate']) for idx in
-                   index_y]
         if nb==0:
             Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0],varx, [varyref], 'Building num', ['ATemp'],
                                          'Areas (m2)', 'x')
@@ -147,7 +145,7 @@ def plotEnergy(GlobRes,FigName,name):
     #                          'Heat Needs (kWh/m2)', 'k-')
 
 
-def plotTimeSeries(GlobRes,FigName,name,Location,TimeSerieList,SimNum=[]):
+def plotTimeSeries(GlobRes,FigName,name,Location,TimeSerieList,Unit,SimNum=[]):
 
     refVar= '[''BuildID''][''50A_UUID'']'
     reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
@@ -162,10 +160,10 @@ def plotTimeSeries(GlobRes,FigName,name,Location,TimeSerieList,SimNum=[]):
             index_y, varx = Utilities.getSortedIdx(reference, locref)
             vary = Res[Location][index_y[varx.index(nbBld)]][TimeSerieList]
             varx = np.linspace(1,len(vary),len(vary))
-            Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0],varx, [vary], 'Time', [name[nb]+'_Bld_'+str(nbBld)],
-                                     TimeSerieList, '--')
+            Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0],varx, [vary], 'Time', [name[nb]+'_Bld_'+str(nbBld)+' '+TimeSerieList],
+                                     Unit, '--')
             Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][1], varx, [np.cumsum(vary)], 'Time',
-                                     [name[nb] + '_Bld_' + str(nbBld)],
+                                     [],
                                      'Cumulative form', '--')
         # if nb==0:
         #     vary0 = vary
@@ -211,6 +209,7 @@ if __name__ == '__main__' :
 
     Res = {}
     TimeSerieList=[]
+    TimeSerieUnit = []
     id =0
     for idx, curPath in enumerate(path):
         Res[idx] = Utilities.GetData(curPath,extraVar)
@@ -221,30 +220,34 @@ if __name__ == '__main__' :
             for key in Res[idx]['HeatedArea'][blfRef].keys():
                 if type(Res[idx]['HeatedArea'][blfRef][key])==list:
                     TimeSerieList.append(key)
+                    TimeSerieUnit.append(Res[idx]['HeatedArea'][blfRef][key.replace('Data_','Unit_')])
 
 
     #The opening order does not follows the building simulation number while opening the data. Thus, this first graphs provides the correspondance between the other plots, building number and their simulation number
-    # IndexFig = Utilities.createSimpleFig()
-    # plotIndex(Res, IndexFig, Names4Plots)
+    IndexFig = Utilities.createSimpleFig()
+    plotIndex(Res, IndexFig, Names4Plots)
     #this 2nd plot gives the size of the error file. It gives insights if some buildings causses particulary over whole issue in the simulation process
     ErrorFig = Utilities.createMultilFig('',2,linked=False)
     plotErrorFile(Res, ErrorFig, Names4Plots,legend = False)
     #this 3rd graph gives the footprint area and the correspondance between EPCs value if available
-    # AreaFig = Utilities.createMultilFig('',2,linked=False)
-    # plotAreaVal(Res, AreaFig, Names4Plots)
+    AreaFig = Utilities.createMultilFig('',2,linked=False)
+    plotAreaVal(Res, AreaFig, Names4Plots)
     #this one gives geometric values
-    # DimFig = Utilities.createMultilFig('', 3)
-    # plotDim(Res, DimFig,Names4Plots)
+    DimFig = Utilities.createMultilFig('', 3)
+    plotDim(Res, DimFig,Names4Plots)
     # this one gives the energy demand of heating with EPCs values
-    # EnergyFig = Utilities.createMultilFig('',2,linked=False)
-    # plotEnergy(Res, EnergyFig,Names4Plots)
+    EnergyFig = Utilities.createMultilFig('',2,linked=False)
+    plotEnergy(Res, EnergyFig,Names4Plots)
 
     #below, some timeseries are plotted, all time series available but only for building Simulation Number 0
-    Timecomp={}
+    Figures={}
+    UniqueUnit = list(set(TimeSerieUnit))
+    for Unit in UniqueUnit:
+        Figures[Unit] = Utilities.createMultilFig('', 2, linked=False)
     for i,serie in enumerate(TimeSerieList):
         try:
-            Timecomp[i] =  Utilities.createMultilFig('',2,linked=False)
-            plotTimeSeries(Res,Timecomp[i],Names4Plots,'HeatedArea',serie,SimNum =[])
+            #Timecomp[i] =  Utilities.createMultilFig('',2,linked=False)
+            plotTimeSeries(Res,Figures[TimeSerieUnit[i]],Names4Plots,'HeatedArea',serie,TimeSerieUnit[i],SimNum =[])
         except:
             pass
 

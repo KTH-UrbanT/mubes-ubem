@@ -6,6 +6,7 @@ SimuData = \
     'End_Day_of_Month' : 31,
     'End_Month' : 12,
     'SaveLogFiles' : False, #if True, computing folder is not removed thus all energyplus outpus files are preserved
+    'ZoneOutput' : False, #this key handles the output level being either at the building scale or the zone scale. The zone scale can give a bunch of outputs !! so building scale is prefered.
     #'FloorZoningLevel' : True,  #1 zone per floor, if False --> 1 zone per building bloc
  }
 
