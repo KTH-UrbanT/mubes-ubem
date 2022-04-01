@@ -87,13 +87,13 @@ class BuildingList:
     def __init__(self):
         self.building = []
 
-    def addBuilding(self,name,DataBaseInput,nbcase,MainPath,epluspath,LogFile,PlotOnly, DebugMode):
+    def addBuilding(self,name,DataBaseInput,nbcase,MainPath,keypath,LogFile,PlotOnly, DebugMode):
         #idf object is created here
-        IDF.setiddname(os.path.join(epluspath,"Energy+.idd"))
-        idf = IDF(os.path.normcase(os.path.join(epluspath,"ExampleFiles/Minimal.idf")))
+        IDF.setiddname(os.path.join(keypath['epluspath'],"Energy+.idd"))
+        idf = IDF(os.path.normcase(os.path.join(keypath['epluspath'],"ExampleFiles/Minimal.idf")))
         idf.idfname = name
         #building object is created here
-        building = Building(name, DataBaseInput, nbcase, MainPath,LogFile,PlotOnly, DebugMode)
+        building = Building(name, DataBaseInput, nbcase, MainPath,keypath['Buildingsfile'],LogFile,PlotOnly, DebugMode)
         #both are append as dict in the globa studied case list
         self.building.append({
             'BuildData' : building,
@@ -103,7 +103,12 @@ class BuildingList:
 
 class Building:
 
-    def __init__(self,name,DataBaseInput,nbcase,MainPath,LogFile,PlotOnly,DebugMode):
+    def __init__(self,name,DataBaseInput,nbcase,MainPath,GeoJsonFilePath,LogFile,PlotOnly,DebugMode):
+        #lets check if a json file is there for the shadowing walls
+        GeoJsonFileName = os.path.basename(GeoJsonFilePath)
+        JsonShadeFile = []
+        if os.path.isfile(os.path.join(os.path.dirname(GeoJsonFilePath),GeoJsonFileName[:GeoJsonFileName.index('.')] + '_Walls.json')):
+            JsonShadeFile = os.path.join(os.path.dirname(GeoJsonFilePath),GeoJsonFileName[:GeoJsonFileName.index('.')] + '_Walls.json')
         Buildingsfile = DataBaseInput['Build']
         Shadingsfile = DataBaseInput['Shades']
         DB = Buildingsfile[nbcase]
@@ -137,10 +142,11 @@ class Building:
         self.EPHeatedArea = self.getEPHeatedArea(LogFile,DebugMode)
         self.MaxShadingDist = GE['MaxShadingDist']
         self.AdjacentWalls = [] #this will be appended in the getshade function if any present
-        self.shades = self.getshade(DB,Shadingsfile,Buildingsfile,GE,LogFile,DebugMode)
+        self.shades = self.getshade(DB,Shadingsfile,Buildingsfile,GE,JsonShadeFile,LogFile,DebugMode)
         self.Materials = config['SIM']['BaseMaterial']
         self.InternalMass = config['SIM']['InternalMass']
-        self.MakeRelativeCoord() # we need to convert into local coordinate in order to compute adjacencies with more precision than keeping thousand of km for x and y
+        self.edgesHeights = self.getEdgesHeights()
+        self.MakeRelativeCoord()# we need to convert into local coordinate in order to compute adjacencies with more precision than keeping thousand of km for x and y
         if not PlotOnly:
             #the attributres above are needed in all case, the one below are needed only if energy simulation is asked for
             self.VentSyst = self.getVentSyst(DB, config['SIM']['VentSyst'], LogFile,DebugMode)
@@ -163,6 +169,22 @@ class Building:
             #         self.intT_freecool = 50
             #     else:
             #         self.setTempUpL = [50]*len(BE['setTempUpL'])
+
+    def getEdgesHeights(self):
+        GlobalFootprint = Polygon2D(self.AggregFootprint[:-1])
+        EdgesHeights = {'Edge':[],'Height':[]}
+        for edge in GlobalFootprint.edges:
+            EdgesHeights['Edge'].append([(x,y) for x,y in edge.vertices])
+            EdgesHeights['Height'].append(0)
+        for idx,poly in enumerate(self.footprint):
+            localBloc = Polygon2D(poly)
+            for edge,edge_reversed in zip(localBloc.edges,localBloc.edges_reversed):
+                Heightidx1 = [idx for idx,val in enumerate(GlobalFootprint.edges) if edge == val]
+                Heightidx2 = [idx for idx, val in enumerate(GlobalFootprint.edges_reversed) if edge == val]
+                if Heightidx1 or Heightidx2:
+                    Heigthidx = Heightidx1 if Heightidx1 else Heightidx2
+                    EdgesHeights['Height'][Heigthidx[0]] = self.BlocHeight[idx]
+        return EdgesHeights
 
     def MakeRelativeCoord(self):
         # we need to convert change the reference coordinate because precision is needed for boundary conditions definition:
@@ -447,7 +469,7 @@ class Building:
             for i in coord:
                 xs, ys = zip(*i)
                 plt.plot(xs, ys, '-.')
-            plt.show()
+            #plt.show()
             # titre = 'FormularId : '+str(DB.properties['FormularId'])+'\n 50A_UUID : '+str(DB.properties['50A_UUID'])
             # plt.title(titre)
             # plt.savefig(self.name+ '.png')
@@ -611,8 +633,39 @@ class Building:
             AggregFootprint.append(AggregFootprint[0])
         return AggregFootprint
 
-    def getshade(self, DB,Shadingsfile,Buildingsfile,GE,LogFile,PlotOnly = True,DebugMode = False):
+    def getShadesFromJson(self,ShadowingWalls):
+        # shades: dict of dict with key being shade ID and sub key are
+        # 'Vertex (list of tuple)' \
+        # 'height (in m)' \
+        # 'distance'
+        # and that should be enough
+        shades = {}
+        RelativeAgregFootprint = [(node[0] - self.RefCoord[0], node[1] - self.RefCoord[1]) for node in
+                                  self.AggregFootprint]
+        Meancoordx = list(Polygon(RelativeAgregFootprint).centroid.coords)[0][0]
+        Meancoordy = list(Polygon(RelativeAgregFootprint).centroid.coords)[0][1]
+        for key in ShadowingWalls:
+            if self.BuildID['50A_UUID'] in ShadowingWalls[key]['RecepientBld_ID']:
+                x,y = zip(*ShadowingWalls[key]['AbsCoord'])
+                meanPx = sum(x)/2- self.RefCoord[0]
+                meanPy = sum(y) / 2 - self.RefCoord[1]
+                dist = (abs(meanPx - Meancoordx) ** 2 + abs(meanPy - Meancoordy) ** 2) ** 0.5
+                shades[key] = {}
+                shades[key]['Vertex'] = ShadowingWalls[key]['AbsCoord']
+                shades[key]['height'] = ShadowingWalls[key]['Height']
+                shades[key]['distance'] = dist
+        return shades
+
+
+    def getshade(self, DB,Shadingsfile,Buildingsfile,GE,JSONFile,LogFile,PlotOnly = True,DebugMode = False):
         "Get all the shading surfaces to be build for surrounding building effect"
+        if JSONFile:
+            import json
+            with open(JSONFile) as json_file:
+                ShadowingWalls = json.load(json_file)
+            print('Shadowing walls are taken from a json file')
+            return self.getShadesFromJson(ShadowingWalls)
+
         shades = {}
         try:
             shadesID = DB.properties[GE['ShadingIdKey']]

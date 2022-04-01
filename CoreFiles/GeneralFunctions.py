@@ -16,8 +16,8 @@ import pickle
 import pyproj
 import numpy as np
 
-def appendBuildCase(StudiedCase,epluspath,nbcase,DataBaseInput,MainPath,LogFile,PlotOnly = False, DebugMode = False):
-    StudiedCase.addBuilding('Building'+str(nbcase),DataBaseInput,nbcase,MainPath,epluspath,LogFile,PlotOnly, DebugMode)
+def appendBuildCase(StudiedCase,keypath,nbcase,DataBaseInput,MainPath,LogFile,PlotOnly = False, DebugMode = False):
+    StudiedCase.addBuilding('Building'+str(nbcase),DataBaseInput,nbcase,MainPath,keypath,LogFile,PlotOnly, DebugMode)
     idf = StudiedCase.building[-1]['BuildIDF']
     building = StudiedCase.building[-1]['BuildData']
     return idf, building
@@ -110,10 +110,10 @@ def ReadGeoJsonDir(keyPath):
     if os.path.isdir(keyPath['Buildingsfile']):
         FileList = os.listdir(keyPath['Buildingsfile'])
         for nb,file in enumerate(FileList):
-            if 'Buildings' in file:
+            if 'Buildings' in file and 'geojson' in file:
                 #print('Building main input file with file nb: ' + str(nb))
                 BuildingFiles.append(file)
-            if 'Walls' in file:
+            if 'Walls' in file and 'geojson' in file:
                 ShadingWallFiles.append(file.replace('Buildings', 'Walls'))
 
     return BuildingFiles,ShadingWallFiles
@@ -121,6 +121,8 @@ def ReadGeoJsonDir(keyPath):
 
 
 def checkRefCoordinates(GeojsonFile):
+    if not GeojsonFile:
+        return GeojsonFile
     if 'EPSG' in GeojsonFile.crs['properties']['name']:
         return GeojsonFile
     ##The coordinate system depends on the input file, thus, if specific filter or conversion from one to another,
@@ -141,7 +143,7 @@ def checkRefCoordinates(GeojsonFile):
 def ComputeDistance(v1,v2):
     return ((v2[0]-v1[0])**2+(v2[1]-v1[1])**2)**0.5
 
-def MakeAbsoluteCoord(idf,building):
+def MakeAbsoluteCoord(building,idf = []):
     # we need to convert change the reference coordinate because precision is needed for boundary conditions definition:
     newfoot = []
     for foot in building.footprint:
@@ -155,20 +157,23 @@ def MakeAbsoluteCoord(idf,building):
     for Wall in building.AdjacentWalls:
         newcoord = [(node[0] - building.RefCoord[0], node[1] - building.RefCoord[1]) for node in Wall['geometries']]
         Wall['geometries'] = newcoord
-    surfaces = idf.getsurfaces() + idf.getshadingsurfaces() + idf.getsubsurfaces()
-    for surf in surfaces:
-        for i,node in enumerate(surf.coords):
-            try:
-                x,y,z = node[0], node[1], node[2]
-                varx = 'Vertex_' + str(i+1) + '_Xcoordinate'
-                vary = 'Vertex_' + str(i+1) + '_Ycoordinate'
-                varz = 'Vertex_' + str(i+1) + '_Zcoordinate'
-                setattr(surf, varx, x + building.RefCoord[0])
-                setattr(surf, vary, y + building.RefCoord[1])
-                setattr(surf, varz, z)
-            except:
-                a=1
-    return idf,building
+    if idf:
+        surfaces = idf.getsurfaces() + idf.getshadingsurfaces() + idf.getsubsurfaces()
+        for surf in surfaces:
+            for i,node in enumerate(surf.coords):
+                try:
+                    x,y,z = node[0], node[1], node[2]
+                    varx = 'Vertex_' + str(i+1) + '_Xcoordinate'
+                    vary = 'Vertex_' + str(i+1) + '_Ycoordinate'
+                    varz = 'Vertex_' + str(i+1) + '_Zcoordinate'
+                    setattr(surf, varx, x + building.RefCoord[0])
+                    setattr(surf, vary, y + building.RefCoord[1])
+                    setattr(surf, varz, z)
+                except:
+                    a=1
+        return building, idf
+    else:
+        return building
 
 
 
@@ -477,6 +482,38 @@ def getInputFile(path,seperator):
             for id,key in enumerate(Header.keys()):
                 Header[key].append(Val[id].replace(',','.'))
     return Header
+
+def ManageGlobalPlots(BldObj,IdfObj,FigCenter,WindSize, PlotBldOnly,nbcase = [],LastBld = False):
+    FigCenter.append(BldObj.RefCoord)
+    refx = sum([center[0] for center in FigCenter]) / len(FigCenter)
+    refy = sum([center[1] for center in FigCenter]) / len(FigCenter)
+    FigCentroid = BldObj.RefCoord if PlotBldOnly else (refx, refy)
+    # we need to transform the prvious relatve coordinates into absolute one in order to make plot of several building keeping their location
+    if PlotBldOnly:
+        FigCentroid = (0,0)
+    else:
+        BldObj,IdfObj = MakeAbsoluteCoord(BldObj,IdfObj)
+
+    # compåuting the window size for visualization
+    for poly in BldObj.footprint:
+        for vertex in poly:
+            WindSize = max(ComputeDistance(FigCentroid, vertex), WindSize)
+    surf = IdfObj.getsurfaces()
+    ok2plot = False
+    nbadiab = 0
+    adiabsurf = []
+    for s in surf:
+        if s.Outside_Boundary_Condition == 'adiabatic':
+            ok2plot = True
+            if s.Name[:s.Name.index('_')] not in adiabsurf:
+                adiabsurf.append(s.Name[:s.Name.index('_')])
+                nbadiab += 1
+    RoofSpecialColor = "firebrick"
+    if nbcase in [39]:
+        RoofSpecialColor = 'limegreen'
+    IdfObj.view_model(test= True if PlotBldOnly+LastBld>0 else False, FigCenter=FigCentroid, WindSize=2 * WindSize,
+                       RoofSpecialColor=RoofSpecialColor)
+    return FigCenter,WindSize
 
 
 if __name__ == '__main__' :

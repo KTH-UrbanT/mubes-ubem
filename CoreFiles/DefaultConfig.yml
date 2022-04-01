@@ -14,6 +14,8 @@ DATA :
 SIM:
     CaseChoices:
         CaseName : 'ForTest'
+        MakePlotsOnly : False
+        MakePlotsPerBld : False
         UUID : []
         DESO : []
         VarName2Change : []

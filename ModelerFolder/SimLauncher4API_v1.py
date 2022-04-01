@@ -74,19 +74,23 @@ def Read_Arguments():
 
 def CreatePool2Launch(UUID,GlobKey):
     Pool2Launch = []
+    NewUUIDList = []
     for nbfile,keyPath in enumerate(GlobKey):
         DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
         #check of the building to run
         for bldNum, Bld in enumerate(DataBaseInput['Build']):
             if not UUID:
                 Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum})
+                try: NewUUIDList.append(Bld.properties['50A_UUID'])
+                except: NewUUIDList.append('BuildingIndexInFile:'+str(bldNum))
             else:
                 try:
                     if Bld.properties['50A_UUID'] in UUID:
                         Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum})
+                        NewUUIDList.append(Bld.properties['50A_UUID'])
                 except: pass
 
-    return Pool2Launch
+    return Pool2Launch,NewUUIDList
 
 if __name__ == '__main__' :
 
@@ -140,7 +144,7 @@ if __name__ == '__main__' :
     #this function makes the list of dictionnary with single input files if several are present inthe sample folder
     GlobKey, MultipleFiles = GrlFct.ListAvailableFiles(keyPath)
     #this function creates the full pool to launch afterward, including the file name and which buildings to simulate
-    Pool2Launch = CreatePool2Launch(CaseChoices['UUID'],GlobKey)
+    Pool2Launch,CaseChoices['UUID'] = CreatePool2Launch(CaseChoices['UUID'],GlobKey)
 
     PathInputFile = keyPath
     ######################################################################################################################
@@ -186,9 +190,6 @@ if __name__ == '__main__' :
     for idx,Case in enumerate(Pool2Launch):
         keypath = Case['keypath']
         nbBuild = Case['BuildNum2Launch'] #this will be used in case the file has to be read again (launched through prompt cmd)
-        if nbBuild not in [5]:
-            continue
-        print('here is build ' + str(nbBuild))
         MainInputs['FirstRun'] = True
         #First, lets create the folder for the building and simulation processes
         SimDir = GrlFct.CreateSimDir(CurrentPath, CaseChoices['CaseName'], SepThreads, nbBuild, idx, Refresh=CaseChoices['RefreshFolder'])
@@ -253,8 +254,17 @@ if __name__ == '__main__' :
         elif not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + 'v0.idf'))):
             # if not, then the building number will be appended to alist that will be used afterward
             File2Launch.append({'nbBuild': nbBuild, 'keypath': keypath})
-
-    if not SepThreads and not CaseChoices['CreateFMU']:
+    if CaseChoices['MakePlotsOnly']:
+        FigCenter = []
+        WindSize = 50
+        for file_idx,file in enumerate(File2Launch):
+            lastBld = True if (file_idx+1)/len(File2Launch)==1 else False
+            BldObj,IDFObj,Check = CB_OAT.LaunchOAT(MainInputs, SimDir, file['keypath'], file['nbBuild'], [1], 0,
+                                                  pythonpath,MakePlotOnly = CaseChoices['MakePlotsOnly'])
+            if Check == 'OK':
+                FigCenter, WindSize = GrlFct.ManageGlobalPlots(BldObj, IDFObj, FigCenter, WindSize,
+                                                           CaseChoices['MakePlotsPerBld'],nbcase=[], LastBld=lastBld)
+    elif not SepThreads and not CaseChoices['CreateFMU']:
         #lets launch the idf file creation process using the listed created above
         pool = mp.Pool(processes=int(nbcpu))
         for nbBuild in File2Launch:

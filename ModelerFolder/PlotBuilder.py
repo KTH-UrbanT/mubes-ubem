@@ -58,7 +58,7 @@ def LaunchProcess(SimDir, DataBaseInput, LogFile, bldidx, keyPath, nbcase, CoreP
     GrlFct.setEnvelopeLevel(idf_ref, building_ref)
     FigCentroid = building_ref.RefCoord if PlotBuilding else (refx, refy)
     #we need to transform the prvious relatve coordinates into absolute one in order to make plot of several building keeping their location
-    idf_ref, building_ref = GrlFct.MakeAbsoluteCoord(idf_ref,building_ref)
+    building_ref,idf_ref = GrlFct.MakeAbsoluteCoord(building_ref,idf_ref)
 
     # compåuting the window size for visualization
     for poly in building_ref.footprint:
@@ -91,8 +91,8 @@ def LaunchProcess(SimDir, DataBaseInput, LogFile, bldidx, keyPath, nbcase, CoreP
     # Bld2Sim = []
     # for line in FileLines:
     #     Bld2Sim.append(int(line))
-    # if nbcase in [5,7,39,41]:
-    #     RoofSpecialColor = 'limegreen'
+    if nbcase in [39]:
+        RoofSpecialColor = 'limegreen'
 
     idf_ref.view_model(test=PlotBuilding, FigCenter=FigCentroid, WindSize=2 * WindSize, RoofSpecialColor = RoofSpecialColor)
 
@@ -123,10 +123,10 @@ if __name__ == '__main__':
     # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
 
     import numpy as np
-    BuildNum = [7]#,14]#,15]#16,17,18,19,20]#,12,13,14,15]#,26,28,34,35]#[int(i) for i in np.linspace(5,10,6)]#[int(i) for i in np.linspace(0,3,4)]#[40,41,42,43,44,45,46,47,48,49]##[52]#,51,52,53]#[40,41,42,43,44,45,46,47,48,49]#[30,31,32,33,34,35,36,37,38,39]#[20,21,22,23,24,25,26,27,28,29]#[10,11,12,13,14,15,16,17,18,19]#[0,1,2,3,4,5,6,7,8,9]#[50,51,52,53]#
+    BuildNum = []#,14]#,15]#16,17,18,19,20]#,12,13,14,15]#,26,28,34,35]#[int(i) for i in np.linspace(5,10,6)]#[int(i) for i in np.linspace(0,3,4)]#[40,41,42,43,44,45,46,47,48,49]##[52]#,51,52,53]#[40,41,42,43,44,45,46,47,48,49]#[30,31,32,33,34,35,36,37,38,39]#[20,21,22,23,24,25,26,27,28,29]#[10,11,12,13,14,15,16,17,18,19]#[0,1,2,3,4,5,6,7,8,9]#[50,51,52,53]#
     CorePerim = False
     FloorZoning = False
-    PlotBuilding = False
+    PlotBuilding = True
     ZoneOfInterest = ''#'HSS_Network.txt'
 
     config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfig.yml'))
@@ -157,26 +157,27 @@ if __name__ == '__main__':
     # reading the pathfiles and the geojsonfile
     # lets see if the input file is a dir with several geojson files
     GlobKey, MultipleFiles =GrlFct.ListAvailableFiles(keyPath)
-    BuildingFiles,WallFiles = GrlFct.ReadGeoJsonDir(GlobKey[0])
+    #BuildingFiles,WallFiles = GrlFct.ReadGeoJsonDir(GlobKey[0])
     import yaml
     with open('ConfigFile.yml', 'w') as file:
         documents = yaml.dump(config, file)
-    if BuildingFiles:
-        multipleFiles = True
-        MainRootPath = GlobKey[0]['Buildingsfile']
-        GlobKey[0]['Buildingsfile'] = os.path.join(MainRootPath,BuildingFiles[0])
-        GlobKey[0]['Shadingsfile'] = os.path.join(MainRootPath, WallFiles[0])
-        for nb,file in enumerate(BuildingFiles[1:]):
-            GlobKey.append(GlobKey[-1].copy())
-            GlobKey[-1]['Buildingsfile'] = os.path.join(MainRootPath, file)
-            GlobKey[-1]['Shadingsfile'] = os.path.join(MainRootPath, WallFiles[nb+1])
+    # if BuildingFiles:
+    #     multipleFiles = True
+    #     MainRootPath = GlobKey[0]['Buildingsfile']
+    #     GlobKey[0]['Buildingsfile'] = os.path.join(MainRootPath,BuildingFiles[0])
+    #     GlobKey[0]['Shadingsfile'] = os.path.join(MainRootPath, WallFiles[0])
+    #     for nb,file in enumerate(BuildingFiles[1:]):
+    #         GlobKey.append(GlobKey[-1].copy())
+    #         GlobKey[-1]['Buildingsfile'] = os.path.join(MainRootPath, file)
+    #         GlobKey[-1]['Shadingsfile'] = os.path.join(MainRootPath, WallFiles[nb+1])
 
     for nbfile, keyPath in enumerate(GlobKey):
+
         # if nbfile not in [0]:
         #     continue
-        if MultipleFiles:
-            nb = len(GlobKey)
-            print('File number : '+str(nbfile) + ' which correspond to Area Ref : '+BuildingFiles[nbfile][:-18])
+        # if MultipleFiles:
+        #     nb = len(GlobKey)
+        #     print('File number : '+str(nbfile) + ' which correspond to Area Ref : '+BuildingFiles[nbfile][:-18])
         DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
         BuildNum2Launch = [i for i in range(len(DataBaseInput['Build']))]
         if BuildNum:
@@ -198,11 +199,12 @@ if __name__ == '__main__':
                 WindSize = 50
                 SimDir = CurrentPath
                 LogFile = open(os.path.join(SimDir, CaseName+'_Logs.log'), 'w')
-            if MultipleFiles:
-                msg = '[New AREA] A new goejson file is open (num '+str(nbfile)+'), Area Id : '+BuildingFiles[nbfile][:-18]+'\n'
-                print(msg[:-1])
-                GrlFct.Write2LogFile(msg, LogFile)
+            # if MultipleFiles:
+            #     msg = '[New AREA] A new goejson file is open (num '+str(nbfile)+'), Area Id : '+BuildingFiles[nbfile][:-18]+'\n'
+            #     print(msg[:-1])
+            #     GrlFct.Write2LogFile(msg, LogFile)
             for idx, nbBuild in enumerate(BuildNum2Launch):
+
                 if idx < len(DataBaseInput['Build']):
                     # getting through the mainfunction above :LaunchProcess() each building sees its idf done in a row within this function
                     try:

@@ -18,16 +18,17 @@ import BuildObject.DB_Data as DB_Data
 import re
 import time
 
-def LaunchOAT(MainInputs,SimDir,keypath,nbBuild,ParamVal,currentRun,pythonpath=[],BldObj=[]):
+def LaunchOAT(MainInputs,SimDir,keypath,nbBuild,ParamVal,currentRun,pythonpath=[],BldObj=[],
+              MakePlotOnly = False):
 
     #this function was made to enable either to launch a process in a seperate terminal or not, given a python path to a virtualenv
     #but if kept in seperate terminal, the inputfile needs to be read for each simulation...not really efficient,
     #thus, the first option, being fully in the same envirnment is used with the optionnal argument 'DataBaseInput'
     if not pythonpath:
-        LaunchProcess(SimDir, MainInputs['FirstRun'], MainInputs['TotNbRun'], currentRun,
-                                  keypath, nbBuild, MainInputs['CorePerim'],
-                                  MainInputs['FloorZoning'], ParamVal,MainInputs['VarName2Change'],MainInputs['CreateFMU'],
-                                    MainInputs['OutputsFile'],DataBaseInput = MainInputs['DataBaseInput'], DebugMode = MainInputs['DebugMode'])
+        return LaunchProcess(SimDir, MainInputs['FirstRun'], MainInputs['TotNbRun'], currentRun,keypath, nbBuild,
+                      MainInputs['CorePerim'], MainInputs['FloorZoning'], ParamVal,MainInputs['VarName2Change'],
+                      MainInputs['CreateFMU'],MainInputs['OutputsFile'],DataBaseInput = MainInputs['DataBaseInput'],
+                    DebugMode = MainInputs['DebugMode'],MakePlotOnly = MakePlotOnly)
     # if willing to launch each run in seperate terminals, all arguments must be given in text form and the pythonpath is required
     else:
         if platform.system() == "Windows":
@@ -61,7 +62,7 @@ def LaunchOAT(MainInputs,SimDir,keypath,nbBuild,ParamVal,currentRun,pythonpath=[
         check_call(cmdline,stdout=open(os.devnull, "w"))
 
 def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,FloorZoning,ParamVal,VarName2Change,
-                  CreateFMU,OutputsFile,DataBaseInput = [], DebugMode = False):
+                  CreateFMU,OutputsFile,DataBaseInput = [], DebugMode = False,MakePlotOnly = False):
     #This function builds the idf file, a log file is generated if the buildiung is run for the first time,
     #the idf file will be saved as well as the building object as a pickle. the latter could be commented as not required
     MainPath = os.getcwd()
@@ -93,7 +94,17 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
     if FirstRun:
         StudiedCase = BuildingList()
         #lets build the two main object we'll be playing with in the following : the idf and the building
-        idf, building = GrlFct.appendBuildCase(StudiedCase, epluspath, nbcase, DataBaseInput, MainPath,LogFile, DebugMode = DebugMode)
+        try:
+            idf, building = GrlFct.appendBuildCase(StudiedCase, keyPath, nbcase, DataBaseInput, MainPath,LogFile,
+                                               DebugMode = DebugMode,PlotOnly=MakePlotOnly)
+        except:
+            msg = '[Error] The Building Object Initialisation has failed...\n'
+            print(msg[:-1])
+            os.chdir(MainPath)
+            if FirstRun:
+                GrlFct.Write2LogFile(msg, LogFile)
+                GrlFct.Write2LogFile('##############################################################\n', LogFile)
+                return [], [], 'NOK'
         #Rounds of check if we continue with this building or not, see DB_Filter4Simulation.py if other filter are to add
         CaseOK = checkBldFilter(building,LogFile,DebugMode = DebugMode)
         if not CaseOK:
@@ -103,14 +114,15 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
             if FirstRun:
                 GrlFct.Write2LogFile(msg, LogFile)
                 GrlFct.Write2LogFile('##############################################################\n', LogFile)
-                return
+                return building,idf, 'NOK'
 
         # The simulation parameters are assigned here
-        GrlFct.setSimLevel(idf, building)
+        if not MakePlotOnly:
+            GrlFct.setSimLevel(idf, building)
         # The geometry is assigned here
         try:
             # start = time.time()
-            GrlFct.setBuildingLevel(idf, building,LogFile,CorePerim,FloorZoning,DebugMode = DebugMode)
+            GrlFct.setBuildingLevel(idf, building,LogFile,CorePerim,FloorZoning,DebugMode = DebugMode,ForPlots=MakePlotOnly)
             # end = time.time()
             # print('[Time Report] : The setBuildingLevel took : ',round(end-start,2),' sec')
         except:
@@ -120,7 +132,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
             if FirstRun:
                 GrlFct.Write2LogFile(msg, LogFile)
                 GrlFct.Write2LogFile('##############################################################\n', LogFile)
-                return
+                return building,idf, 'NOK'
         # if the number of run for one building is greater than 1 it means parametric simulation, a template file will be saved
         if TotNbRun>1:
             Case = {}
@@ -162,9 +174,10 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
         if FirstRun:
             GrlFct.Write2LogFile(msg, LogFile)
             GrlFct.Write2LogFile('##############################################################\n', LogFile)
-            return
-    #uncomment only to have a look at the splitting surfaces function effect. it will make a figure for each building created
-    #idf.view_model(test=True, FigCenter=(0,0))
+            return building,idf, 'NOK'
+    #the following is only to make building plots, so no need to go  feeding the indoor building inputs
+    if MakePlotOnly:
+        return building,idf, 'OK'
 
     # lets define the zone level now
     try:
