@@ -197,11 +197,10 @@ def SaveCase(MainPath,SepThreads,CaseName,nbBuild):
         except:
             pass
 
-def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,MultipleFile = '',Refresh = False):
-    if not os.path.exists(os.path.join(os.path.dirname(os.path.dirname(CurrentPath)),'MUBES_SimResults')):
-        os.mkdir(os.path.join(os.path.dirname(os.path.dirname(CurrentPath)),'MUBES_SimResults'))
-    SimDir = os.path.normcase(
-        os.path.join(os.path.dirname(os.path.dirname(CurrentPath)), os.path.join('MUBES_SimResults', CaseName)))
+def CreateSimDir(CurrentPath,DestinationPath,CaseName,SepThreads,nbBuild,idx,MultipleFile = '',Refresh = False):
+    if not os.path.exists(DestinationPath):
+        os.mkdir(os.path.abspath(DestinationPath))
+    SimDir = os.path.join(os.path.abspath(DestinationPath), CaseName)
     if not os.path.exists(SimDir):
         os.mkdir(SimDir)
     elif idx == 0 and Refresh:
@@ -354,7 +353,7 @@ def AppendLogFiles(MainPath):
         os.remove(os.path.join(MainPath, file2del))
 
 
-def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shadingsfile,nbcase,DB_Data,LogFile=[]):
+def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shadingsfile,nbcase,LogFile=[]):
     #there is a loop file along the variable name to change and if specific ation are required it should be define here
     # if the variable to change are embedded into several layer of dictionnaries than there is a need to make checks and change accordingly to the correct element
     # here are examples for InternalMass impact using 'InternalMass' keyword in the VarName2Change list to play with the 'WeightperZoneArea' parameter
@@ -383,7 +382,7 @@ def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shad
             setattr(building, var, exttmass)
         elif 'MaxShadingDist' in var:
             building.MaxShadingDist = round(ParamVal[varnum], roundVal)
-            building.shades = building.getshade(Buildingsfile[nbcase], Shadingsfile, Buildingsfile,DB_Data.GeomElement,LogFile,PlotOnly = False)
+            building.shades = building.getshade(Buildingsfile[nbcase], Shadingsfile, Buildingsfile,LogFile,PlotOnly = False)
         elif 'IntLoadCurveShape' in var:
             building.IntLoadCurveShape = max(round(ParamVal[varnum], roundVal),1e-6)
             building.IntLoad = building.getIntLoad(MainPath, LogFile)

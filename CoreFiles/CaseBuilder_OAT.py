@@ -12,9 +12,9 @@ from geomeppy import IDF
 import pickle#5 as pickle
 #import pickle5
 import CoreFiles.GeneralFunctions as GrlFct
-from BuildObject.DB_Building import BuildingList
-from BuildObject.DB_Filter4Simulations import checkBldFilter
-import BuildObject.DB_Data as DB_Data
+from BuildObject.BuildingObject import BuildingList
+from BuildObject.Filter4BldProcess import checkBldFilter
+#import BuildObject.DB_Data as DB_Data
 import re
 import time
 
@@ -159,7 +159,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
     building.name = 'Building_' + str(nbcase) +  'v'+str(currentRun)
 
     #in order to make parametric simulation, lets go along the VarName2Change list and change the building object attributes accordingly
-    GrlFct.setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shadingsfile,nbcase,DB_Data)
+    GrlFct.setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shadingsfile,nbcase)
 
     # lets assign the material and finalize the envelope definition
     try:

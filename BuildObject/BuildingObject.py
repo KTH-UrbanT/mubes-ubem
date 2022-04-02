@@ -115,7 +115,7 @@ class Building:
         config = setConfig.read_yaml('ConfigFile.yml')
         DBL = config['SIM']['DBLimits']
         BE = config['SIM']['BasisElement']
-        GE = config['SIM']['GeomElement']
+        self.GE = config['SIM']['GeomElement'] #these element might be needed afterward for parametric simulation, thus the keys words are needed
         EPC = config['SIM']['EPCMeters']
         SD = config['SIM']['SimuData']
         ExEn = config['SIM']['ExtraEnergy']
@@ -127,12 +127,12 @@ class Building:
         self.getBEData(BE)
         self.getSimData(SD)
         self.name = name
-        self.BuildID = self.getBuildID(DB, GE,LogFile)
+        self.BuildID = self.getBuildID(DB,LogFile)
         self.Multipolygon = self.getMultipolygon(DB)
         self.nbfloor = self.getnbfloor(DB, DBL,LogFile,DebugMode)
         self.nbBasefloor = self.getnbBasefloor(DB, DBL)
         self.height = self.getheight(DB, DBL)
-        self.DistTol = GE['DistanceTolerance']
+        self.DistTol = self.GE['DistanceTolerance']
         self.footprint,  self.BlocHeight, self.BlocNbFloor = self.getfootprint(DB,LogFile,self.nbfloor,DebugMode)
         self.AggregFootprint = self.getAggregatedFootprint()
         self.RefCoord = self.getRefCoord()
@@ -140,9 +140,8 @@ class Building:
         self.SharedBld, self.VolumeCorRatio = self.IsSameFormularIdBuilding(Buildingsfile, nbcase, LogFile, DBL,DebugMode)
         self.BlocHeight, self.BlocNbFloor, self.StoreyHeigth = self.EvenFloorCorrection(self.BlocHeight, self.nbfloor, self.BlocNbFloor, self.footprint, LogFile,DebugMode)
         self.EPHeatedArea = self.getEPHeatedArea(LogFile,DebugMode)
-        self.MaxShadingDist = GE['MaxShadingDist']
         self.AdjacentWalls = [] #this will be appended in the getshade function if any present
-        self.shades = self.getshade(DB,Shadingsfile,Buildingsfile,GE,JsonShadeFile,LogFile,DebugMode)
+        self.shades = self.getshade(DB,Shadingsfile,Buildingsfile,JsonShadeFile,LogFile,PlotOnly=PlotOnly,DebugMode = DebugMode)
         self.Materials = config['SIM']['BaseMaterial']
         self.InternalMass = config['SIM']['InternalMass']
         self.edgesHeights = self.getEdgesHeights()
@@ -299,9 +298,9 @@ class Building:
         for key in SD.keys():
             setattr(self, key, SD[key])
 
-    def getBuildID(self,DB,GE,LogFile):
+    def getBuildID(self,DB,LogFile):
         BuildID={}
-        for key in GE['BuildIDKey']:
+        for key in self.GE['BuildIDKey']:
             try:
                 BuildID[key] = DB.properties[key]
             except:
@@ -345,7 +344,7 @@ class Building:
 
     def getfootprint(self,DB,LogFile=[],nbfloor=0,DebugMode = False):
         "get the footprint coordinate and the height of each building bloc"
-        DistTol = self.DistTol
+        DistTol = self.GE['DistanceTolerance']
         coord = []
         node2remove =[]
         BlocHeight = []
@@ -657,7 +656,7 @@ class Building:
         return shades
 
 
-    def getshade(self, DB,Shadingsfile,Buildingsfile,GE,JSONFile,LogFile,PlotOnly = True,DebugMode = False):
+    def getshade(self, nbcase,Shadingsfile,Buildingsfile,JSONFile,LogFile,PlotOnly = True,DebugMode = False):
         "Get all the shading surfaces to be build for surrounding building effect"
         if JSONFile:
             import json
@@ -668,7 +667,8 @@ class Building:
 
         shades = {}
         try:
-            shadesID = DB.properties[GE['ShadingIdKey']]
+            GE = self.GE
+            shadesID = Buildingsfile[nbcase].properties[GE['ShadingIdKey']]
         except:
             return shades
         ModifiedShadeVertexes ={'ShadeId' : [], 'OldCoord': [], 'NewCoord' : []} #this dict will log the changes in the vertex coordinate to adjust other shading if necesseray afterward
@@ -704,7 +704,8 @@ class Building:
                 continue
             if ShadeWall[GE['ShadingIdKey']] =='V67656-3':
                 a=1
-            confirmed,currentShadingElement,OverlapCode = GeomUtilities.checkShadeWithFootprint(RelativeAgregFootprint,currentShadingElement,ShadeWall[GE['ShadingIdKey']],tol = self.DistTol)
+            confirmed,currentShadingElement,OverlapCode = GeomUtilities.checkShadeWithFootprint(RelativeAgregFootprint,
+                            currentShadingElement,ShadeWall[GE['ShadingIdKey']],tol = self.GE['DistanceTolerance'])
             if confirmed:
                 if ShadeWall['height']<=(max(self.BlocHeight)+self.StoreyHeigth):
                     OverlapCode +=1

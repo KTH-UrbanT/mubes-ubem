@@ -1,11 +1,11 @@
 #This files provides the default settings for MUBES
 APP : 
-    PATH_TO_MUBES_UBEM : ../MUBES_UBEM/
-    PATH_TO_MUBES_UBEM_PYTHON_WIN : ../venv/Scripts/python.exe
-    PATH_TO_MUBES_UBEM_PYTHON : ../venv/bin/python
-    PATH_TO_ENERGYPLUS_WIN : C:\EnergyPlusV9-1-0
+    #PATH_TO_MUBES_UBEM : ../MUBES_UBEM/
+    #PATH_TO_MUBES_UBEM_PYTHON_WIN : ../venv/Scripts/python.exe
+    #PATH_TO_MUBES_UBEM_PYTHON : ../venv/bin/python
+    #PATH_TO_ENERGYPLUS_WIN : C:\EnergyPlusV9-1-0
     PATH_TO_ENERGYPLUS : C:\EnergyPlusV9-1-0
-    PATH_TO_RESULTS : ../results/
+    PATH_TO_RESULTS : ../../MUBES_SimResults/
     
 DATA :
     Buildingsfile : '../ModelerFolder/Minneberg_Buildings_v1.geojson'
