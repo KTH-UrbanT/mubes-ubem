@@ -11,6 +11,7 @@ import CoreFiles.MUBES_pygeoj as MUBES_pygeoj
 import CoreFiles.BuildFMUs as BuildFMUs
 from openpyxl import load_workbook
 from SALib.sample import latin
+import openturns as ot
 import shutil
 import pickle
 import pyproj
@@ -224,19 +225,48 @@ def CreateSimDir(CurrentPath,DestinationPath,CaseName,SepThreads,nbBuild,idx,Mul
             os.mkdir(SimDir)
     return SimDir
 
-def getParamSample(VarName2Change,Bounds,nbruns):
+def getDistType(ParamMethod,Bounds):
+    if 'Normal' in ParamMethod:
+        return ot.Normal((Bounds[1]+Bounds[0])/2,(Bounds[1]-Bounds[0])/6)
+    elif 'Triangular' in ParamMethod:
+        return ot.Triangular(Bounds[0],(Bounds[1]+Bounds[0])/2, Bounds[1])
+    else:
+        #the Uniform law is by default
+        return ot.Uniform(Bounds[0],Bounds[1])
+
+def getParamSample(VarName2Change,Bounds,nbruns,ParamMethods):
     # Sampling process if someis define int eh function's arguments
     # It is currently using the latin hyper cube methods for the sampling generation (latin.sample)
     Param = [1]
-    try:
-        if len(VarName2Change) > 0:
-            problem = {}
-            problem['names'] = VarName2Change
-            problem['bounds'] = Bounds  # ,
-            problem['num_vars'] = len(VarName2Change)
-            # problem = read_param_file(MainPath+'\\liste_param.txt')
-            Param = latin.sample(problem, nbruns)
-    except: pass
+    #former version with SALib is below if OpenTurnsMethod is False
+    OpenTurnsMethod = True
+    if OpenTurnsMethod:
+        Dist = {}
+        LinearVal = {}
+        for idx,param in enumerate(VarName2Change):
+            if 'Linear' in ParamMethods[idx]:
+                LinearVal[param] = np.linspace(Bounds[idx][0],Bounds[idx][1],nbruns)
+            else:
+                Dist[param] = getDistType(ParamMethods[idx],Bounds[idx])
+        if Dist:
+            MakeDist = ot.ComposedDistribution([Dist[x] for x in Dist.keys()])
+            Sample = ot.LHSExperiment(MakeDist, nbruns).generate()
+            return np.array(Sample)
+        else:
+            #Sample = np.array([LinearVal[x] for x in LinearVal.keys()])
+            return np.array([[LinearVal[key][x] for key in LinearVal.keys()] for x in range(nbruns)])
+
+    else:
+        try:
+            if len(VarName2Change) > 0:
+                problem = {}
+                problem['names'] = VarName2Change
+                problem['bounds'] = Bounds  # ,
+                problem['num_vars'] = len(VarName2Change)
+                # problem = read_param_file(MainPath+'\\liste_param.txt')
+                Param = latin.sample(problem, nbruns)
+        except: pass
+
     return Param
 
 def CreatFMU(idf,building,nbcase,epluspath,SimDir, i,varOut,LogFile,DebugMode):
@@ -400,13 +430,14 @@ def SetParamSample(SimDir,CaseChoices,SepThreads):
     nbruns = CaseChoices['NbRuns']
     VarName2Change = CaseChoices['VarName2Change']
     Bounds = CaseChoices['Bounds']
+    ParamMethods = CaseChoices['ParamMethods']
     if SepThreads:
         Paramfile = os.path.join(SimDir, 'ParamSample.pickle')#os.path.join(os.path.dirname(SimDir), 'ParamSample.pickle')
         if os.path.isfile(Paramfile):
             with open(Paramfile, 'rb') as handle:
                 ParamSample = pickle.load(handle)
         else:
-            ParamSample = getParamSample(VarName2Change,Bounds,nbruns)
+            ParamSample = getParamSample(VarName2Change,Bounds,nbruns,ParamMethods)
             if nbruns>1:
                 with open(Paramfile, 'wb') as handle:
                     pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -416,7 +447,7 @@ def SetParamSample(SimDir,CaseChoices,SepThreads):
             with open(Paramfile, 'rb') as handle:
                 ParamSample = pickle.load(handle)
         else:
-            ParamSample = getParamSample(VarName2Change, Bounds, nbruns)
+            ParamSample = getParamSample(VarName2Change, Bounds, nbruns,ParamMethods)
             if nbruns > 1:
                 with open(Paramfile, 'wb') as handle:
                     pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)

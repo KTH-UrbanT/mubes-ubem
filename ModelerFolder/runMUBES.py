@@ -222,7 +222,7 @@ if __name__ == '__main__' :
                 else:
                     Finished,idx_offset,ParamSample = CalibUtil.CompareSample(Finished,idx_offset, SimDir, CurrentPath, nbBuild, CaseChoices['VarName2Change'],
                                 CaseChoices['CalibTimeBasis'], CaseChoices['MeasurePath4Calibration'],ParamSample,
-                                CaseChoices['Bounds'], CaseChoices['BoundsLim'], NbRun)
+                                CaseChoices['Bounds'], CaseChoices['BoundsLim'], CaseChoices['ParamMethods'],NbRun)
                     print('Offset is :'+ str(idx_offset))
 
         # lets check if this building is already present in the folder (means Refresh = False in CreateSimDir() above)

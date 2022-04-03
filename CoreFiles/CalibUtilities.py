@@ -272,7 +272,8 @@ def getTheWeightedWinners(VarName2Change,Matches20, Matches10, Matches5):
                 Matches[key] = np.append(Matches[key], Matches5[key])
     return Matches, int(nbwinners)
 
-def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change,CalibBasis,MeasPath,ParamSample,Bounds,BoundLim,NbRun):
+def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change,CalibBasis,MeasPath,ParamSample,
+                  Bounds,BoundLim,ParamMethods,NbRun):
     # once every run has been computed, lets get the matche and compute the covariance depending on the number of matches
     extraVar = ['nbAppartments', 'ATempOr', 'SharedBld', 'height', 'StoreyHeigth', 'nbfloor','BlocHeight','BlocFootprintArea','BlocNbFloor',
                 'HeatedArea', 'AreaBasedFlowRate','NonHeatedArea', 'Other']
@@ -321,7 +322,7 @@ def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change
                             fullRange = (BoundLim[i][1]-BoundLim[i][0])*openRange
                             ModifiedBounds.append([max(BoundLim[i][0], NewSample1[:, i].min() - 0.1*fullRange),
                                                    min(BoundLim[i][1], NewSample1[:, i].max() + 0.1*fullRange)])
-                        NewSample2 = GrlFct.getParamSample(VarName2Change, ModifiedBounds, NbNewRuns)
+                        NewSample2 = GrlFct.getParamSample(VarName2Change, ModifiedBounds, NbNewRuns,ParamMethods)
                         NewSample = np.append(NewSample1, NewSample2, axis=0)
                     else:
                         NewSample = NewSample1
@@ -329,10 +330,10 @@ def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change
                 except:
                     print('Covariance did not work...')
                     Bounds = getNewBounds(Bounds, BoundLim)
-                    NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRun)
+                    NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRun,ParamMethods)
             else:
                 Bounds = getNewBounds(Bounds, BoundLim)
-                NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRun)
+                NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRun,ParamMethods)
             idx_offset = len(ParamSample[:, 0])
             ParamSample = np.concatenate((ParamSample, NewSample))
             Paramfile = os.path.join(SimDir, 'ParamSample.pickle')
@@ -344,7 +345,7 @@ def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change
             Finished = True
         else:
             Bounds = getNewBounds(Bounds, BoundLim)
-            NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRun)
+            NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRun,ParamMethods)
             idx_offset = len(ParamSample[:, 0])
             ParamSample = np.concatenate((ParamSample, NewSample))
             Paramfile = os.path.join(SimDir, 'ParamSample.pickle')

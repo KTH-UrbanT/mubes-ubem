@@ -22,6 +22,8 @@ SIM:
         Bounds : []
         BoundsLim : []
         NbRuns : 1
+        ParamMethods : ['Uniform']
+        # ParamSampling can be 'Linear' from lowe tu upper bounds, 'LHS' stand for LatinHypercube Sampling
         CreateFMU : False
         CorePerim : False
         FloorZoning : True
