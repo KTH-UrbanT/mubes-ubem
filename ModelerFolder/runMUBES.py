@@ -94,6 +94,11 @@ def CreatePool2Launch(UUID,GlobKey):
                         Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum,'NbBldandOr':'' })
                         NewUUIDList.append(Bld.properties['50A_UUID'])
                 except: pass
+        if not Pool2Launch:
+            print('###  INPUT ERROR ### ')
+            print('/!\ None of the building UUID were found in the input GeoJson file...')
+            print('/!\ Please, check you inputs.')
+            sys.exit()
         Pool2Launch[idx]['NbBldandOr'] = str(len(Pool2Launch)-idx) +' buildings will be considered from '+os.path.basename(keyPath['Buildingsfile'])
     return Pool2Launch,NewUUIDList
 
@@ -257,14 +262,22 @@ if __name__ == '__main__' :
     if CaseChoices['MakePlotsOnly']:
         FigCenter = []
         WindSize = 50
+        totalsize = 0
+        offset = 0
         for ListKey in File2Launch:
+            totalsize += len(File2Launch[ListKey])
+        for nbfile,ListKey in enumerate(File2Launch):
             for file_idx,file in enumerate(File2Launch[ListKey]):
-                lastBld = True if (file_idx+1)/len(File2Launch[ListKey])==1 else False
+                if CaseChoices['Verbose'] : print('process completed by '+str(round(100*(file_idx+nbfile+1+offset)/totalsize,1))+ ' %')
+                done = (file_idx+nbfile+1+offset)/totalsize
+                lastBld = True if done==1 and nbfile+1 == len(File2Launch) else False
                 BldObj,IDFObj,Check = CB_OAT.LaunchOAT(MainInputs, file['SimDir'], file['keypath'], file['nbBuild'], [1], 0,
                                                       pythonpath,MakePlotOnly = CaseChoices['MakePlotsOnly'])
                 if Check == 'OK':
                     FigCenter, WindSize = GrlFct.ManageGlobalPlots(BldObj, IDFObj, FigCenter, WindSize,
                                                                CaseChoices['MakePlotsPerBld'],nbcase=[], LastBld=lastBld)
+            offset += file_idx
+            GrlFct.CleanUpLogFiles(file['SimDir'])
     elif not SepThreads and not CaseChoices['CreateFMU']:
         CurrentSimDir = ''
         for ListKey in File2Launch:
@@ -276,7 +289,7 @@ if __name__ == '__main__' :
             if not MultipleFiles and CaseChoices['Verbose']: print('Idf input files under process...')
             CurrentSimDir = File2Launch[ListKey][0]['SimDir']
             pool = mp.Pool(processes=int(nbcpu))
-            for nbBuild in File2Launch[ListKey][:10]:
+            for nbBuild in File2Launch[ListKey]:
                 pool.apply_async(CB_OAT.LaunchOAT, args=(MainInputs,nbBuild['SimDir'],nbBuild['keypath'],nbBuild['nbBuild'],[1],0,pythonpath))
             pool.close()
             pool.join()

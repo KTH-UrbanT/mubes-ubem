@@ -349,6 +349,7 @@ def CleanUpLogFiles(MainPath):
         file1.close()
         for line in Lines:
             Write2LogFile(line,MainLogFile)
+        Write2LogFile('#############################################################\n', MainLogFile)
         os.remove(os.path.join(MainPath,file))
     MainLogFile.close()
 

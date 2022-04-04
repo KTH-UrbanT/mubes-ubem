@@ -4,6 +4,8 @@
 import os
 import sys
 import re
+import yaml
+import shutil
 
 # #add the required path for geomeppy special branch
 path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
@@ -15,7 +17,7 @@ sys.path.append(MUBES_Paths)
 
 import CoreFiles.GeneralFunctions as GrlFct
 import CoreFiles.setConfig as setConfig
-from BuildObject.DB_Building import Building
+from BuildObject.BuildingObject import Building
 import numpy as np
 import json
 from shapely.geometry import Polygon, LineString, Point
@@ -61,12 +63,28 @@ def Read_Arguments():
         if (currArg.startswith('-CONFIG')):
             currIdx += 1
             Config2Launch = json.loads(sys.argv[currIdx])
+        if (currArg.startswith('-yml')):
+            currIdx += 1
+            Config2Launch = sys.argv[currIdx]
+            return Config2Launch
+        if (currArg.startswith('-geojson')):
+            currIdx += 1
+            Config2Launch = sys.argv[currIdx]
+            return Config2Launch
         currIdx += 1
     return Config2Launch
 
-def CreatePolygonEnviro(UUID,GlobKey):
+def CreatePolygonEnviro(UUID,GlobKey,config):
     PolygonEnviro = {}
+    MainPath = os.getcwd()
     for nbfile,keyPath in enumerate(GlobKey):
+        #we need to create a temporary folder to stor the log file if needed
+        SimDir = os.path.join(os.path.dirname(keyPath['Buildingsfile']),'Temp')
+        if not os.path.isdir(SimDir):
+            os.mkdir(SimDir)
+        os.chdir(SimDir)
+        with open(os.path.join(SimDir, 'ConfigFile.yml'), 'w') as file:
+            documents = yaml.dump(config, file)
         PolygonEnviro[nbfile] = {'Bld_ID': [], 'EdgesHeights': [], 'FootPrint': [], 'BldNum': [], 'WindowSize': [],
                          'Centroid': []}
         PolygonEnviro[nbfile]['PathName'] = keyPath['Buildingsfile']
@@ -77,8 +95,8 @@ def CreatePolygonEnviro(UUID,GlobKey):
         print('Urban Area under construction with:')
         for bldNum, Bld in enumerate(DataBaseInput['Build']):
             print('--building '+str(bldNum) +' / '+str(Size))
-            BldObj = Building('Bld'+str(bldNum), DataBaseInput, bldNum, os.path.dirname(keyPath['Buildingsfile']),
-                              keyPath['Buildingsfile'],LogFile=[],PlotOnly=False, DebugMode=False)
+            BldObj = Building('Bld'+str(bldNum), DataBaseInput, bldNum, SimDir,
+                              '',LogFile=[],PlotOnly=True, DebugMode=False)
             PolygonEnviro[nbfile]['FootPrint'].append(BldObj.AggregFootprint)
             try: BldID = BldObj.BuildID['50A_UUID']
             except: BldID = 'BuildingIndexInFile:' + str(bldNum)
@@ -95,10 +113,18 @@ def MakePointOutside(Edge,poly):
     resolution = 3
     x = round((p2[0] + p1[0]) / 2,resolution) + epsilon
     y = round((p2[1] + p1[1]) / 2,resolution) + epsilon
+    x1 = round((0.95*p2[0] + 0.05*p1[0]), resolution) + epsilon
+    y1 = round((0.95*p2[1] + 0.05*p1[1]), resolution) + epsilon
+    x2 = round((0.05*p2[0] + 0.95*p1[0]), resolution) + epsilon
+    y2 = round((0.05*p2[1] + 0.95*p1[1]), resolution) + epsilon
     if Polygon(poly).contains(Point(x,y)): #helper_fcts.inside_polygon(x, y, np.array(poly), border_value=False):
         x -= 2*epsilon
         y -= 2*epsilon
-    return x,y
+        x1 -= 2 * epsilon
+        y1 -= 2 * epsilon
+        x2 -= 2 * epsilon
+        y2 -= 2 * epsilon
+    return (x,y),(x1,y1),(x2,y2)
 
 def isEdgeDone(Matches,Edge):
     p1 = Edge[0]
@@ -162,8 +188,7 @@ def computMatchesNew(Data):
             for seg,vertex in enumerate(bld):
                 StartingEdge = [vertex, bld[(seg + 1) % len(bld)]]
                 #lets make the tsarting point
-                x, y = MakePointOutside(StartingEdge, np.array(bld))
-                start_coordinates = (x, y)
+                start_coordinates,s1,s2 = MakePointOutside(StartingEdge, np.array(bld))
                 a, b, Orientation = checkEdgeOrientation(StartingEdge,start_coordinates)
                 #lets check if the building is in the view of the segde
                 Bldvisible = False
@@ -175,8 +200,6 @@ def computMatchesNew(Data):
                 if not Bldvisible:
                     continue
                 for seg1, vertex1 in enumerate(bld1):
-                    if seg == 18 and seg1 == 6:
-                        toto = 1
                     EndingEdge = [vertex1, bld1[(seg1 + 1) % len(bld1)]]
                     #MakeIntermediateFig(bld, bld1, bldBox, StartingEdge, EndingEdge)
                     #define if there is a need to go into this edge
@@ -189,19 +212,22 @@ def computMatchesNew(Data):
                     #lets check if the current building has already been treated for the edge and building (reciprocity from the first analyses)
                     BldDone = isBldDone(Matches, EdgeDone, Data['Bld_ID'][bldidx])
                     if EdgeDone and not BldDone or not EdgeDone:
-                        x, y = MakePointOutside(EndingEdge, np.array(bld1))
-                        goal_coordinates = (x, y)
-                        Ray = LineString([start_coordinates, goal_coordinates])
+                        goal_coordinates,g1,g2 = MakePointOutside(EndingEdge, np.array(bld1))
+                        #the five Ray below are to consider either the middle point of the edge point (being 5% form the edges (see MakePointOutside())
+                        Raym = LineString([start_coordinates, goal_coordinates])
+                        Ray11 = LineString([s1, g1])
+                        Ray12 = LineString([s1, g2])
+                        Ray21 = LineString([s2, g1])
+                        Ray22 = LineString([s2, g2])
                         for bldunit in NewBld:
                             Visible = True
-                            if Polygon(bldunit).intersection(Ray):
+                            if Polygon(bldunit).intersection(Ray11) and Polygon(bldunit).intersection(Ray12) and \
+                                Polygon(bldunit).intersection(Ray21) and Polygon(bldunit).intersection(Ray22):
                                 Visible = False
                                 break
                         if not Visible:
                             continue
                         else:
-                            if edgeidx ==26:
-                                a=1
                             #MakeIntermediateFig(bld, bld1, bldBox, StartingEdge, EndingEdge)
                             if not EdgeDone:
                                 #lets feed the disctionnary for this edge
@@ -212,8 +238,6 @@ def computMatchesNew(Data):
                                 Matches[edgeidx]['RecepientBld_ID'].append(Data['Bld_ID'][bldidx])
                                 Matches[edgeidx]['Rays'].append([start_coordinates,goal_coordinates])
                                 edgeidx += 1
-                                if edgeidx == 26:
-                                    a = 1
                                 #lets feed the reciprocity as well
                                 EdgeDone = isEdgeDone(Matches, StartingEdge)
                                 BldDone = isBldDone(Matches, EdgeDone, Data['Bld_ID'][bldidx1 + offsetidx])
@@ -247,41 +271,18 @@ def computMatchesNew(Data):
 
 if __name__ == '__main__' :
 
-    ######################################################################################################################
-    ########        MAIN INPUT PART  (choices from the modeler)   ########################################################
-    ######################################################################################################################
-    #The Modeler have to fill in the following parameter to define his choices
-
-    # CaseName = 'String'                   #name of the current study (the ouput folder will be renamed using this entry)
-    # BuildNum = [1,2,3,4]                  #list of numbers : number of the buildings to be simulated (order respecting the
-    #                                       geojsonfile), if empty, all building in the geojson file will be considered
-    # VarName2Change = ['String','String']  #list of strings: Variable names (same as Class Building attribute, if different
-    #                                       see LaunchProcess 'for' loop for examples)
-    # Bounds = [[x1,y1],[x2,y2]]            #list of list of 2 values  :bounds in which the above variable will be allowed to change
-    # NbRuns = 1000                         #number of run to launch for each building (all VarName2Change will have automotaic
-    #                                       allocated value (see sampling in LaunchProcess)
-    # CPUusage = 0.7                        #factor of possible use of total CPU for multiprocessing. If only one core is available,
-    #                                       this value should be 1
-    # CreateFMU = False / True             #True = FMU are created for each building selected to be computed in BuildNum
-    #                                       #no simulation will be run but the folder CaseName will be available for the FMUSimPlayground.py
-    # CorePerim = False / True             #True = create automatic core and perimeter zonning of each building. This options increases in a quite
-    #                                       large amount both building process and simulation process.
-    #                                       It can used with either one zone per floor or one zone per heated or none heated zone
-    #                                       building will be generated first, all results will be saved in one single folder
-    # FloorZoning = False / True            True = thermal zoning will be realized for each floor of the building, if false, there will be 1 zone
-    #                                       for the heated volume and, if present, one zone for the basement (non heated volume
-    # PathInputFile = 'String'              #Name of the PathFile containing the paths to the data and to energyplus application (see ReadMe)
-    # OutputsFile = 'String'               #Name of the Outfile with the selected outputs wanted and the associated frequency (see file's template)
-    # ZoneOfInterest = 'String'             #Text file with Building's ID that are to be considered withoin the BuildNum list, if '' than all building in BuildNum will be considered
-
-    #these are default values :
-    #UUID,DESO,CaseName,DataPath = Read_Arguments()
-    ConfigFromAPI = Read_Arguments()
+    ConfigFromArg = Read_Arguments()
     config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()),'CoreFiles','DefaultConfig.yml'))
-    CaseChoices = config['SIM']['CaseChoices']
-
-    if ConfigFromAPI:
-        config = setConfig.ChangeConfigOption(config, ConfigFromAPI)
+    CaseChoices = config['2_SIM']['0_CaseChoices']
+    geojsonfile = False
+    print(ConfigFromArg)
+    if type(ConfigFromArg) == str and ConfigFromArg[-4:] == '.yml':
+        localConfig = setConfig.read_yaml(ConfigFromArg)
+        config = setConfig.ChangeConfigOption(config, localConfig)
+    elif type(ConfigFromArg) == str and ConfigFromArg[-8:] == '.geojson':
+        geojsonfile = True
+    elif ConfigFromArg:
+        config = setConfig.ChangeConfigOption(config, ConfigFromArg)
         CaseChoices['OutputFile'] = 'Outputs4API.txt'
     else:
         config = setConfig.check4localConfig(config, os.getcwd())
@@ -289,16 +290,17 @@ if __name__ == '__main__' :
     if type(config) != dict:
         print('Something seems wrong in : ' + config)
         sys.exit()
-    epluspath = config['APP']['PATH_TO_ENERGYPLUS']
+    epluspath = config['0_APP']['PATH_TO_ENERGYPLUS']
     #a first keypath dict needs to be defined to comply with the current paradigme along the code
-    Buildingsfile = os.path.abspath(config['DATA']['Buildingsfile'])
-    Shadingsfile = os.path.abspath(config['DATA']['Shadingsfile'])
-    keyPath =  {'epluspath': epluspath, 'Buildingsfile': Buildingsfile, 'Shadingsfile': Shadingsfile,'pythonpath': '','GeojsonProperties':''}
+    Buildingsfile = os.path.abspath(config['1_DATA']['Buildingsfile'])
+    keyPath =  {'epluspath': epluspath, 'Buildingsfile': Buildingsfile,'pythonpath': '','GeojsonProperties':''}
+    if geojsonfile:
+        keyPath['Buildingsfile'] = ConfigFromArg
     #this function makes the list of dictionnary with single input files if several are present inthe sample folder
     GlobKey, MultipleFiles = GrlFct.ListAvailableFiles(keyPath)
     #this function creates the full pool to launch afterward, including the file name and which buildings to simulate
-    print('Urban Area is first build by aggregatong all building in each geojson files')
-    PolygonEnviro = CreatePolygonEnviro(CaseChoices['UUID'],GlobKey)
+    print('Urban Area is first build by aggregating all building in each geojson files')
+    PolygonEnviro = CreatePolygonEnviro(CaseChoices['UUID'],GlobKey,config)
     print('Lets compute, for each building the shadowing surfaces from others')
     for Enviro in PolygonEnviro:
         computMatchesNew(PolygonEnviro[Enviro])

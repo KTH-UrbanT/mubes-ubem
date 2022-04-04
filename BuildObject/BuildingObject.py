@@ -103,7 +103,6 @@ class BuildingList:
         )
 
 class Building:
-
     def __init__(self,name,DataBaseInput,nbcase,MainPath,BuildingFilePath,LogFile,PlotOnly,DebugMode):
         Buildingsfile = DataBaseInput['Build']
         DB = Buildingsfile[nbcase]
