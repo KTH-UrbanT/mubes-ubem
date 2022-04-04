@@ -3,13 +3,14 @@
 
 from shapely.geometry.polygon import Polygon, Point, LineString
 import CoreFiles.GeneralFunctions as GrlFct
+import CoreFiles.MUBES_pygeoj as MUBES_pygeoj
 from CoreFiles import setConfig as setConfig
 from geomeppy.geom.polygons import Polygon2D, break_polygons, Polygon3D
 from geomeppy import IDF
 from geomeppy.geom import core_perim
 import os
+import json
 import shutil
-#import BuildObject.DB_Data as DB_Data
 import BuildObject.GeomUtilities as GeomUtilities
 import re
 import CoreFiles.ProbGenerator as ProbGenerator
@@ -103,22 +104,16 @@ class BuildingList:
 
 class Building:
 
-    def __init__(self,name,DataBaseInput,nbcase,MainPath,GeoJsonFilePath,LogFile,PlotOnly,DebugMode):
-        #lets check if a json file is there for the shadowing walls
-        GeoJsonFileName = os.path.basename(GeoJsonFilePath)
-        JsonShadeFile = []
-        if os.path.isfile(os.path.join(os.path.dirname(GeoJsonFilePath),GeoJsonFileName[:GeoJsonFileName.index('.')] + '_Walls.json')):
-            JsonShadeFile = os.path.join(os.path.dirname(GeoJsonFilePath),GeoJsonFileName[:GeoJsonFileName.index('.')] + '_Walls.json')
+    def __init__(self,name,DataBaseInput,nbcase,MainPath,BuildingFilePath,LogFile,PlotOnly,DebugMode):
         Buildingsfile = DataBaseInput['Build']
-        Shadingsfile = DataBaseInput['Shades']
         DB = Buildingsfile[nbcase]
         config = setConfig.read_yaml('ConfigFile.yml')
-        DBL = config['SIM']['DBLimits']
-        BE = config['SIM']['BasisElement']
-        self.GE = config['SIM']['GeomElement'] #these element might be needed afterward for parametric simulation, thus the keys words are needed
-        EPC = config['SIM']['EPCMeters']
-        SD = config['SIM']['SimuData']
-        ExEn = config['SIM']['ExtraEnergy']
+        DBL = config['2_SIM']['DBLimits']
+        BE = config['2_SIM']['BasisElement']
+        self.GE = config['2_SIM']['GeomElement'] #these element might be needed afterward for parametric simulation, thus the keys words are needed
+        EPC = config['2_SIM']['EPCMeters']
+        SD = config['2_SIM']['2_SimuData']
+        ExEn = config['2_SIM']['ExtraEnergy']
         try:
             self.CRS = Buildingsfile.crs['properties']['name'] #this is the coordinates reference system for the polygons
         except:
@@ -141,18 +136,24 @@ class Building:
         self.BlocHeight, self.BlocNbFloor, self.StoreyHeigth = self.EvenFloorCorrection(self.BlocHeight, self.nbfloor, self.BlocNbFloor, self.footprint, LogFile,DebugMode)
         self.EPHeatedArea = self.getEPHeatedArea(LogFile,DebugMode)
         self.AdjacentWalls = [] #this will be appended in the getshade function if any present
-        self.shades = self.getshade(DB,Shadingsfile,Buildingsfile,JsonShadeFile,LogFile,PlotOnly=PlotOnly,DebugMode = DebugMode)
-        self.Materials = config['SIM']['BaseMaterial']
-        self.InternalMass = config['SIM']['InternalMass']
+        try:
+            self.shades = self.getshade(nbcase, Buildingsfile, BuildingFilePath,LogFile, PlotOnly=PlotOnly,DebugMode=DebugMode)
+        except:
+            msg = '[Shadowing Error] Json or GeoJson or file failed, no shading are considered\n'
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+            self.shades = {}
+            pass
+        self.Materials = config['2_SIM']['BaseMaterial']
+        self.InternalMass = config['2_SIM']['InternalMass']
         self.edgesHeights = self.getEdgesHeights()
         self.MakeRelativeCoord()# we need to convert into local coordinate in order to compute adjacencies with more precision than keeping thousand of km for x and y
         if not PlotOnly:
             #the attributres above are needed in all case, the one below are needed only if energy simulation is asked for
-            self.VentSyst = self.getVentSyst(DB, config['SIM']['VentSyst'], LogFile,DebugMode)
+            self.VentSyst = self.getVentSyst(DB, config['2_SIM']['VentSyst'], LogFile,DebugMode)
             self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB, DBL, BE)
-            self.OccupType = self.getOccupType(DB, config['SIM']['OccupType'], LogFile,DebugMode)
+            self.OccupType = self.getOccupType(DB, config['2_SIM']['OccupType'], LogFile,DebugMode)
             self.nbStairwell = self.getnbStairwell(DB, DBL)
-            self.WeatherDataFile = config['SIM']['WeatherFile']['Loc']
+            self.WeatherDataFile = config['2_SIM']['1_WeatherFile']['Loc']
             self.year = self.getyear(DB, DBL)
             self.EPCMeters = self.getEPCMeters(DB, EPC, LogFile,DebugMode)
             if len(self.SharedBld) > 0:
@@ -655,86 +656,108 @@ class Building:
                 shades[key]['distance'] = dist
         return shades
 
-
-    def getshade(self, nbcase,Shadingsfile,Buildingsfile,JSONFile,LogFile,PlotOnly = True,DebugMode = False):
+    def getshade(self, nbcase, Buildingsfile, BuildingFilePath,LogFile, PlotOnly=True, DebugMode=False):
         "Get all the shading surfaces to be build for surrounding building effect"
+        JSONFile = []
+        GeJsonFile = []
+        shades = {}
+        BuildingFileName = os.path.basename(BuildingFilePath)
+        if os.path.isfile(os.path.join(os.path.dirname(BuildingFilePath),
+                                       BuildingFileName[:BuildingFileName.index('.')] + '_Walls.json')):
+            JSONFile = os.path.join(os.path.dirname(BuildingFilePath),
+                                       BuildingFileName[:BuildingFileName.index('.')] + '_Walls.json')
+        elif os.path.isfile(os.path.join(os.path.dirname(BuildingFilePath),
+                                       BuildingFileName.replace('Buildings', 'Walls'))):
+            GeJsonFile = os.path.join(os.path.dirname(BuildingFilePath),
+                                        BuildingFileName.replace('Buildings', 'Walls'))
+
         if JSONFile:
-            import json
+            msg = '[Shadowing Info] Shadowing walls are taken from a json file\n'
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
             with open(JSONFile) as json_file:
                 ShadowingWalls = json.load(json_file)
-            print('Shadowing walls are taken from a json file')
             return self.getShadesFromJson(ShadowingWalls)
-
-        shades = {}
-        try:
-            GE = self.GE
-            shadesID = Buildingsfile[nbcase].properties[GE['ShadingIdKey']]
-        except:
-            return shades
-        ModifiedShadeVertexes ={'ShadeId' : [], 'OldCoord': [], 'NewCoord' : []} #this dict will log the changes in the vertex coordinate to adjust other shading if necesseray afterward
-
-        RelativeAgregFootprint = [(node[0] - self.RefCoord[0], node[1] - self.RefCoord[1]) for node in self.AggregFootprint]
-        Meancoordx = list(Polygon(RelativeAgregFootprint).centroid.coords)[0][0]
-        Meancoordy = list(Polygon(RelativeAgregFootprint).centroid.coords)[0][1]
+        elif GeJsonFile:
+            msg = '[Shadowing Info] Shadowing walls are taken from a GeoJson file\n'
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+            Shadingsfile = MUBES_pygeoj.load(GeJsonFile)
+            Shadingsfile = GrlFct.checkRefCoordinates(Shadingsfile)
 
 
-        currentRef = self.getRefCoord()
-        ref = (0, 0) if currentRef==self.RefCoord else self.RefCoord
-        idlist = [-1]
-        for m in re.finditer(';', shadesID):
-            idlist.append(m.start())
-        for ii, sh in enumerate(idlist):
-            if ii == len(idlist) - 1:
-                wallId = shadesID[idlist[ii] + 1:]
-            else:
-                wallId = shadesID[idlist[ii] + 1:idlist[ii + 1]]
-            ShadeWall = findWallId(wallId, Shadingsfile, ref, GE)
-            if not 'height' in ShadeWall.keys():
-                ShadeWall['height'] = findBuildId(ShadeWall[GE['BuildingIdKey']], Buildingsfile,GE)
-                if ShadeWall['height']==None:
-                    ShadeWall['height'] = self.height
-            currentShadingElement = [(node[0]-self.RefCoord[0],node[1]-self.RefCoord[1]) for node in ShadeWall[GE['VertexKey']]]
-            meanPx = (currentShadingElement[0][0] + currentShadingElement[1][0]) / 2
-            meanPy = (currentShadingElement[0][1] + currentShadingElement[1][1]) / 2
-            edgelength = LineString(currentShadingElement).length
-            if edgelength<2:
-                msg = '[Shading Info] This one is dropped, less than 2m wide ('+str(round(edgelength,2))+'m), shading Id : '+ ShadeWall[GE['ShadingIdKey']] +'\n'
-                if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
-                #print(msg[:-1])
-                continue
-            if ShadeWall[GE['ShadingIdKey']] =='V67656-3':
-                a=1
-            confirmed,currentShadingElement,OverlapCode = GeomUtilities.checkShadeWithFootprint(RelativeAgregFootprint,
-                            currentShadingElement,ShadeWall[GE['ShadingIdKey']],tol = self.GE['DistanceTolerance'])
-            if confirmed:
-                if ShadeWall['height']<=(max(self.BlocHeight)+self.StoreyHeigth):
-                    OverlapCode +=1
-                    ShadeWall['height'] = self.StoreyHeigth*round(ShadeWall['height'] / self.StoreyHeigth) #max(self.BlocHeight)#
-                self.AdjacentWalls.append(ShadeWall)
+            try:
+                GE = self.GE
+                shadesID = Buildingsfile[nbcase].properties[GE['ShadingIdKey']]
+            except:
+                return shades
+            ModifiedShadeVertexes ={'ShadeId' : [], 'OldCoord': [], 'NewCoord' : []} #this dict will log the changes in the vertex coordinate to adjust other shading if necesseray afterward
+
+            RelativeAgregFootprint = [(node[0] - self.RefCoord[0], node[1] - self.RefCoord[1]) for node in self.AggregFootprint]
+            Meancoordx = list(Polygon(RelativeAgregFootprint).centroid.coords)[0][0]
+            Meancoordy = list(Polygon(RelativeAgregFootprint).centroid.coords)[0][1]
+
+
+            currentRef = self.getRefCoord()
+            ref = (0, 0) if currentRef==self.RefCoord else self.RefCoord
+            idlist = [-1]
+            for m in re.finditer(';', shadesID):
+                idlist.append(m.start())
+            for ii, sh in enumerate(idlist):
+                if ii == len(idlist) - 1:
+                    wallId = shadesID[idlist[ii] + 1:]
+                else:
+                    wallId = shadesID[idlist[ii] + 1:idlist[ii + 1]]
+                ShadeWall = findWallId(wallId, Shadingsfile, ref, GE)
+                if not 'height' in ShadeWall.keys():
+                    ShadeWall['height'] = findBuildId(ShadeWall[GE['BuildingIdKey']], Buildingsfile,GE)
+                    if ShadeWall['height']==None:
+                        ShadeWall['height'] = self.height
+                currentShadingElement = [(node[0]-self.RefCoord[0],node[1]-self.RefCoord[1]) for node in ShadeWall[GE['VertexKey']]]
+                meanPx = (currentShadingElement[0][0] + currentShadingElement[1][0]) / 2
+                meanPy = (currentShadingElement[0][1] + currentShadingElement[1][1]) / 2
+                edgelength = LineString(currentShadingElement).length
+                if edgelength<2:
+                    msg = '[Shadowing Info] This one is dropped, less than 2m wide ('+str(round(edgelength,2))+'m), shading Id : '+ ShadeWall[GE['ShadingIdKey']] +'\n'
+                    if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+                    #print(msg[:-1])
+                    continue
+                if ShadeWall[GE['ShadingIdKey']] =='V67656-3':
+                    a=1
+                confirmed,currentShadingElement,OverlapCode = GeomUtilities.checkShadeWithFootprint(RelativeAgregFootprint,
+                                currentShadingElement,ShadeWall[GE['ShadingIdKey']],tol = self.GE['DistanceTolerance'])
+                if confirmed:
+                    if ShadeWall['height']<=(max(self.BlocHeight)+self.StoreyHeigth):
+                        OverlapCode +=1
+                        ShadeWall['height'] = self.StoreyHeigth*round(ShadeWall['height'] / self.StoreyHeigth) #max(self.BlocHeight)#
+                    self.AdjacentWalls.append(ShadeWall)
+                    shades[wallId] = {}
+                    shades[wallId]['Vertex'] = [(node[0]+self.RefCoord[0],node[1]+self.RefCoord[1]) for node in currentShadingElement]
+                    shades[wallId]['height'] = ShadeWall['height']
+                    shades[wallId]['distance'] = 0
+                    ModifiedShadeVertexes['ShadeId'].append(ShadeWall[GE['ShadingIdKey']])
+                    ModifiedShadeVertexes['OldCoord'].append(ShadeWall[GE['VertexKey']])
+                    ModifiedShadeVertexes['NewCoord'].append(shades[wallId]['Vertex'])
+                    msg = '[Adjacent Wall] This Shading wall is considered as adjacent with an overlap code of '+str(OverlapCode)+', shading Id : ' + ShadeWall[
+                        GE['ShadingIdKey']] + '\n'
+                    #print(msg[:-1])
+                    if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+                    continue
+                if OverlapCode== 999:
+                    msg = '[Shadowing Error] This Shading wall goes inside the building...It is dropped, shading Id : ' + ShadeWall[
+                              GE['ShadingIdKey']] + '\n'
+                    #print(msg[:-1])
+                    if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+                    continue
+                dist = (abs(meanPx - Meancoordx) ** 2 + abs(meanPy - Meancoordy) ** 2) ** 0.5
                 shades[wallId] = {}
-                shades[wallId]['Vertex'] = [(node[0]+self.RefCoord[0],node[1]+self.RefCoord[1]) for node in currentShadingElement]
-                shades[wallId]['height'] = ShadeWall['height']
-                shades[wallId]['distance'] = 0
-                ModifiedShadeVertexes['ShadeId'].append(ShadeWall[GE['ShadingIdKey']])
-                ModifiedShadeVertexes['OldCoord'].append(ShadeWall[GE['VertexKey']])
-                ModifiedShadeVertexes['NewCoord'].append(shades[wallId]['Vertex'])
-                msg = '[Adjacent Wall] This Shading wall is considered as adjacent with an overlap code of '+str(OverlapCode)+', shading Id : ' + ShadeWall[
-                    GE['ShadingIdKey']] + '\n'
-                #print(msg[:-1])
-                if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
-                continue
-            if OverlapCode== 999:
-                msg = '[Shading Error] This Shading wall goes inside the building...It is dropped, shading Id : ' + ShadeWall[
-                          GE['ShadingIdKey']] + '\n'
-                #print(msg[:-1])
-                if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
-                continue
-            dist = (abs(meanPx - Meancoordx) ** 2 + abs(meanPy - Meancoordy) ** 2) ** 0.5
-            shades[wallId] = {}
-            shades[wallId]['Vertex'] = ShadeWall[GE['VertexKey']]
-            shades[wallId]['height'] = round(ShadeWall['height'],2)
-            shades[wallId]['distance'] = dist
-        return shades
+                shades[wallId]['Vertex'] = ShadeWall[GE['VertexKey']]
+                shades[wallId]['height'] = round(ShadeWall['height'],2)
+                shades[wallId]['distance'] = dist
+            return shades
+
+        else:
+            msg = '[Shadowing Info] No Shadowing wall file were found\n'
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+            return shades
 
 
     def getVentSyst(self, DB,VentSystDict,LogFile,DebugMode):

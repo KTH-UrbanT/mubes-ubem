@@ -19,7 +19,7 @@ def createWaterEqpt(idf,building):
     idf.newidfobject(
         'WATERUSE:EQUIPMENT',
         Name = building.DHWInfos['Name'],
-        Peak_Flow_Rate = building.nbAppartments*multiplier*CallCorrectionFactor1(building),
+        Peak_Flow_Rate = building.nbAppartments*multiplier*CallCorrectionFactor(building),
         Flow_Rate_Fraction_Schedule_Name = 'WaterTaps',
         Target_Temperature_Schedule_Name='TargetWaterTemp',
         Hot_Water_Supply_Temperature_Schedule_Name = 'HotWaterTemp',
@@ -59,7 +59,7 @@ def getDHW_EPC(DHW_Meas):
         TotDHW += DHW_Meas[key]
     return TotDHW
 
-def CallCorrectionFactor1(building):
+def CallCorrectionFactorMade4Calib(building):
     BuildName = building.name
     #all this below was done for the calibration study using the calibrated values to make Strobe package comply with measurements
     #cf paper on the calibration study

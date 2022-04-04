@@ -28,7 +28,7 @@ def LaunchOAT(MainInputs,SimDir,keypath,nbBuild,ParamVal,currentRun,pythonpath=[
         return LaunchProcess(SimDir, MainInputs['FirstRun'], MainInputs['TotNbRun'], currentRun,keypath, nbBuild,
                       MainInputs['CorePerim'], MainInputs['FloorZoning'], ParamVal,MainInputs['VarName2Change'],
                       MainInputs['CreateFMU'],MainInputs['OutputsFile'],DataBaseInput = MainInputs['DataBaseInput'],
-                    DebugMode = MainInputs['DebugMode'],MakePlotOnly = MakePlotOnly)
+                    DebugMode = MainInputs['DebugMode'],MakePlotOnly = MakePlotOnly,Verbose = MainInputs['Verbose'])
     # if willing to launch each run in seperate terminals, all arguments must be given in text form and the pythonpath is required
     else:
         if platform.system() == "Windows":
@@ -62,7 +62,7 @@ def LaunchOAT(MainInputs,SimDir,keypath,nbBuild,ParamVal,currentRun,pythonpath=[
         check_call(cmdline,stdout=open(os.devnull, "w"))
 
 def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,FloorZoning,ParamVal,VarName2Change,
-                  CreateFMU,OutputsFile,DataBaseInput = [], DebugMode = False,MakePlotOnly = False):
+                  CreateFMU,OutputsFile,DataBaseInput = [], DebugMode = False,MakePlotOnly = False,Verbose = False):
     #This function builds the idf file, a log file is generated if the buildiung is run for the first time,
     #the idf file will be saved as well as the building object as a pickle. the latter could be commented as not required
     MainPath = os.getcwd()
@@ -76,7 +76,6 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
         # Building and Shading objects from reading the geojson file as input for further functionsif not given as arguments
         DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
     Buildingsfile = DataBaseInput['Build']
-    Shadingsfile = DataBaseInput['Shades']
     epluspath = keyPath['epluspath']
     os.chdir(SimDir)
     start = time.time()
@@ -84,7 +83,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
     if FirstRun:
         LogFile = open(os.path.join(SimDir, 'Build_'+str(nbcase)+'_Logs.log'), 'w')
         msg = 'Building ' + str(nbcase) + ' is starting\n'
-        print(msg[:-1])
+        #if Verbose: print(msg[:-1])
         GrlFct.Write2LogFile(msg,LogFile)
     else:
         LogFile = False
@@ -95,6 +94,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
         StudiedCase = BuildingList()
         #lets build the two main object we'll be playing with in the following : the idf and the building
         try:
+            if DebugMode: startIniti = time.time()
             idf, building = GrlFct.appendBuildCase(StudiedCase, keyPath, nbcase, DataBaseInput, MainPath,LogFile,
                                                DebugMode = DebugMode,PlotOnly=MakePlotOnly)
         except:
@@ -105,6 +105,8 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
                 GrlFct.Write2LogFile(msg, LogFile)
                 GrlFct.Write2LogFile('##############################################################\n', LogFile)
                 return [], [], 'NOK'
+
+
         #Rounds of check if we continue with this building or not, see DB_Filter4Simulation.py if other filter are to add
         CaseOK = checkBldFilter(building,LogFile,DebugMode = DebugMode)
         if not CaseOK:
@@ -115,13 +117,14 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
                 GrlFct.Write2LogFile(msg, LogFile)
                 GrlFct.Write2LogFile('##############################################################\n', LogFile)
                 return building,idf, 'NOK'
-
+        if DebugMode: GrlFct.Write2LogFile('[Time report] Building Initialisation phase : '+
+                                           str(round(time.time()-startIniti,2))+' sec\n', LogFile)
         # The simulation parameters are assigned here
         if not MakePlotOnly:
             GrlFct.setSimLevel(idf, building)
         # The geometry is assigned here
         try:
-            # start = time.time()
+            if DebugMode: startIniti = time.time()
             GrlFct.setBuildingLevel(idf, building,LogFile,CorePerim,FloorZoning,DebugMode = DebugMode,ForPlots=MakePlotOnly)
             # end = time.time()
             # print('[Time Report] : The setBuildingLevel took : ',round(end-start,2),' sec')
@@ -133,8 +136,10 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
                 GrlFct.Write2LogFile(msg, LogFile)
                 GrlFct.Write2LogFile('##############################################################\n', LogFile)
                 return building,idf, 'NOK'
+        if DebugMode: GrlFct.Write2LogFile('[Time report] Building level (geometry) phase : ' +
+                                           str(round(time.time() - startIniti, 2)) + ' sec\n', LogFile)
         # if the number of run for one building is greater than 1 it means parametric simulation, a template file will be saved
-        if TotNbRun>1:
+        if TotNbRun>1 and not MakePlotOnly:
             Case = {}
             Case['BuildData'] = building
             idf.saveas('Building_' + str(nbcase) + '_template.idf')
@@ -158,8 +163,9 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
     # assignement of the building name for the simulation
     building.name = 'Building_' + str(nbcase) +  'v'+str(currentRun)
 
-    #in order to make parametric simulation, lets go along the VarName2Change list and change the building object attributes accordingly
-    GrlFct.setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shadingsfile,nbcase)
+    if DebugMode: startIniti = time.time()
+    if not MakePlotOnly: #in order to make parametric simulation, lets go along the VarName2Change list and change the building object attributes accordingly
+        GrlFct.setChangedParam(building, ParamVal, VarName2Change, MainPath, Buildingsfile, nbcase)
 
     # lets assign the material and finalize the envelope definition
     try:
@@ -176,10 +182,14 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
             GrlFct.Write2LogFile('##############################################################\n', LogFile)
             return building,idf, 'NOK'
     #the following is only to make building plots, so no need to go  feeding the indoor building inputs
+    if DebugMode: GrlFct.Write2LogFile('[Time report] Building level (Envelope) phase : ' +
+                                       str(round(time.time() - startIniti, 2)) + ' sec\n', LogFile)
+
     if MakePlotOnly:
         return building,idf, 'OK'
 
     # lets define the zone level now
+    if DebugMode: startIniti = time.time()
     try:
         # start = time.time()
         GrlFct.setZoneLevel(idf, building,FloorZoning)
@@ -194,6 +204,9 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
             GrlFct.Write2LogFile('##############################################################\n', LogFile)
             return
 
+    if DebugMode: GrlFct.Write2LogFile('[Time report] Zone level phase : ' +
+                                       str(round(time.time() - startIniti, 2)) + ' sec\n', LogFile)
+
     try:
         # add some extra energy loads like domestic Hot water
         # start = time.time()
@@ -206,6 +219,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
             GrlFct.Write2LogFile(msg, LogFile)
             GrlFct.Write2LogFile('##############################################################\n', LogFile)
             return
+    if DebugMode: startIniti = time.time()
     try:
         #lets add the main gloval variable : Mean temperautre over the heated areas and the total building power consumption
         #and if present, the heating needs for DHW production as heated by direct heating
@@ -224,34 +238,43 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
         # end = time.time()
         # print('[Time Report] : The setOutputLevel took : ', round(end - start, 2), ' sec')
         #special ending process if FMU is wanted
-        if CreateFMU:
-            GrlFct.CreatFMU(idf,building,nbcase,epluspath,SimDir, currentRun,EMSOutputs,LogFile,DebugMode)
-        else:
-             # saving files and objects
-            idf.saveas('Building_' + str(nbcase) +  'v'+str(currentRun)+'.idf')
-
-        #the data object is saved as needed afterward aside the Eplus results (might be not needed, to be checked)
-        with open('Building_' + str(nbcase) +  'v'+str(currentRun)+ '.pickle', 'wb') as handle:
-            pickle.dump(Case, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-        msg = 'Building_' + str(nbcase)+' IDF file ' + str(currentRun+1)+ '/'  + str(TotNbRun)+ ' is done\n'
-        #print(msg[:-1])
-        end = time.time()
-        GrlFct.Write2LogFile('[Reported Time] Input File : '+str(round(end-start,2))+' seconds\n',LogFile)
-        GrlFct.Write2LogFile('##############################################################\n', LogFile)
-        if FirstRun:
-            LogFile.close()
-        # lets get back to the Main Folder we were at the very beginning
-        os.chdir(MainPath)
     except:
-        msg = '[Error] The process after the Zonelevel definition failed...\n'
+        msg = '[Error] The Output definition failed...\n'
         print(msg[:-1])
         os.chdir(MainPath)
         if FirstRun:
             GrlFct.Write2LogFile(msg, LogFile)
             GrlFct.Write2LogFile('##############################################################\n', LogFile)
             return
+    if DebugMode: GrlFct.Write2LogFile('[Time report] Output level phase : ' +
+                                       str(round(time.time() - startIniti, 2)) + ' sec\n', LogFile)
 
+    if CreateFMU:
+        if DebugMode: startIniti = time.time()
+        GrlFct.CreatFMU(idf,building,nbcase,epluspath,SimDir, currentRun,EMSOutputs,LogFile,DebugMode)
+        if DebugMode: GrlFct.Write2LogFile('[Time report] Creating FMU phase : ' +
+                                           str(round(time.time() - startIniti, 2)) + ' sec\n', LogFile)
+        if DebugMode: startIniti = time.time()
+    else:
+        # saving files and objects
+        if DebugMode: startIniti = time.time()
+        idf.saveas('Building_' + str(nbcase) +  'v'+str(currentRun)+'.idf')
+
+        #the data object is saved as needed afterward aside the Eplus results (might be not needed, to be checked)
+    with open('Building_' + str(nbcase) +  'v'+str(currentRun)+ '.pickle', 'wb') as handle:
+        pickle.dump(Case, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    if DebugMode: GrlFct.Write2LogFile('[Time report] Writing file and data phase : ' +
+                                           str(round(time.time() - startIniti, 2)) + ' sec\n', LogFile)
+    msg = 'Building_' + str(nbcase)+' IDF file ' + str(currentRun+1)+ '/'  + str(TotNbRun)+ ' is done\n'
+    if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+    if Verbose: print(msg[:-1])
+    end = time.time()
+    GrlFct.Write2LogFile('[Reported Time] Input File : '+str(round(end-start,2))+' seconds\n',LogFile)
+    GrlFct.Write2LogFile('##############################################################\n', LogFile)
+    if FirstRun:
+        LogFile.close()
+        # lets get back to the Main Folder we were at the very beginning
+    os.chdir(MainPath)
 
 if __name__ == '__main__' :
 

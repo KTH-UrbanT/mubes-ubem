@@ -1,34 +1,34 @@
 #This files provides the default settings for MUBES
-APP : 
+0_APP :
     #PATH_TO_MUBES_UBEM : ../MUBES_UBEM/
     #PATH_TO_MUBES_UBEM_PYTHON_WIN : ../venv/Scripts/python.exe
     #PATH_TO_MUBES_UBEM_PYTHON : ../venv/bin/python
     #PATH_TO_ENERGYPLUS_WIN : C:\EnergyPlusV9-1-0
-    PATH_TO_ENERGYPLUS : C:\EnergyPlusV9-1-0
+    PATH_TO_ENERGYPLUS : C:/EnergyPlusV9-1-0
     PATH_TO_RESULTS : ../../MUBES_SimResults/
     
-DATA :
+1_DATA :
     Buildingsfile : '../ModelerFolder/Minneberg_Buildings_v1.geojson'
     Shadingsfile : '../ModelerFolder/Minneberg_Wallsv1.geojson'
 
-SIM:
-    CaseChoices:
+2_SIM:
+    0_CaseChoices:
         CaseName : 'ForTest'
+        OutputFile : 'Outputs_Template.txt'
+        RefreshFolder : True
         MakePlotsOnly : False
         MakePlotsPerBld : False
+        Verbose : True
         UUID : []
         DESO : []
         VarName2Change : []
         Bounds : []
         BoundsLim : []
+        ParamMethods : ['Uniform'] # ParamSampling can be 'Linear' from lowe tu upper bounds, 'LHS' stand for LatinHypercube Sampling
         NbRuns : 1
-        ParamMethods : ['Uniform']
-        # ParamSampling can be 'Linear' from lowe tu upper bounds, 'LHS' stand for LatinHypercube Sampling
         CreateFMU : False
         CorePerim : False
         FloorZoning : True
-        OutputFile : 'Outputs_Template.txt'
-        RefreshFolder : True
         CPUusage : 0.8
         ZoneOfInterest : ''
         DebugMode : False
@@ -41,7 +41,7 @@ SIM:
         ECMParam : False
         ECMChange : ''
     
-    SimuData :
+    2_SimuData :
         Begin_Day_of_Month : 1
         Begin_Month : 1
         End_Day_of_Month : 31
@@ -49,7 +49,7 @@ SIM:
         SaveLogFiles : False #if True, computing folder is not removed thus all energyplus outpus files are preserved
 
     #files are needed to be located in the eather folder of EnergyPlus asthe same path is used afterward to launch the simulation
-    WeatherFile :
+    1_WeatherFile :
         Loc : 'WeatherData/USA_CA_San.Francisco.Intl.AP.724940_TMY3.epw' #WE_Stockholm.Arlanda.024600_IWEC.epw'
 
     #Thisdict gives all the materials characteristics.

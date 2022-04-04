@@ -41,23 +41,23 @@ def ChangeConfigOption(config,localConfig):
 
 def checkGlobalConfig(config):
     #lets check for the paths
-    if not is_tool(os.path.join(config['APP']['PATH_TO_ENERGYPLUS'],'energyplus')):
+    if not is_tool(os.path.join(config['0_APP']['PATH_TO_ENERGYPLUS'],'energyplus')):
         print(' /!\ ERROR /!\ ')
         print('It seems that the path to EnergyPlus is missing, please specify it in your local.yml')
         return 'EnergyPlus path'
     #lets check for the weather file needed for EnergyPlus
-    if not os.path.isfile(os.path.join(os.path.abspath(config['APP']['PATH_TO_ENERGYPLUS']),config['SIM']['WeatherFile']['Loc'])):
+    if not os.path.isfile(os.path.join(os.path.abspath(config['0_APP']['PATH_TO_ENERGYPLUS']),config['2_SIM']['1_WeatherFile']['Loc'])):
         print(' /!\ ERROR /!\ ')
         print('It seems that the given Weatherfile to EnergyPlus is missing')
-        print('Please check if : '+config['SIM']['WeatherFile']['Loc'] +' is present in : '+os.path.abspath(config['APP']['PATH_TO_ENERGYPLUS']))
+        print('Please check if : '+config['2_SIM']['1_WeatherFile']['Loc'] +' is present in : '+os.path.abspath(config['0_APP']['PATH_TO_ENERGYPLUS']))
         return 'EnergyPlus Weather path'
     #lets check for the geojsonfile:
     ok = []
-    if os.path.isdir(os.path.abspath(config['DATA']['Buildingsfile'])):
-        liste = os.listdir(config['DATA']['Buildingsfile'])
+    if os.path.isdir(os.path.abspath(config['1_DATA']['Buildingsfile'])):
+        liste = os.listdir(config['1_DATA']['Buildingsfile'])
         ok = [file for file in liste if '.geojson' in file]
     else:
-        if '.geojson' in config['DATA']['Buildingsfile']:
+        if '.geojson' in config['1_DATA']['Buildingsfile']:
             ok = True
     if not ok:
         return 'DATA path'

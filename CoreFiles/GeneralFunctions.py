@@ -76,32 +76,33 @@ def ReadGeoJsonFile(keyPath):
     try:
         BuildObjectDict = ReadGeojsonKeyNames(keyPath['GeojsonProperties'])
         Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'])
-        Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'])
+        #Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'])
         Buildingsfile = checkRefCoordinates(Buildingsfile)
-        Shadingsfile = checkRefCoordinates(Shadingsfile)
-        return {'BuildObjDict':BuildObjectDict,'Build' :Buildingsfile, 'Shades': Shadingsfile}
+        #Shadingsfile = checkRefCoordinates(Shadingsfile)
+        return {'BuildObjDict':BuildObjectDict,'Build' :Buildingsfile}#, 'Shades': Shadingsfile}
     except:
         Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'])
-        Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'])
+        #Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'])
         Buildingsfile = checkRefCoordinates(Buildingsfile)
-        Shadingsfile = checkRefCoordinates(Shadingsfile)
-        return {'Build': Buildingsfile, 'Shades': Shadingsfile}
+        #Shadingsfile = checkRefCoordinates(Shadingsfile)
+        return {'Build': Buildingsfile}#, 'Shades': Shadingsfile}
 
 def ListAvailableFiles(keyPath):
     # reading the pathfiles and the geojsonfile
     GlobKey = [keyPath]
     # lets see if the input file is a dir with several geojson files
-    multipleFiles = False
+    multipleFiles = []
     BuildingFiles, WallFiles = ReadGeoJsonDir(GlobKey[0])
     if BuildingFiles:
-        multipleFiles = True if len(BuildingFiles)>1 else False
+        if len(BuildingFiles)>1:
+            multipleFiles = [FileName[:-8] for FileName in BuildingFiles]
         MainRootPath = GlobKey[0]['Buildingsfile']
         GlobKey[0]['Buildingsfile'] = os.path.join(MainRootPath, BuildingFiles[0])
-        GlobKey[0]['Shadingsfile'] = [] if not WallFiles else os.path.join(MainRootPath, WallFiles[0])
+        #GlobKey[0]['Shadingsfile'] = [] if not WallFiles else os.path.join(MainRootPath, WallFiles[0])
         for nb, file in enumerate(BuildingFiles[1:]):
             GlobKey.append(GlobKey[-1].copy())
             GlobKey[-1]['Buildingsfile'] = os.path.join(MainRootPath, file)
-            GlobKey[-1]['Shadingsfile'] = [] if not WallFiles else os.path.join(MainRootPath, WallFiles[nb + 1])
+            #GlobKey[-1]['Shadingsfile'] = [] if not WallFiles else os.path.join(MainRootPath, WallFiles[nb + 1])
     return GlobKey, multipleFiles
 
 def ReadGeoJsonDir(keyPath):
@@ -198,31 +199,37 @@ def SaveCase(MainPath,SepThreads,CaseName,nbBuild):
         except:
             pass
 
-def CreateSimDir(CurrentPath,DestinationPath,CaseName,SepThreads,nbBuild,idx,MultipleFile = '',Refresh = False):
+def CreateSimDir(CurrentPath,DestinationPath,CaseName,SepThreads,nbBuild,idx,MultipleFile = '',Refresh = False,Verbose = False):
     if not os.path.exists(DestinationPath):
         os.mkdir(os.path.abspath(DestinationPath))
+        if Verbose: print(DestinationPath +' folder is created')
     SimDir = os.path.join(os.path.abspath(DestinationPath), CaseName)
     if not os.path.exists(SimDir):
         os.mkdir(SimDir)
+        if Verbose: print('[Prep. phase] '+CaseName + ' folder is created')
     elif idx == 0 and Refresh:
         shutil.rmtree(SimDir)
         os.mkdir(SimDir)
+        if Verbose: print('[Prep. phase] '+CaseName + ' folder is emptied')
     if SepThreads:
-        SimDir = os.path.normcase(
-            os.path.join(SimDir, 'Build_' + str(nbBuild)))
+        SimDir = os.path.join(SimDir, 'Build_' + str(nbBuild))
         if not os.path.exists(SimDir):
             os.mkdir(SimDir)
+            if Verbose: print('[Prep. phase] '+CaseName +  '/Build_' + str(nbBuild)+' folder is created')
         elif idx == 0 and Refresh:
             shutil.rmtree(SimDir)
             os.mkdir(SimDir)
+            if Verbose: print('[Prep. phase] '+CaseName + '/Build_' + str(nbBuild)+' folder is emptied')
     if len(MultipleFile)> 0 :
         SimDir = os.path.normcase(
             os.path.join(SimDir, MultipleFile))
         if not os.path.exists(SimDir):
             os.mkdir(SimDir)
+            if Verbose: print('[Prep. phase] '+CaseName + '/'+MultipleFile+ ' folder is created')
         elif idx == 0 and Refresh:
             shutil.rmtree(SimDir)
             os.mkdir(SimDir)
+            if Verbose: print('[Prep. phase] '+CaseName + '/' + MultipleFile + ' folder is emptied')
     return SimDir
 
 def getDistType(ParamMethod,Bounds):
@@ -382,8 +389,8 @@ def AppendLogFiles(MainPath):
         FinalLogFile.close()
         os.remove(os.path.join(MainPath, file2del))
 
-
-def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shadingsfile,nbcase,LogFile=[]):
+#def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shadingsfile,nbcase,LogFile=[]):
+def setChangedParam(building, ParamVal, VarName2Change, MainPath, Buildingsfile, nbcase, LogFile=[]):
     #there is a loop file along the variable name to change and if specific ation are required it should be define here
     # if the variable to change are embedded into several layer of dictionnaries than there is a need to make checks and change accordingly to the correct element
     # here are examples for InternalMass impact using 'InternalMass' keyword in the VarName2Change list to play with the 'WeightperZoneArea' parameter
@@ -412,7 +419,8 @@ def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shad
             setattr(building, var, exttmass)
         elif 'MaxShadingDist' in var:
             building.MaxShadingDist = round(ParamVal[varnum], roundVal)
-            building.shades = building.getshade(Buildingsfile[nbcase], Shadingsfile, Buildingsfile,LogFile,PlotOnly = False)
+            #building.shades = building.getshade(Buildingsfile[nbcase], Shadingsfile, Buildingsfile,LogFile,PlotOnly = False)
+            building.shades = building.getshade(nbcase, Buildingsfile, LogFile,PlotOnly=False)
         elif 'IntLoadCurveShape' in var:
             building.IntLoadCurveShape = max(round(ParamVal[varnum], roundVal),1e-6)
             building.IntLoad = building.getIntLoad(MainPath, LogFile)
