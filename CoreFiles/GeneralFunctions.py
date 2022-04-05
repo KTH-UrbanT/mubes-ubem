@@ -243,21 +243,43 @@ def getDistType(ParamMethod,Bounds):
 def getParamSample(VarName2Change,Bounds,nbruns,ParamMethods):
     # Sampling process if someis define int eh function's arguments
     # It is currently using the latin hyper cube methods for the sampling generation (latin.sample)
-    Param = [1]
     Dist = {}
     LinearVal = {}
+    varMethodIdx = {'Idx':[],'Method':[]}
+    LinearIdx = 0
+    DistIdx = 0
     for idx,param in enumerate(VarName2Change):
         if 'Linear' in ParamMethods[idx]:
             LinearVal[param] = np.linspace(Bounds[idx][0],Bounds[idx][1],nbruns)
+            varMethodIdx['Method'].append('Linear')
+            varMethodIdx['Idx'].append(LinearIdx)
+            LinearIdx+=1
         else:
             Dist[param] = getDistType(ParamMethods[idx],Bounds[idx])
+            varMethodIdx['Method'].append('Dist')
+            varMethodIdx['Idx'].append(DistIdx)
+            DistIdx +=1
     if Dist:
         MakeDist = ot.ComposedDistribution([Dist[x] for x in Dist.keys()])
-        Sample = ot.LHSExperiment(MakeDist, nbruns).generate()
-        return np.array(Sample)
+        OTSample = np.array(ot.LHSExperiment(MakeDist, nbruns).generate())
+    if LinearVal:
+        LinSample = np.array([[LinearVal[key][x] for key in LinearVal.keys()] for x in range(nbruns)])
+    if Dist and LinearVal:
+        #both dict need to be implemented but keeping the order of  VarName2change list
+        newSample = []
+        for idx,mthd in enumerate(varMethodIdx['Method']):
+            if idx==0:
+                newSample = LinSample[:,varMethodIdx['Idx'][idx]].reshape(nbruns,1) if mthd=='Linear' else \
+                                        OTSample[:,varMethodIdx['Idx'][idx]].reshape(nbruns,1)
+            else:
+                newSample = np.append(newSample,LinSample[:,varMethodIdx['Idx'][idx]].reshape(nbruns,1) if \
+                         mthd=='Linear' else OTSample[:,varMethodIdx['Idx'][idx]].reshape(nbruns,1),axis = 1)
+        return newSample
+    elif Dist:
+        return OTSample
     elif LinearVal:
-        return np.array([[LinearVal[key][x] for key in LinearVal.keys()] for x in range(nbruns)])
-    return Param
+        return LinSample
+    return [1]
 
 def CreatFMU(idf,building,nbcase,epluspath,SimDir, i,varOut,LogFile,DebugMode):
     print('Building FMU under process...Please wait around 30sec')
