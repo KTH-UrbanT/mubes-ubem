@@ -10,7 +10,6 @@ import CoreFiles.DomesticHotWater as DomesticHotWater
 import CoreFiles.MUBES_pygeoj as MUBES_pygeoj
 import CoreFiles.BuildFMUs as BuildFMUs
 from openpyxl import load_workbook
-from SALib.sample import latin
 import openturns as ot
 import shutil
 import pickle
