@@ -1,6 +1,7 @@
 git+https://github.com/xavfa/geomeppy.git@geomeppyForMUBES
 eppy==0.5.53
 numpy==1.19.2
+pandas==1.2.0
 shapely==1.7.1
 pyclipper==1.2.0
 transforms3d==0.3.1
