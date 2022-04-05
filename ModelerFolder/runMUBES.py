@@ -106,9 +106,9 @@ if __name__ == '__main__' :
     #Main script to launch either simulation or plot of the urban area represened in the main geojson file
     #all inputs can be given inside a yml file. If not specified in a specific yml file, value form the defaultConfig.yml file will be considered
     #It can be launchedby :
-    #python runMUBES.py     it will load the default yml file and check if a local one is present in same folder to adapt the default one
-    #python runMUBES.py -yml MyConfig.yml   it will consider the specified yml file.
-    #python runMUBES.py -CONFIG {xxxxxxx} json format of the yml file
+    #python runMUBES.py     it will load the default yml file and check if a local one is present in the same folder to adapt the default one
+    #python runMUBES.py -yml MyConfig.yml   it will consider the specified yml file to adapt the default one
+    #python runMUBES.py -CONFIG {xxxxxxx} json format of the yml file to adapt the default one
 
 
     ConfigFromArg = Read_Arguments()

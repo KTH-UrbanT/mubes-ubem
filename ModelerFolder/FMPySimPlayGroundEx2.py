@@ -18,6 +18,7 @@ import pickle
 import time as timedelay
 from CoreFiles import LaunchSim as LaunchSim
 from ReadResults import Utilities
+from BuildObject.BuildingObject import Building
 
 
 
@@ -153,7 +154,8 @@ def LaunchFMU_Sim(FMUElement,VarNames, start_time,stop_time,step_size):
             FMUElement[key]['fmu'].setReal([FMUElement[key]['Exch_Var']['TempSetPoint']], [SetPoints[key][-1]])
             FMUElement[key]['fmu'].setReal([FMUElement[key]['Exch_Var']['IntLoadPow']], [IntLoad[key][-1]])
             FMUElement[key]['fmu'].setReal([FMUElement[key]['Exch_Var']['WaterTap_m3_s']],
-                                         [watercurrenttaps * Res['nbAppartments'][Res['SimNum'].index(key)]])
+                                         [watercurrenttaps * Res['nbAppartments']
+                                         [Res['BldSimName'].index(FMUElement[key]['fmu'].instanceName)]])
 
             FMUElement[key]['fmu'].doStep(currentCommunicationPoint=time, communicationStepSize=step_size)
             #lets catch the outputs (even if not used in this example, it could be used to control the next inputs)

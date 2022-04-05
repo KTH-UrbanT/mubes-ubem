@@ -338,7 +338,7 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[],BldList = []):
 
     #lets get the mandatory variables
     variables=['EP_Elec','EP_Heat','EP_Cool','EP_DHW','SimNum','EPC_Elec','EPC_Heat','EPC_Cool','EPC_Tot',
-               'ATemp','EP_Area','BuildID']
+               'ATemp','EP_Area','BuildID','BldSimName']
     # lest build the Res dictionnary
     for key in variables:
         Res[key] = []
@@ -373,6 +373,7 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[],BldList = []):
         except:
             Res['BuildID'].append(None)
         Res['EP_Area'].append(BuildObj.EPHeatedArea)
+        Res['BldSimName'].append(BuildObj.name)
         try:
             Res['ATemp'].append(BuildObj.ATemp)
         except:
