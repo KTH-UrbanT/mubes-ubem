@@ -100,7 +100,7 @@ def InstAndInitiV2(filelist,VarNames,start_time,stop_time) :
             FMUElement[FMUKeyName]['fmu'].exitInitializationMode()
     return  FMUElement
 
-def LaunchFMU_Sim(FMUElement,VarNames, start_time,stop_time,step_size):
+def LaunchFMU_Sim(FMUElement,VarNames, start_time,stop_time,step_size,MainPath):
     time = start_time
     day = 0
     SetPoints = {}
@@ -121,8 +121,7 @@ def LaunchFMU_Sim(FMUElement,VarNames, start_time,stop_time,step_size):
     extraVar = ['nbAppartments']
     Res = Utilities.GetData(work_dir, extraVar)
 
-    WatertapsFile = os.path.normcase(os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),
-                                 'MUBES_UBEM/ExternalFiles/mDHW_Sum_over_40.txt'))
+    WatertapsFile = os.path.join(os.path.dirname(MainPath),'ExternalFiles/mDHW_Sum_over_40.txt')
     with open(WatertapsFile, 'r') as handle:
         FileLines = handle.readlines()
     Watertaps = []
@@ -212,6 +211,6 @@ if __name__ == '__main__':
     except:
         FMUElement = InstAndInitiV2(filelist,VarNames, start_time, stop_time)
         print('FMU 2.0 used')
-    LaunchFMU_Sim(FMUElement,VarNames, start_time, stop_time, step_size)
+    LaunchFMU_Sim(FMUElement,VarNames, start_time, stop_time, step_size,MainPath)
     CleanUpSimRes(work_dir, keepLogFolder=True)
 
