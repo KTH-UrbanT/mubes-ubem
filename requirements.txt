@@ -1,4 +1,4 @@
-git+https://github.com/xavfa/geomeppy.git@Multi_floor_complexe_buildings
+git+https://github.com/xavfa/geomeppy.git@geomeppyForMUBES
 eppy==0.5.53
 numpy==1.19.2
 shapely==1.7.1
