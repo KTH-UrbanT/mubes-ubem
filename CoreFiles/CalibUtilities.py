@@ -3,7 +3,7 @@
 
 import os
 from scipy import stats, linalg
-from SALib.sample import latin
+#from SALib.sample import latin
 import numpy as np
 from ReadResults import Utilities
 import pickle
@@ -105,6 +105,7 @@ def getGoodParamList(Error,CalibBasis, VarName2Change, ParamSample, REMax=5, CVR
     return Matches
 
 def getOpenTurnsCorrelated(Data, VarName2Change, nbruns, BoundLim):
+    ##################NO MORE USED##########################
     # this is taken form https://se.mathworks.com/matlabcentral/fileexchange/56384-lhsgeneral-pd-correlation-n
     # and implemented in python by a proposeal in https://openturns.discourse.group/t/generate-multivariate-joint-distribution/182/3
     ParamSample = []
@@ -139,6 +140,7 @@ def getOpenTurnsCorrelatedFromSample(Data, VarName2Change, nbruns, BoundLim):
     return np.array(correlatedSamples)
 
 def lhsgeneral(pd, correlation, n):
+    ##################NO MORE USED##########################
     dim = len(pd)
     RStar = correlation
     unifND = [ot.Uniform(0.0, 1.0)]*dim
@@ -156,6 +158,7 @@ def lhsgeneral(pd, correlation, n):
     return transformed_sample
 
 def getCovarCalibratedParam(Data, VarName2Change, nbruns, BoundLim):
+    ##################NO MORE USED##########################
     # the method below follows the one describe in :
     # https://scipy-cookbook.readthedocs.io/items/CorrelatedRandomSamples.html
     # with the exception that as we on't have the former distribution type, the new sample are kept uniform
@@ -197,6 +200,7 @@ def getCovarCalibratedParam(Data, VarName2Change, nbruns, BoundLim):
     return Param2keep.transpose()
 
 def getBootStrapedParam(Data, VarName2Change, nbruns, BoundLim):
+    ##################NO MORE USED##########################
     import openturns as ot
     ParamSample = []
     NormalizedParam = []
