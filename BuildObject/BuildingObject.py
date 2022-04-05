@@ -121,6 +121,7 @@ class Building:
         self.getBEData(BE)
         self.getSimData(SD)
         self.name = name
+        self.BuildingFilePath = BuildingFilePath
         self.BuildID = self.getBuildID(DB,LogFile)
         self.Multipolygon = self.getMultipolygon(DB)
         self.nbfloor = self.getnbfloor(DB, DBL,LogFile,DebugMode)
@@ -136,7 +137,7 @@ class Building:
         self.EPHeatedArea = self.getEPHeatedArea(LogFile,DebugMode)
         self.AdjacentWalls = [] #this will be appended in the getshade function if any present
         try:
-            self.shades = self.getshade(nbcase, Buildingsfile, BuildingFilePath,LogFile, PlotOnly=PlotOnly,DebugMode=DebugMode)
+            self.shades = self.getshade(nbcase, Buildingsfile,LogFile, PlotOnly=PlotOnly,DebugMode=DebugMode)
         except:
             msg = '[Shadowing Error] Json or GeoJson or file failed, no shading are considered\n'
             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
@@ -655,19 +656,19 @@ class Building:
                 shades[key]['distance'] = dist
         return shades
 
-    def getshade(self, nbcase, Buildingsfile, BuildingFilePath,LogFile, PlotOnly=True, DebugMode=False):
+    def getshade(self, nbcase, Buildingsfile,LogFile, PlotOnly=True, DebugMode=False):
         "Get all the shading surfaces to be build for surrounding building effect"
         JSONFile = []
         GeJsonFile = []
         shades = {}
-        BuildingFileName = os.path.basename(BuildingFilePath)
-        if os.path.isfile(os.path.join(os.path.dirname(BuildingFilePath),
+        BuildingFileName = os.path.basename(self.BuildingFilePath)
+        if os.path.isfile(os.path.join(os.path.dirname(self.BuildingFilePath),
                                        BuildingFileName[:BuildingFileName.index('.')] + '_Walls.json')):
-            JSONFile = os.path.join(os.path.dirname(BuildingFilePath),
+            JSONFile = os.path.join(os.path.dirname(self.BuildingFilePath),
                                        BuildingFileName[:BuildingFileName.index('.')] + '_Walls.json')
-        elif os.path.isfile(os.path.join(os.path.dirname(BuildingFilePath),
+        elif os.path.isfile(os.path.join(os.path.dirname(self.BuildingFilePath),
                                        BuildingFileName.replace('Buildings', 'Walls'))):
-            GeJsonFile = os.path.join(os.path.dirname(BuildingFilePath),
+            GeJsonFile = os.path.join(os.path.dirname(self.BuildingFilePath),
                                         BuildingFileName.replace('Buildings', 'Walls'))
 
         if JSONFile:

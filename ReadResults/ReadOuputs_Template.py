@@ -205,10 +205,10 @@ def plotIndex(GlobRes,FigName,name):
 
 if __name__ == '__main__' :
 
-    CaseName= 'ecmnewcalibweekly' #Name of the case study to post-process
+    CaseName= 'ForTest' #Name of the case study to post-process
 
     #Names (attributes) wanted to be taken in the pickle files for post-processing. The time series are agrregated into HeatedArea, NonHeatedArea and OutdoorSite
-    extraVar=['height','StoreyHeigth','nbfloor','BlocHeight','BlocFootprintArea','BlocNbFloor','HeatedArea','NonHeatedArea','Other']
+    extraVar=['height','MaxShadingDist','StoreyHeigth','nbfloor','BlocHeight','BlocFootprintArea','BlocNbFloor','HeatedArea','NonHeatedArea','Other']
     Names4Plots = [CaseName] #because we can have several path for several studies we want to overplot.
     mainpath = os.path.dirname(os.path.dirname(os.getcwd()))
 
@@ -223,7 +223,7 @@ if __name__ == '__main__' :
             Names4Plots.append(CaseName+'/'+folder)
 
 
-    #path = ['C:/Users/xav77/Documents/FAURE/prgm_python/UrbanT/Eplus4Mubes/MUBES_SimResults/newcalibyearly/build_5/Sim_Results']
+    #path = ['C:/Users/xav77/Documents/FAURE/prgm_python/UrbanT/Eplus4Mubes/MUBES_SimResults/tutu\Build_1/Sim_Results']
 
     Res = {}
     TimeSerieList=[]

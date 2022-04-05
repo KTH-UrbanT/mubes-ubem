@@ -245,35 +245,19 @@ def getParamSample(VarName2Change,Bounds,nbruns,ParamMethods):
     # Sampling process if someis define int eh function's arguments
     # It is currently using the latin hyper cube methods for the sampling generation (latin.sample)
     Param = [1]
-    #former version with SALib is below if OpenTurnsMethod is False
-    OpenTurnsMethod = True
-    if OpenTurnsMethod:
-        Dist = {}
-        LinearVal = {}
-        for idx,param in enumerate(VarName2Change):
-            if 'Linear' in ParamMethods[idx]:
-                LinearVal[param] = np.linspace(Bounds[idx][0],Bounds[idx][1],nbruns)
-            else:
-                Dist[param] = getDistType(ParamMethods[idx],Bounds[idx])
-        if Dist:
-            MakeDist = ot.ComposedDistribution([Dist[x] for x in Dist.keys()])
-            Sample = ot.LHSExperiment(MakeDist, nbruns).generate()
-            return np.array(Sample)
+    Dist = {}
+    LinearVal = {}
+    for idx,param in enumerate(VarName2Change):
+        if 'Linear' in ParamMethods[idx]:
+            LinearVal[param] = np.linspace(Bounds[idx][0],Bounds[idx][1],nbruns)
         else:
-            #Sample = np.array([LinearVal[x] for x in LinearVal.keys()])
-            return np.array([[LinearVal[key][x] for key in LinearVal.keys()] for x in range(nbruns)])
-
-    else:
-        try:
-            if len(VarName2Change) > 0:
-                problem = {}
-                problem['names'] = VarName2Change
-                problem['bounds'] = Bounds  # ,
-                problem['num_vars'] = len(VarName2Change)
-                # problem = read_param_file(MainPath+'\\liste_param.txt')
-                Param = latin.sample(problem, nbruns)
-        except: pass
-
+            Dist[param] = getDistType(ParamMethods[idx],Bounds[idx])
+    if Dist:
+        MakeDist = ot.ComposedDistribution([Dist[x] for x in Dist.keys()])
+        Sample = ot.LHSExperiment(MakeDist, nbruns).generate()
+        return np.array(Sample)
+    elif LinearVal:
+        return np.array([[LinearVal[key][x] for key in LinearVal.keys()] for x in range(nbruns)])
     return Param
 
 def CreatFMU(idf,building,nbcase,epluspath,SimDir, i,varOut,LogFile,DebugMode):

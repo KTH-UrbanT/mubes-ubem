@@ -268,7 +268,7 @@ if __name__ == '__main__' :
             totalsize += len(File2Launch[ListKey])
         for nbfile,ListKey in enumerate(File2Launch):
             for file_idx,file in enumerate(File2Launch[ListKey]):
-                if CaseChoices['Verbose'] : print('process completed by '+str(round(100*(file_idx+nbfile+1+offset)/totalsize,1))+ ' %')
+                if CaseChoices['Verbose'] : print('Figure being completed by '+str(round(100*(file_idx+nbfile+1+offset)/totalsize,1))+ ' %')
                 done = (file_idx+nbfile+1+offset)/totalsize
                 lastBld = True if done==1 and nbfile+1 == len(File2Launch) else False
                 BldObj,IDFObj,Check = CB_OAT.LaunchOAT(MainInputs, file['SimDir'], file['keypath'], file['nbBuild'], [1], 0,

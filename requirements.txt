@@ -14,3 +14,4 @@ pyproj==3.1.0
 scikit-learn==0.24.1
 scikit-optimize==0.8.1
 fmpy==0.3.1
+openturns==1.18
