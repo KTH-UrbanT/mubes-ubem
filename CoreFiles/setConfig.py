@@ -94,13 +94,13 @@ def checkGlobalConfig(config):
     if not is_tool(os.path.join(config['0_APP']['PATH_TO_ENERGYPLUS'],'energyplus')):
         print(' /!\ ERROR /!\ ')
         print('It seems that the path to EnergyPlus is missing, please specify it in your local.yml')
-        return 'EnergyPlus path'
+        return 'EnergyPlus path',False
     #lets check for the weather file needed for EnergyPlus
     if not os.path.isfile(os.path.join(os.path.abspath(config['0_APP']['PATH_TO_ENERGYPLUS']),config['3_SIM']['1_WeatherFile']['Loc'])):
         print(' /!\ ERROR /!\ ')
         print('It seems that the given Weatherfile to EnergyPlus is missing')
         print('Please check if : '+config['3_SIM']['1_WeatherFile']['Loc'] +' is present in : '+os.path.abspath(config['0_APP']['PATH_TO_ENERGYPLUS']))
-        return 'EnergyPlus Weather path'
+        return 'EnergyPlus Weather path',False
     #lets check for the geojsonfile:
     ok = []
     if os.path.isdir(os.path.abspath(config['1_DATA']['Buildingsfile'])):
@@ -110,7 +110,7 @@ def checkGlobalConfig(config):
         if '.geojson' in config['1_DATA']['Buildingsfile']:
             ok = True
     if not ok:
-        return 'DATA path'
+        return 'DATA path',False
     config,SepThreads =  checkChoicesCombinations(config)
     return config,SepThreads
 
