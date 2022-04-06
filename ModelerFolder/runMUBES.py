@@ -184,8 +184,12 @@ if __name__ == '__main__' :
                 LocalConfigFile['2_CASE']['1_SimChoices']['UUID'] = CaseChoices['UUID'][idx]
             else:
                 LocalConfigFile['2_CASE']['1_SimChoices']['UUID'] = CaseChoices['UUID']
+                if CaseChoices['VarName2Change']:
+                    if CaseChoices['Verbose']: print('[Info] It seems that at least one parameter is to be change but only one simulation is asked. The default value will be used. ')
+                CaseChoices['VarName2Change'] = []
             with open(os.path.join(SimDir,'ConfigFile.yml'), 'w') as file:
                 documents = yaml.dump(LocalConfigFile, file)
+
         #this a key that could be used to pass dictly the GeoJson object into other function. bu not possible if launching the process in console
         #still empty then
         CaseChoices['DataBaseInput'] = []

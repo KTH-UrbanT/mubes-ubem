@@ -115,6 +115,12 @@ def checkGlobalConfig(config):
     return config,SepThreads
 
 def checkChoicesCombinations(config):
+    if len(config['2_CASE']['1_SimChoices']['VarName2Change'])>0:
+        if type(config['2_CASE']['1_SimChoices']['VarName2Change']) != list:
+            print('###  INPUT ERROR ### ')
+            print('/!\ The VarName2Change must be a list either empty or a list of strings')
+            print('/!\ Please, check you inputs')
+            return 'Choices combination issue', False
     if config['2_CASE']['1_SimChoices']['NbRuns']>1:
         SepThreads = True
         if config['2_CASE']['2_AdvancedChoices']['CreateFMU'] :
@@ -130,10 +136,6 @@ def checkChoicesCombinations(config):
                 return 'Choices combination issue',False
     else:
         SepThreads = False
-        config['2_CASE']['1_SimChoices']['VarName2Change'] = []
-        config['2_CASE']['1_SimChoices']['Bounds'] = []
-        config['2_CASE']['1_SimChoices']['BoundsLim'] = []
-        config['2_CASE']['1_SimChoices']['ParamMethods'] = []
     return config,SepThreads
 
 # path2file = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CoreFiles'
