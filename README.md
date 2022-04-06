@@ -30,14 +30,14 @@ __ModelerFolder__ : containes the __runMUBES.py__ file as well as two examples o
 __ReadResults__ : contains one template to read the results and some functions for post-processing in the Utilities.py file.  
 
 ## Run simulation case
-*python runMUBES.py* will launch the simulation using the geojson file provided as well as all default values form a .yml file (__CoreFile/DefaultConfig.yml__)  
-*python runMUBES.py -yml path_to_config.yml* will launch the simulation using the information given in the path_to_config.yml. The latter can contain only the changes wanted from the DefaultConfig.yml.  
-*python runMUBES.py -CONFIG {JSON Format}* will launch the simulation using the information given in the {JSON Format} as arguments. The latter can contain only the changes wanted from the DefaultConfig.yml.  
+*__python__ __runMUBES.py__* will launch the simulation using the geojson file provided as well as all default values form a .yml file (__CoreFile/DefaultConfig.yml__)  
+*__python__ __runMUBES.py__ __-yml__ __path_to_config.yml__* will launch the simulation using the information given in the path_to_config.yml. The latter can contain only the changes wanted from the DefaultConfig.yml.  
+*__python__ __runMUBES.py__ __-CONFIG__ __{JSON Format}__* will launch the simulation using the information given in the {JSON Format} as arguments. The latter can contain only the changes wanted from the DefaultConfig.yml.  
 
 __Outputs_Template.txt__ : This file proposes a list of available outputs from EP. It has been build from a .rdd file from EP. The required outputs should be indicated in this file. It also indicates at which frequency the modeler wants his ouputs.  
 
 ## Creating a shadowing Wall file
-*__python__ __MakeShadowingWallFile.py__ will built a .json file out of the geojson one of the buildings in the same location, given in the DefaultConfig.yml.  
+*__python__ __MakeShadowingWallFile.py__* will built a .json file out of the geojson one of the buildings in the same location, given in the DefaultConfig.yml.  
 *__python__ __MakeShadowingWallFile.py__ __-yml__ __path_to_config.yml__* will built a .json file out of the geojson one of the buildings in the same location, given in the path_to_config.yml.  
 *__python__ __MakeShadowingWallFile.py__ __-geojson__ __path_to_geojson.geojson__* will built a .json file out of the geojson one of the buildings in the same location, given in path_to_geojson.geojson  
 
@@ -47,12 +47,12 @@ The two examples (Ex1 and Ex2) :
 Ex1 : proposes a simple offset on the temperature setPoints. Every two hours a new building sees its setpoint decreases from 21degC to 18degC. the frequency of changes for each building thus depends on the size of the district that is considered. The internal Loads are also modified depending on working and nonworking hours  
 Ex2 : proposes a couple temperature setpoints and water taps controls for each building, keeping the hourly based internal load inputs. It reads an external file to feed the water taps at each time step, and depending on a threshold of water taps' flow, the temperature's setpoints are changed.  
 Ex1 is usable by default, Ex2 needs to have Domestic Hot Water in external file, so DB_Data.ExtraEnergy dictionnary in __BuildObject__  folder needs to be uncommented.  
-  
+
+## Reading the Ouputs  
 The __ReadResults__ folder contains also a template for post-processing the results :  
 __ReadOutputs_Template.py__ : this script proposes a basic post-processing stage including reading the data, ploting the areas of footprint and the energy needs as well as some times series for specific building number. Its works for simulation done with or without FMUs.  
 __Utilities.py__ : contains several useful functions for the post-processing stage. The _getData()_ is highly helpful. It gathers all the pickle files present in a directory into one dictionnary. It can deal with several CaseNames and overplots results for same Building's Ids by simply appending the path's list.    
   
-The systems and building's caracteristics are taken from the available data in the goejson file and\or in the _DB_Data.py_ file in the __BuildObject__ folder that contains several dictionnaries needed as inputs. The modeler is highly invited to look along this file to understand all the different thermal elements that are needed for the simulation.  
 
 ## Engine structure
 The paradigm of simulation engine is to automate simulation on several different levels :
