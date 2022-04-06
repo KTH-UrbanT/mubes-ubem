@@ -30,18 +30,18 @@ __ModelerFolder__ : containes the __runMUBES.py__ file as well as two examples o
 __ReadResults__ : contains one template to read the results and some functions for post-processing in the Utilities.py file.  
 
 ## Run simulation case
-* python runMUBES.py *will launch the simulation using the geojson file provided as well as all default values form a .yml file (__CoreFile/DefaultConfig.yml__)  
+*python runMUBES.py* will launch the simulation using the geojson file provided as well as all default values form a .yml file (__CoreFile/DefaultConfig.yml__)  
 *python runMUBES.py -yml path_to_config.yml* will launch the simulation using the information given in the path_to_config.yml. The latter can contain only the changes wanted from the DefaultConfig.yml.  
 *python runMUBES.py -CONFIG {JSON Format}* will launch the simulation using the information given in the {JSON Format} as arguments. The latter can contain only the changes wanted from the DefaultConfig.yml.  
 
 __Outputs_Template.txt__ : This file proposes a list of available outputs from EP. It has been build from a .rdd file from EP. The required outputs should be indicated in this file. It also indicates at which frequency the modeler wants his ouputs.  
 
 ## Creating a shadowing Wall file
-*python MakeShadowingWallFile.py* will built a .json file out of the geojson one of the buildings in the same location, given in the DefaultConfig.yml.  
-*python MakeShadowingWallFile.py -yml path_to_config.yml* will built a .json file out of the geojson one of the buildings in the same location, given in the path_to_config.yml.  
-*python MakeShadowingWallFile.py -geojson path_to_geojson.geojson* will built a .json file out of the geojson one of the buildings in the same location, given in path_to_geojson.geojson  
+*__python__ __MakeShadowingWallFile.py__ will built a .json file out of the geojson one of the buildings in the same location, given in the DefaultConfig.yml.  
+*__python__ __MakeShadowingWallFile.py__ __-yml__ __path_to_config.yml__* will built a .json file out of the geojson one of the buildings in the same location, given in the path_to_config.yml.  
+*__python__ __MakeShadowingWallFile.py__ __-geojson__ __path_to_geojson.geojson__* will built a .json file out of the geojson one of the buildings in the same location, given in path_to_geojson.geojson  
 
-Some few other files are present in this folder :  
+## FMU examples
 __FMPySimPlayGroundEx1.py__ and __FMPySimPlayGroundEx2.py__: it uses FMPy package and as been successfully tested for controlling temperature's setpoints, internal loads, or watertaps at each time steps of the simulation. For one who'd like to make co-simulation, a deep understanding is still needed on the EP side as inputs and ouputs are to be defined. The SimLauncher, using *CreateFMU = True*, proposes by default the temperature's setpoints and the water taps as inputs and the averaged indoor temperature, the total power for heat needs and for domestic hot water as outputs.  
 The two examples (Ex1 and Ex2) :  
 Ex1 : proposes a simple offset on the temperature setPoints. Every two hours a new building sees its setpoint decreases from 21degC to 18degC. the frequency of changes for each building thus depends on the size of the district that is considered. The internal Loads are also modified depending on working and nonworking hours  
