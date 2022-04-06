@@ -15,7 +15,7 @@ It is based on 2 main packages: [EPPY](https://github.com/santoshphilip/eppy) an
 
 ## Installation process
 The needed packages are given in the requirements.txt file.  
-<pip install -r requirements.txt>
+*__pip__ __install__ __-r__ __requirements.txt__*
 __Note__ : GeomEppy packages uses a specific branch of the original package.  
 The FMUs creation option uses the [EnergyPlusToFMU-v3.1.0](https://simulationresearch.lbl.gov/fmu/EnergyPlus/export/userGuide/download.html) toolkit developed by LNBL. This toolkit should be downloaded and installed at the same level as MUBES_UBEM under a folder named __FMUsKit__ (see BuildFMUs.buildEplusFMU() in the CoreFile folder).  
 The portability of FMUs (used on another computer than the one used to generate them) is valid but currently only when no external files are used as error are encountered when relative paths are defined.  
@@ -30,7 +30,7 @@ __ModelerFolder__ : containes the __runMUBES.py__ file as well as two examples o
 __ReadResults__ : contains one template to read the results and some functions for post-processing in the Utilities.py file.  
 
 ## Run simulation case
-*__python__ __runMUBES.py__* will launch the simulation using the geojson file provided as well as all default values form a .yml file (__CoreFile/DefaultConfig.yml__)  
+*__python__ __runMUBES.py__* will launch the simulation using the geojson file provided as well as all default values form a .yml file (__CoreFile/DefaultConfig.yml__). if a local .yml file is in __ModelerFolder__, it will be used to update DefaultConfig.yml  
 *__python__ __runMUBES.py__ __-yml__ __path_to_config.yml__* will launch the simulation using the information given in the path_to_config.yml. The latter can contain only the changes wanted from the DefaultConfig.yml.  
 *__python__ __runMUBES.py__ __-CONFIG__ __{JSON Format}__* will launch the simulation using the information given in the {JSON Format} as arguments. The latter can contain only the changes wanted from the DefaultConfig.yml.  
 
