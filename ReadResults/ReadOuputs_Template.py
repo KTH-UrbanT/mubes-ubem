@@ -8,6 +8,7 @@ import numpy as np
 sys.path.append(os.path.dirname(os.getcwd()))
 import Utilities
 
+
 # the main idea of this file is to present some way for analyzing the data.
 # some useful function are implemented in Utilities. Such as agregating the data from several simulation in one disctionary
 # this enable to make easy plots of variables over others.
@@ -34,8 +35,6 @@ def plotAreaVal(GlobRes,FigName,name):
         locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
         index_y,varx = Utilities.getSortedIdx(reference,locref)
         varyref = [Res['ATemp'][idx] for idx in index_y]
-        maxpow = [max(Res['HeatedArea'][idx]['Data_Zone Ideal Loads Supply Air Total Heating Rate']) for idx in
-                   index_y]
         if nb==0:
             Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0],varx, [varyref], 'Building num', ['ATemp'],
                                          'Areas (m2)', 'x')
@@ -49,18 +48,33 @@ def plotAreaVal(GlobRes,FigName,name):
     #                             'EP Area (m2)', '--')
 
 
-def plotErrorFile(GlobRes,FigName,name):
-    refVar= '[''BuildID''][''50A_UUID'']'
-    reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
+def plotErrorFile(GlobRes,FigName,name,legend = True):
+    #reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
     #definition of the reference for comparison
     signe = ['.','s','>','<','d','o','.','s','>','<','d','o']
+    offset = 0
+    tot = 0
     for nb in GlobRes:
         Res = GlobRes[nb]
-        locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
-        index_y,varx = Utilities.getSortedIdx(reference,locref)
-        vary = [Res['ErrFiles'][idx] for idx in index_y]
-        Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax0'],varx, [vary], 'Building', [name[nb]],
-                                 'ErrFilesSize (bytes)', signe[nb])
+        #locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
+        #index_y,varx = Utilities.getSortedIdx(reference,locref)
+        vary = Res['Warnings']
+        varx = [int(x) for x in np.linspace(offset, offset + len(vary), len(vary))]
+        xtitle = 'Building'
+        Warnings = [Res['SimNum'][idx] for idx, val in enumerate(vary) if val > 0]
+        if Warnings:
+            print('File nb : ' + str(nb) + ' has simulations with Warnings on buildings : ' + str(Warnings))
+        Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0],varx, [vary], xtitle, [name[nb]],
+                                 'Nb Warnings', signe[np.random.randint(0,10)],legend = legend)
+        vary = Res['Errors']
+        varx = [int(x) for x in np.linspace(offset, offset + len(vary), len(vary))]
+        offset += (len(vary) + 1)
+        xtitle = 'Building'
+        Errors = [Res['SimNum'][idx] for idx,val in enumerate(vary) if val>0]
+        if Errors:
+            print('File nb : '+str(nb)+' has simulations with errors on buildings : '+str(Errors))
+        Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][1], varx, [vary], xtitle, [name[nb]],
+                                 'Nb Severe Errors (bytes)', signe[np.random.randint(0, 10)], legend=legend)
 
 
 def plotDim(GlobRes,FigName,name):
@@ -130,33 +144,9 @@ def plotEnergy(GlobRes,FigName,name):
     #                          'EPCs', ['1:1'],
     #                          'Heat Needs (kWh/m2)', 'k-')
 
-def plotDistrictEnergy(GlobRes,FigName,name):
-    refVar = '[''BuildID''][''50A_UUID'']'
-    reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(
-        len(GlobRes[0]['BuildID']))]  # we need this reference because some building are missing is somme simulation !!!
-    # definition of the reference for comparison
-    signe = ['.', 's', '>', '<', 'd', 'o', '.', 's', '>', '<', 'd', 'o']
-    for nb in GlobRes:
-        Res = GlobRes[nb]
-        locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
-        index_y, varx = Utilities.getSortedIdx(reference, locref)
-        varyref = [Res['EPC_Heat'][idx]*Res['ATemp'][idx] for idx in index_y]
-        if nb == 0:
-            Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0], varx, [np.cumsum(varyref)], 'Building num',
-                                     ['EPCs'],
-                                     'Heat Needs (kWh)', 'x')
-        vary = [Res['EP_Heat'][idx]*Res['EP_Area'][idx] for idx in index_y]
-        Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0], varx, [np.cumsum(vary)], 'Building', [name[nb]],
-                                 'Heat Needs (kWh/m2)', signe[nb])
-        Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][1], varyref, [vary], 'EP Sim',
-                                 [name[nb]],
-                                 'EP Sim', signe[nb])
-    # Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][1], [0, max(varyref)], [[0, max(varyref)]],
-    #                          'EPCs', ['1:1'],
-    #                          'Heat Needs (kWh/m2)', 'k-')
 
+def plotTimeSeries(GlobRes,FigName,name,Location,TimeSerieList,Unit,SimNum=[]):
 
-def plotTimeSeries(GlobRes,FigName,name,Location,TimeSerieList,SimNum=[]):
     refVar= '[''BuildID''][''50A_UUID'']'
     reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
     signe = ['.','s','>','<','d','o','.','s','>','<','d','o']
@@ -165,26 +155,22 @@ def plotTimeSeries(GlobRes,FigName,name,Location,TimeSerieList,SimNum=[]):
         if not SimNum:
             SimNum = Res['SimNum']
         locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
+
         for nbBld in SimNum:
             index_y, varx = Utilities.getSortedIdx(reference, locref)
             vary = Res[Location][index_y[varx.index(nbBld)]][TimeSerieList]
             varx = np.linspace(1,len(vary),len(vary))
-            Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0],varx, [vary], 'Time', [name[nb]+'_Bld_'+str(nbBld)],
-                                     TimeSerieList, '--')
+            Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0],varx, [vary], 'Time', [name[nb]+'_Bld_'+str(nbBld)+' '+TimeSerieList],
+                                     Unit, '--')
             Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][1], varx, [np.cumsum(vary)], 'Time',
-                                     [name[nb] + '_Bld_' + str(nbBld)],
+                                     [],
                                      'Cumulative form', '--')
-            try:
-                tot = [tot[idx]+val for idx,val in enumerate(vary)]
-            except:
-                tot = vary
-        if TimeSerieList == 'Data_Zone Ideal Loads Supply Air Total Heating Rate':
-           Write2file(tot,'DistrictHeatNeeds.txt')
-
-def Write2file(val,name):
-    with open(name, 'w') as f:
-        for item in val:
-            f.write("%s\n" % item)
+        # if nb==0:
+        #     vary0 = vary
+        # else:
+        #     diff = [(vary0[idx]-val) for idx,val in enumerate(vary)]
+        #     Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax1'],varx, [diff], 'Time', [name[nb]],
+        #                              'Error', '--')
 
 
 def plotIndex(GlobRes,FigName,name):
@@ -208,10 +194,9 @@ if __name__ == '__main__' :
     CaseName= 'ForTest' #Name of the case study to post-process
 
     #Names (attributes) wanted to be taken in the pickle files for post-processing. The time series are agrregated into HeatedArea, NonHeatedArea and OutdoorSite
-    extraVar=['height','MaxShadingDist','StoreyHeigth','nbfloor','BlocHeight','BlocFootprintArea','BlocNbFloor','HeatedArea','NonHeatedArea','Other']
+    extraVar=['height','StoreyHeigth','nbfloor','BlocHeight','BlocFootprintArea','BlocNbFloor','HeatedArea','NonHeatedArea','OutdoorSite']
     Names4Plots = [CaseName] #because we can have several path for several studies we want to overplot.
     mainpath = os.path.dirname(os.path.dirname(os.getcwd()))
-
     if os.path.exists(mainpath + os.path.normcase('/MUBES_SimResults/'+CaseName+'/Sim_Results')):
         path = [mainpath + os.path.normcase('/MUBES_SimResults/'+CaseName+'/Sim_Results')]
     else:
@@ -222,33 +207,28 @@ if __name__ == '__main__' :
             path.append(mainpath + os.path.normcase('/MUBES_SimResults/'+CaseName+'/'+folder+'/Sim_Results'))
             Names4Plots.append(CaseName+'/'+folder)
 
-
-    #path = ['C:/Users/xav77/Documents/FAURE/prgm_python/UrbanT/Eplus4Mubes/MUBES_SimResults/ForTest\Build_1/Sim_Results']
-
     Res = {}
     TimeSerieList=[]
+    TimeSerieUnit = []
     id =0
-    totalconso =0
     for idx, curPath in enumerate(path):
         Res[idx] = Utilities.GetData(curPath,extraVar)
         #lets grab the time series name (the chossen ouputs from EP).
         # /!\ the data are taken from the building number 0, thus if for example not an office type, the will be no occupant. Choose another building if needed
-        # totalconso += sum(Res[idx]['Other'][0]['Data_Total DHW Heating Power'])/1000000000
-        # print(curPath)
-        # print(totalconso)
         blfRef=0
         if idx==0:
             for key in Res[idx]['HeatedArea'][blfRef].keys():
                 if type(Res[idx]['HeatedArea'][blfRef][key])==list:
                     TimeSerieList.append(key)
+                    TimeSerieUnit.append(Res[idx]['HeatedArea'][blfRef][key.replace('Data_','Unit_')])
 
 
     #The opening order does not follows the building simulation number while opening the data. Thus, this first graphs provides the correspondance between the other plots, building number and their simulation number
     IndexFig = Utilities.createSimpleFig()
     plotIndex(Res, IndexFig, Names4Plots)
     #this 2nd plot gives the size of the error file. It gives insights if some buildings causses particulary over whole issue in the simulation process
-    ErrorFig = Utilities.createSimpleFig()
-    plotErrorFile(Res, ErrorFig, Names4Plots)
+    ErrorFig = Utilities.createMultilFig('',2,linked=False)
+    plotErrorFile(Res, ErrorFig, Names4Plots,legend = False)
     #this 3rd graph gives the footprint area and the correspondance between EPCs value if available
     AreaFig = Utilities.createMultilFig('',2,linked=False)
     plotAreaVal(Res, AreaFig, Names4Plots)
@@ -259,16 +239,15 @@ if __name__ == '__main__' :
     EnergyFig = Utilities.createMultilFig('',2,linked=False)
     plotEnergy(Res, EnergyFig,Names4Plots)
 
-    EnergyFig = Utilities.createMultilFig('', 2, linked=False)
-    plotDistrictEnergy(Res, EnergyFig, Names4Plots)
-
-
     #below, some timeseries are plotted, all time series available but only for building Simulation Number 0
-    Timecomp={}
+    Figures={}
+    UniqueUnit = list(set(TimeSerieUnit))
+    for Unit in UniqueUnit:
+        Figures[Unit] = Utilities.createMultilFig('', 2, linked=False)
     for i,serie in enumerate(TimeSerieList):
         try:
-            Timecomp[i] = Utilities.createMultilFig('',2,linked=False)
-            plotTimeSeries(Res,Timecomp[i],Names4Plots,'HeatedArea',serie,SimNum =[0])
+            #Timecomp[i] =  Utilities.createMultilFig('',2,linked=False)
+            plotTimeSeries(Res,Figures[TimeSerieUnit[i]],Names4Plots,'HeatedArea',serie,TimeSerieUnit[i],SimNum =[])
         except:
             pass
 

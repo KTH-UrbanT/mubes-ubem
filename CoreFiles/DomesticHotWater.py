@@ -13,9 +13,7 @@ def createWaterEqpt(idf,building):
     Load_and_occupancy.ScheduleCompact(idf, 'HotWaterTemp', building.DHWInfos['HotWaterSetTemp'])
     Load_and_occupancy.ScheduleCompact(idf, 'TargetWaterTemp', building.DHWInfos['TargetWaterTapTemp'])
     #now lets create the water equipment object
-    #if somme math expression is given in the multiplier we need to try an eval() function:
-    try: multiplier = eval(building.DHWInfos['WaterTapsMultiplier'])
-    except: multiplier = building.DHWInfos['WaterTapsMultiplier']
+    multiplier = building.DHWInfos['WaterTapsMultiplier']
     idf.newidfobject(
         'WATERUSE:EQUIPMENT',
         Name = building.DHWInfos['Name'],

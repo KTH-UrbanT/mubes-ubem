@@ -113,19 +113,29 @@ if __name__ == '__main__' :
 
     ConfigFromArg = Read_Arguments()
     config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()),'CoreFiles','DefaultConfig.yml'))
-    CaseChoices = config['2_SIM']['0_CaseChoices']
+    configUnit = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfigKeyUnit.yml'))
     if type(ConfigFromArg) == str and ConfigFromArg[-4:] == '.yml':
         localConfig = setConfig.read_yaml(ConfigFromArg)
         config = setConfig.ChangeConfigOption(config, localConfig)
     elif ConfigFromArg:
         config = setConfig.ChangeConfigOption(config, ConfigFromArg)
-        CaseChoices['OutputFile'] = 'Outputs4API.txt'
+        config['2_CASE']['0_GrlChoices']['OutputFile'] = 'Outputs4API.txt'
     else:
         config = setConfig.check4localConfig(config, os.getcwd())
-    config = setConfig.checkGlobalConfig(config)
+    config = setConfig.checkConfigUnit(config,configUnit)
+    if type(config) != dict:
+        print('[Config Error] Something seems wrong : \n' + config)
+        sys.exit()
+    config, SepThreads = setConfig.checkGlobalConfig(config)
     if type(config) != dict:
         print('[Config Error] Something seems wrong in : ' + config)
         sys.exit()
+    #the config file is now validated, lets vreate a smaller dict that will called along the process
+    Key2Aggregate = ['0_GrlChoices', '1_SimChoices', '2_AdvancedChoices']
+    CaseChoices = {}
+    for key in Key2Aggregate:
+        for subkey in config['2_CASE'][key]:
+            CaseChoices[subkey] = config['2_CASE'][key][subkey]
     if CaseChoices['Verbose']: print('[OK] Input config. info checked and valid.')
     epluspath = config['0_APP']['PATH_TO_ENERGYPLUS']
     #a first keypath dict needs to be defined to comply with the current paradigme along the code
@@ -138,41 +148,10 @@ if __name__ == '__main__' :
     ######################################################################################################################
     ########     LAUNCHING MULTIPROCESS PROCESS PART  (nothing should be changed hereafter)   ############################
     ######################################################################################################################
-    if CaseChoices['NbRuns']>1:
-        SepThreads = True
-        if CaseChoices['CreateFMU'] :
-            print('###  INPUT ERROR ### ' )
-            print('/!\ It is asked to ceate FMUs but the number of runs for each building is above 1...')
-            print('/!\ Please, check you inputs as this case is not allowed yet')
-            sys.exit()
-        if not CaseChoices['VarName2Change'] or not CaseChoices['Bounds']:
-            if not CaseChoices['FromPosteriors']:
-                print('###  INPUT ERROR ### ')
-                print('/!\ It is asked to make several runs but no variable is specified or bound of variation...')
-                print('/!\ Please, check you inputs VarName2Change and Bounds')
-                sys.exit()
-    else:
-        SepThreads = False
-        CaseChoices['VarName2Change'] = []
-        CaseChoices['Bounds'] = []
-
     nbcpu = max(mp.cpu_count() * CaseChoices['CPUusage'], 1)
-
     nbBuild = 0
-    #all argument are packed in a dictionnaru, as parallel process is used, the arguments shall be strictly kept for each
-    #no moving object of dictionnary values that should change between two processes.
     FigCenter = []
     CurrentPath = os.getcwd()
-    MainInputs = {}
-    MainInputs['CorePerim'] = CaseChoices['CorePerim']
-    MainInputs['FloorZoning'] = CaseChoices['FloorZoning']
-    MainInputs['CreateFMU'] = CaseChoices['CreateFMU']
-    MainInputs['TotNbRun'] = CaseChoices['NbRuns']
-    MainInputs['OutputsFile'] = CaseChoices['OutputFile']
-    MainInputs['VarName2Change'] = CaseChoices['VarName2Change']
-    MainInputs['DebugMode'] = CaseChoices['DebugMode']
-    MainInputs['DataBaseInput'] = []
-    MainInputs['Verbose'] =CaseChoices['Verbose']
     pythonpath = keyPath['pythonpath']
     MultipleFileidx = 0
     MultipleFileName = ''
@@ -188,29 +167,28 @@ if __name__ == '__main__' :
             if CaseChoices['Verbose']: print('[Prep. phase] '+Case['NbBldandOr'])
         keypath = Case['keypath']
         nbBuild = Case['BuildNum2Launch'] #this will be used in case the file has to be read again (launched through prompt cmd)
-        MainInputs['FirstRun'] = True
+        CaseChoices['FirstRun'] = True
         #First, lets create the folder for the building and simulation processes
         SimDir = GrlFct.CreateSimDir(CurrentPath, config['0_APP']['PATH_TO_RESULTS'],CaseChoices['CaseName'],
                     SepThreads, nbBuild, idx, MultipleFile = MultipleFileName, Refresh=CaseChoices['RefreshFolder'],Verbose = CaseChoices['Verbose'])
-
         #a sample of parameter is generated if needed
         ParamSample,CaseChoices =  GrlFct.SetParamSample(SimDir, CaseChoices, SepThreads)
         #if a simulation is asked to be done from posterriors that does not exist, the process will skip this building
         if len(ParamSample) == 0 :
             shutil.rmtree(SimDir)
             continue
-        MainInputs['TotNbRun'] = CaseChoices['NbRuns']
-        MainInputs['VarName2Change'] = CaseChoices['VarName2Change']
         #lest create the local yml file that will be used afterward
         if not os.path.isfile((os.path.join(SimDir,'ConfigFile.yml'))) or idx ==0:
             LocalConfigFile = copy.deepcopy(config)
-            if MainInputs['TotNbRun'] >1:
-                LocalConfigFile['2_SIM']['0_CaseChoices']['UUID'] = LocalConfigFile['2_SIM']['0_CaseChoices']['UUID']
+            if CaseChoices['NbRuns'] >1:
+                LocalConfigFile['2_CASE']['1_SimChoices']['UUID'] = CaseChoices['UUID'][idx]
             else:
-                LocalConfigFile['2_SIM']['0_CaseChoices']['UUID'][idx]
+                LocalConfigFile['2_CASE']['1_SimChoices']['UUID'] = CaseChoices['UUID']
             with open(os.path.join(SimDir,'ConfigFile.yml'), 'w') as file:
                 documents = yaml.dump(LocalConfigFile, file)
-
+        #this a key that could be used to pass dictly the GeoJson object into other function. bu not possible if launching the process in console
+        #still empty then
+        CaseChoices['DataBaseInput'] = []
         #lets check if there are several simulation for one building or not
         if CaseChoices['NbRuns'] > 1 and not CaseChoices['MakePlotsOnly']:
             if idx == 0 and CaseChoices['Verbose']: print('Idf input files under process...')
@@ -222,17 +200,17 @@ if __name__ == '__main__' :
                 # lets check if this building is already present in the folder (means Refresh = False in CreateSimDir() above)
                 if not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + '_template.idf'))):
                     #there is a need to launch the first one that will also create the template for all the others
-                    CB_OAT.LaunchOAT(MainInputs,SimDir,keypath,nbBuild,ParamSample[0, :],0,pythonpath)
+                    CB_OAT.LaunchOAT(CaseChoices,SimDir,keypath,nbBuild,ParamSample[0, :],0,pythonpath)
                 # lets check whether all the files are to be run or if there's only some to run again
                 NewRuns = []
                 for i in range(NbRun):
                     if not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + 'v'+str(i+idx_offset)+'.idf'))):
                         NewRuns.append(i)
                 #now the pool can be created changing the FirstRun key to False for all other runs
-                MainInputs['FirstRun'] = False
+                CaseChoices['FirstRun'] = False
                 pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
                 for i in NewRuns:
-                    pool.apply_async(CB_OAT.LaunchOAT, args=(MainInputs,SimDir,keypath,nbBuild,ParamSample[i+idx_offset, :],i+idx_offset,pythonpath))
+                    pool.apply_async(CB_OAT.LaunchOAT, args=(CaseChoices,SimDir,keypath,nbBuild,ParamSample[i+idx_offset, :],i+idx_offset,pythonpath))
                 pool.close()
                 pool.join()
                 #the simulation are launched below using a pool of the earlier created idf files
@@ -271,14 +249,14 @@ if __name__ == '__main__' :
                 if CaseChoices['Verbose'] : print('Figure being completed by '+str(round(100*(file_idx+nbfile+1+offset)/totalsize,1))+ ' %')
                 done = (file_idx+nbfile+1+offset)/totalsize
                 lastBld = True if done==1 and nbfile+1 == len(File2Launch) else False
-                BldObj,IDFObj,Check = CB_OAT.LaunchOAT(MainInputs, file['SimDir'], file['keypath'], file['nbBuild'], [1], 0,
+                BldObj,IDFObj,Check = CB_OAT.LaunchOAT(CaseChoices, file['SimDir'], file['keypath'], file['nbBuild'], [1], 0,
                                                       pythonpath,MakePlotOnly = CaseChoices['MakePlotsOnly'])
                 if Check == 'OK':
                     FigCenter, WindSize = GrlFct.ManageGlobalPlots(BldObj, IDFObj, FigCenter, WindSize,
                                                                CaseChoices['MakePlotsPerBld'],nbcase=[], LastBld=lastBld)
             offset += file_idx
             GrlFct.CleanUpLogFiles(file['SimDir'])
-    elif not SepThreads and not CaseChoices['CreateFMU']:
+    elif not SepThreads and not CaseChoices['CreateFMU'] and File2Launch[0]:
         CurrentSimDir = ''
         for ListKey in File2Launch:
             #lets launch the idf file creation process using the listed created above
@@ -290,7 +268,7 @@ if __name__ == '__main__' :
             CurrentSimDir = File2Launch[ListKey][0]['SimDir']
             pool = mp.Pool(processes=int(nbcpu))
             for nbBuild in File2Launch[ListKey]:
-                pool.apply_async(CB_OAT.LaunchOAT, args=(MainInputs,nbBuild['SimDir'],nbBuild['keypath'],nbBuild['nbBuild'],[1],0,pythonpath))
+                pool.apply_async(CB_OAT.LaunchOAT, args=(CaseChoices,nbBuild['SimDir'],nbBuild['keypath'],nbBuild['nbBuild'],[1],0,pythonpath))
             pool.close()
             pool.join()
             # now that all the files are created, we can aggregate all the log files into a single one.
@@ -311,5 +289,6 @@ if __name__ == '__main__' :
         #the FMU are not taking advantage of the parallel computing option yet
         for ListKey in File2Launch:
             for nbBuild in File2Launch[ListKey]:
-                CB_OAT.LaunchOAT(MainInputs,SimDir,nbBuild['keypath'],nbBuild['nbBuild'],[1],0,pythonpath)
+                CB_OAT.LaunchOAT(CaseChoices,SimDir,nbBuild['keypath'],nbBuild['nbBuild'],[1],0,pythonpath)
+    if not File2Launch[0] and CaseChoices['Verbose']:  print('[Info] All asked simulations are already done and results available...refreshfolder to remove those')
     if CaseChoices['Verbose']: print('[Process Finished] runMUBES.py ended successfully')

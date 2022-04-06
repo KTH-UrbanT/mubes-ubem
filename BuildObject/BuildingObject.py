@@ -107,12 +107,12 @@ class Building:
         Buildingsfile = DataBaseInput['Build']
         DB = Buildingsfile[nbcase]
         config = setConfig.read_yaml('ConfigFile.yml')
-        DBL = config['2_SIM']['DBLimits']
-        BE = config['2_SIM']['BasisElement']
-        self.GE = config['2_SIM']['GeomElement'] #these element might be needed afterward for parametric simulation, thus the keys words are needed
-        EPC = config['2_SIM']['EPCMeters']
-        SD = config['2_SIM']['2_SimuData']
-        ExEn = config['2_SIM']['ExtraEnergy']
+        DBL = config['3_SIM']['DBLimits']
+        BE = config['3_SIM']['3_BasisElement']
+        self.GE = config['3_SIM']['GeomElement'] #these element might be needed afterward for parametric simulation, thus the keys words are needed
+        EPC = config['3_SIM']['EPCMeters']
+        SD = config['3_SIM']['2_SimuData']
+        ExEn = config['3_SIM']['ExtraEnergy']
         try:
             self.CRS = Buildingsfile.crs['properties']['name'] #this is the coordinates reference system for the polygons
         except:
@@ -143,17 +143,17 @@ class Building:
             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
             self.shades = {}
             pass
-        self.Materials = config['2_SIM']['BaseMaterial']
-        self.InternalMass = config['2_SIM']['InternalMass']
+        self.Materials = config['3_SIM']['BaseMaterial']
+        self.InternalMass = config['3_SIM']['InternalMass']
         self.edgesHeights = self.getEdgesHeights()
         self.MakeRelativeCoord()# we need to convert into local coordinate in order to compute adjacencies with more precision than keeping thousand of km for x and y
         if not PlotOnly:
             #the attributres above are needed in all case, the one below are needed only if energy simulation is asked for
-            self.VentSyst = self.getVentSyst(DB, config['2_SIM']['VentSyst'], LogFile,DebugMode)
+            self.VentSyst = self.getVentSyst(DB, config['3_SIM']['VentSyst'], LogFile,DebugMode)
             self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB, DBL, BE)
-            self.OccupType = self.getOccupType(DB, config['2_SIM']['OccupType'], LogFile,DebugMode)
+            self.OccupType = self.getOccupType(DB, config['3_SIM']['OccupType'], LogFile,DebugMode)
             self.nbStairwell = self.getnbStairwell(DB, DBL)
-            self.WeatherDataFile = config['2_SIM']['1_WeatherFile']['Loc']
+            self.WeatherDataFile = config['3_SIM']['1_WeatherFile']['Loc']
             self.year = self.getyear(DB, DBL)
             self.EPCMeters = self.getEPCMeters(DB, EPC, LogFile,DebugMode)
             if len(self.SharedBld) > 0:
@@ -595,7 +595,7 @@ class Building:
                 if '_key' in key2:
                     try:
                         Meters[key1][key2[:-4]] = DB.properties[EPC[key1][key2]]
-                        Meters[key1][key2[:-4]] = int(DB.properties[EPC[key1][key2]])*EPC[key1][key2[:-4]+'COP']*1000 #to convert kW in W
+                        Meters[key1][key2[:-4]] = int(DB.properties[EPC[key1][key2]])*EPC[key1][key2[:-4]+'COP']
                     except:
                         pass
         return Meters
@@ -825,7 +825,7 @@ class Building:
         try :
             for x in self.EPCMeters['ElecLoad']:
                 if self.EPCMeters['ElecLoad'][x]:
-                    eleval += self.EPCMeters['ElecLoad'][x]
+                    eleval += self.EPCMeters['ElecLoad'][x]*1000 #to convert kW in W
         except:
             pass
         if eleval>0:

@@ -25,7 +25,7 @@ def LaunchOAT(MainInputs,SimDir,keypath,nbBuild,ParamVal,currentRun,pythonpath=[
     #but if kept in seperate terminal, the inputfile needs to be read for each simulation...not really efficient,
     #thus, the first option, being fully in the same envirnment is used with the optionnal argument 'DataBaseInput'
     if not pythonpath:
-        return LaunchProcess(SimDir, MainInputs['FirstRun'], MainInputs['TotNbRun'], currentRun,keypath, nbBuild,
+        return LaunchProcess(SimDir, MainInputs['FirstRun'], MainInputs['NbRuns'], currentRun,keypath, nbBuild,
                       MainInputs['CorePerim'], MainInputs['FloorZoning'], ParamVal,MainInputs['VarName2Change'],
                       MainInputs['CreateFMU'],MainInputs['OutputsFile'],DataBaseInput = MainInputs['DataBaseInput'],
                     DebugMode = MainInputs['DebugMode'],MakePlotOnly = MakePlotOnly,Verbose = MainInputs['Verbose'])
@@ -67,13 +67,8 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
     #the idf file will be saved as well as the building object as a pickle. the latter could be commented as not required
     MainPath = os.getcwd()
 
-    # try:
-    #     keyPath = GrlFct.readPathfile(PathInputFiles)
-    # except:
-    #     #this is in case the PathInput file is already the dictionnary (it is the case when launched through the API
-    #     keyPath = PathInputFiles
     if not DataBaseInput:
-        # Building and Shading objects from reading the geojson file as input for further functionsif not given as arguments
+        # Buildingobjects from reading the geojson file as input for further functions if not given as arguments
         DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath)
     Buildingsfile = DataBaseInput['Build']
     epluspath = keyPath['epluspath']
@@ -331,7 +326,7 @@ if __name__ == '__main__' :
         elif (currArg.startswith('-CreateFMU')):
             currIdx += 1
             CreateFMU = eval(sys.argv[currIdx])
-        elif (currArg.startswith('-TotNbRun')):
+        elif (currArg.startswith('-NbRuns')):
             currIdx += 1
             TotNbRun = int(sys.argv[currIdx])
         elif (currArg.startswith('-OutputsFile')):
