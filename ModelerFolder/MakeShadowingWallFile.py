@@ -77,6 +77,7 @@ def Read_Arguments():
 def CreatePolygonEnviro(UUID,GlobKey,config):
     PolygonEnviro = {}
     MainPath = os.getcwd()
+    TotalSimDir = []
     for nbfile,keyPath in enumerate(GlobKey):
         #we need to create a temporary folder to stor the log file if needed
         SimDir = os.path.join(os.path.dirname(keyPath['Buildingsfile']),'Temp')
@@ -104,7 +105,8 @@ def CreatePolygonEnviro(UUID,GlobKey,config):
             PolygonEnviro[nbfile]['BldNum'].append(bldNum)
             Edges2Store[bldNum] = BldObj.edgesHeights
         PolygonEnviro[nbfile]['EdgesHeights'] = Edges2Store
-    return PolygonEnviro
+        TotalSimDir.append(SimDir)
+    return PolygonEnviro,TotalSimDir
 
 def MakePointOutside(Edge,poly):
     p1 = Edge[0]
@@ -261,19 +263,25 @@ def computMatchesNew(Data):
     FileName = os.path.basename(Data['PathName'])
     with open(os.path.join(PathName,FileName[:FileName.index('.')]+'_Walls.json'), 'w') as f:
         f.write(j)
-    import pickle
-    with open(os.path.join(PathName,FileName[:FileName.index('.')]+'_Walls.pickles'), 'wb') as handle:
-        pickle.dump(Matches, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    #
-    # json.dump(Matches, open(os.path.join(PathName,FileName[:FileName.index('.')]+'_WallsBis.json'), "w"))
-
+    # import pickle
+    # with open(os.path.join(PathName,FileName[:FileName.index('.')]+'_Walls.pickles'), 'wb') as handle:
+    #     pickle.dump(Matches, handle, protocol=pickle.HIGHEST_PROTOCOL)
     return Matches,NewBld
 
-if __name__ == '__main__' :
+def cleaningTempFolders(SimDir):
+    for Folder in SimDir:
+        #empyting the files being inside"
+        Liste = os.listdir(Folder)
+        for file in Liste:
+            os.remove(os.path.join(Folder,file))
+        #remove the folder
+        os.rmdir(Folder)
 
+
+if __name__ == '__main__' :
+    MainPath = os.getcwd()
     ConfigFromArg = Read_Arguments()
     config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()),'CoreFiles','DefaultConfig.yml'))
-    CaseChoices = config['2_SIM']['0_CaseChoices']
     geojsonfile = False
     print(ConfigFromArg)
     if type(ConfigFromArg) == str and ConfigFromArg[-4:] == '.yml':
@@ -283,13 +291,19 @@ if __name__ == '__main__' :
         geojsonfile = True
     elif ConfigFromArg:
         config = setConfig.ChangeConfigOption(config, ConfigFromArg)
-        CaseChoices['OutputFile'] = 'Outputs4API.txt'
     else:
         config = setConfig.check4localConfig(config, os.getcwd())
-    config = setConfig.checkGlobalConfig(config)
+    config,SepThread = setConfig.checkGlobalConfig(config)
     if type(config) != dict:
         print('Something seems wrong in : ' + config)
         sys.exit()
+        # the config file is now validated, lets vreate a smaller dict that will called along the process
+    Key2Aggregate = ['0_GrlChoices', '1_SimChoices', '2_AdvancedChoices']
+    CaseChoices = {}
+    for key in Key2Aggregate:
+        for subkey in config['2_CASE'][key]:
+            CaseChoices[subkey] = config['2_CASE'][key][subkey]
+    if CaseChoices['Verbose']: print('[OK] Input config. info checked and valid.')
     epluspath = config['0_APP']['PATH_TO_ENERGYPLUS']
     #a first keypath dict needs to be defined to comply with the current paradigme along the code
     Buildingsfile = os.path.abspath(config['1_DATA']['Buildingsfile'])
@@ -300,8 +314,10 @@ if __name__ == '__main__' :
     GlobKey, MultipleFiles = GrlFct.ListAvailableFiles(keyPath)
     #this function creates the full pool to launch afterward, including the file name and which buildings to simulate
     print('Urban Area is first build by aggregating all building in each geojson files')
-    PolygonEnviro = CreatePolygonEnviro(CaseChoices['UUID'],GlobKey,config)
+    PolygonEnviro,Folders2Clean = CreatePolygonEnviro(CaseChoices['UUID'],GlobKey,config)
     print('Lets compute, for each building the shadowing surfaces from others')
     for Enviro in PolygonEnviro:
         computMatchesNew(PolygonEnviro[Enviro])
+    os.chdir(MainPath)
+    cleaningTempFolders(Folders2Clean)
     print('Wall file created in the same folder of the Building file. see ***.json file')
