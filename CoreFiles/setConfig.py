@@ -114,28 +114,44 @@ def checkGlobalConfig(config):
     config,SepThreads =  checkChoicesCombinations(config)
     return config,SepThreads
 
-def checkChoicesCombinations(config):
-    if len(config['2_CASE']['1_SimChoices']['VarName2Change'])>0:
+def checkParamtricSimCases(config):
+    SepThreads = False
+    errormsg = False
+    if len(config['2_CASE']['1_SimChoices']['VarName2Change']) > 0:
         if type(config['2_CASE']['1_SimChoices']['VarName2Change']) != list:
-            print('###  INPUT ERROR ### ')
-            print('/!\ The VarName2Change must be a list either empty or a list of strings')
-            print('/!\ Please, check you inputs')
-            return 'Choices combination issue', False
-    if config['2_CASE']['1_SimChoices']['NbRuns']>1:
+            errormsg = '/!\ The VarName2Change must be a list either empty or a list of strings'
+            return errormsg, SepThreads
+        if len(config['2_CASE']['1_SimChoices']['VarName2Change']) > len(config['2_CASE']['1_SimChoices']['Bounds']) or \
+                len(config['2_CASE']['1_SimChoices']['VarName2Change']) > len(
+            config['2_CASE']['1_SimChoices']['ParamMethods']):
+            errormsg = '/!\ VarName2Change [list of str], Bounds [list of lists of float or int] and ParamMethods [list of str] must have the same length'
+            return errormsg,SepThreads
+        else:
+            for idx, key in enumerate(config['2_CASE']['1_SimChoices']['VarName2Change']):
+                if type(config['2_CASE']['1_SimChoices']['Bounds'][idx]) != list:
+                    errormsg = '/!\ Bounds must be a list of lists of 2 values for each VarName2Change'
+                    return errormsg,SepThreads
+                elif config['2_CASE']['1_SimChoices']['Bounds'][idx][1] < \
+                        config['2_CASE']['1_SimChoices']['Bounds'][idx][0]:
+                    errormsg = '/!\ Bounds must be [lower bound, upper bounds] in this order'
+                    return errormsg,SepThreads
+    if config['2_CASE']['1_SimChoices']['NbRuns'] > 1:
         SepThreads = True
-        if config['2_CASE']['2_AdvancedChoices']['CreateFMU'] :
-            print('###  INPUT ERROR ### ' )
-            print('/!\ It is asked to ceate FMUs but the number of runs for each building is above 1...')
-            print('/!\ Please, check you inputs as this case is not allowed yet')
-            return 'Choices combination issue',False
+        if config['2_CASE']['2_AdvancedChoices']['CreateFMU']:
+            errormsg = '/!\ It is asked to ceate FMUs but more than one simulation per building is asked...'
+            return errormsg, SepThreads
         if not config['2_CASE']['1_SimChoices']['VarName2Change'] or not config['2_CASE']['1_SimChoices']['Bounds']:
             if not config['2_CASE']['2_AdvancedChoices']['FromPosteriors']:
-                print('###  INPUT ERROR ### ')
-                print('/!\ It is asked to make several runs but no variable is specified with range of variation...')
-                print('/!\ Please, check you inputs VarName2Change and / or Bounds')
-                return 'Choices combination issue',False
-    else:
-        SepThreads = False
+                errormsg = '/!\ It is asked to make several runs but no variable is specified with range of variation'
+                return errormsg, SepThreads
+    return errormsg, SepThreads
+
+def checkChoicesCombinations(config):
+    errormsg, SepThreads = checkParamtricSimCases(config)
+    if errormsg:
+        print('###  INPUT ERROR ### ')
+        print(errormsg)
+        return 'Choices combination issue', SepThreads
     return config,SepThreads
 
 # path2file = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CoreFiles'

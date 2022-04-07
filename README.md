@@ -30,6 +30,9 @@ __ModelerFolder__ : containes the __runMUBES.py__ file as well as two examples o
 __ReadResults__ : contains one template to read the results and some functions for post-processing in the Utilities.py file.  
 
 ## Run simulation case
+__First thing__ : Change the path to EnergyPlus and (if needed) to the Data (geojson files).  
+Simply change the path in the LocalConfig.yml file in __ModelerFolder__ (some few option are given as examples. all element from  (__CoreFile/DefaultConfig.yml__) can be change in the LocalConfig.yml file.  
+
 *__python__ __runMUBES.py__* will launch the simulation using the geojson file provided as well as all default values form a .yml file (__CoreFile/DefaultConfig.yml__). if a local .yml file is in __ModelerFolder__, it will be used to update DefaultConfig.yml  
 *__python__ __runMUBES.py__ __-yml__ __path_to_config.yml__* will launch the simulation using the information given in the path_to_config.yml. The latter can contain only the changes wanted from the DefaultConfig.yml.  
 *__python__ __runMUBES.py__ __-CONFIG__ __{JSON Format}__* will launch the simulation using the information given in the {JSON Format} as arguments. The latter can contain only the changes wanted from the DefaultConfig.yml.  

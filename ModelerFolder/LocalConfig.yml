@@ -1,0 +1,15 @@
+0_APP:
+  PATH_TO_ENERGYPLUS: C:/EnergyPlusV9-1-0
+  PATH_TO_RESULTS: ../../MUBES_SimResults/
+1_DATA:
+  Buildingsfile: ../ModelerFolder/Minneberg_Buildings_v1.geojson
+2_CASE:
+  0_GrlChoices:
+    CPUusage: 0.8
+    CaseName: ForTest
+    DebugMode: false
+    MakePlotsOnly: false
+    MakePlotsPerBld: false
+    OutputsFile: Outputs_Template.txt
+    RefreshFolder: true
+    Verbose: true

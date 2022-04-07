@@ -185,7 +185,7 @@ if __name__ == '__main__' :
             else:
                 LocalConfigFile['2_CASE']['1_SimChoices']['UUID'] = CaseChoices['UUID']
                 if CaseChoices['VarName2Change']:
-                    if CaseChoices['Verbose']: print('[Info] It seems that at least one parameter is to be change but only one simulation is asked. The default value will be used. ')
+                    if CaseChoices['Verbose']: print('[Info] It seems that at least one parameter is to be changed but only one simulation is asked. The default value will be used. ')
                 CaseChoices['VarName2Change'] = []
             with open(os.path.join(SimDir,'ConfigFile.yml'), 'w') as file:
                 documents = yaml.dump(LocalConfigFile, file)
