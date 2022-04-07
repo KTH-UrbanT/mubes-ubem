@@ -121,7 +121,9 @@ if __name__ == '__main__' :
         config = setConfig.ChangeConfigOption(config, ConfigFromArg)
         config['2_CASE']['0_GrlChoices']['OutputFile'] = 'Outputs4API.txt'
     else:
-        config = setConfig.check4localConfig(config, os.getcwd())
+        config,filefound,msg = setConfig.check4localConfig(config, os.getcwd())
+        if msg: print(msg)
+        print('[Config Info] Config complted by ' + filefound)
     config = setConfig.checkConfigUnit(config,configUnit)
     if type(config) != dict:
         print('[Config Error] Something seems wrong : \n' + config)

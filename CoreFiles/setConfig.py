@@ -17,11 +17,21 @@ def read_yaml(file_path):
 def check4localConfig(config,path):
     Liste = os.listdir(path)
     new_config = config
+    filefound = False
+    msg = False
     for file in Liste:
         if '.yml' in file:
-            localConfig = read_yaml(os.path.join(path,file))
-            new_config = ChangeConfigOption(config,localConfig)
-    return new_config
+            if file != 'LocalConfig_Template.yml':
+                if filefound:
+                    msg = '/!\ More than one *.yml file other than the template was found'
+                else:
+                    localConfig = read_yaml(os.path.join(path,file))
+                    filefound = os.path.join(path,file)
+    if not filefound:
+        localConfig = read_yaml(os.path.join(path, 'LocalConfig_Template.yml'))
+        filefound =  os.path.join(path,'LocalConfig_Template.yml')
+    new_config = ChangeConfigOption(config, localConfig)
+    return new_config, filefound, msg
 
 def ChangeConfigOption(config,localConfig):
     for Mainkey in localConfig.keys():
