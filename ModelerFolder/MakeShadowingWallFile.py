@@ -95,15 +95,16 @@ def CreatePolygonEnviro(UUID,GlobKey,config):
         print('Studying buildings file : '+os.path.basename(keyPath['Buildingsfile']))
         print('Urban Area under construction with:')
         for bldNum, Bld in enumerate(DataBaseInput['Build']):
-            print('--building '+str(bldNum) +' / '+str(Size))
-            BldObj = Building('Bld'+str(bldNum), DataBaseInput, bldNum, SimDir,
-                              '',LogFile=[],PlotOnly=True, DebugMode=False)
+            print('\r', end='')
+            print('--building '+str(bldNum) +' / '+str(Size), end='', flush=True)
+            BldObj = Building('Bld'+str(bldNum), DataBaseInput, bldNum, SimDir,keyPath['Buildingsfile'],LogFile=[],PlotOnly=True, DebugMode=False)
             PolygonEnviro[nbfile]['FootPrint'].append(BldObj.AggregFootprint)
             try: BldID = BldObj.BuildID['50A_UUID']
             except: BldID = 'BuildingIndexInFile:' + str(bldNum)
             PolygonEnviro[nbfile]['Bld_ID'].append(BldID)
             PolygonEnviro[nbfile]['BldNum'].append(bldNum)
             Edges2Store[bldNum] = BldObj.edgesHeights
+        print('\nUrban area constructed')
         PolygonEnviro[nbfile]['EdgesHeights'] = Edges2Store
         TotalSimDir.append(SimDir)
     return PolygonEnviro,TotalSimDir
@@ -180,7 +181,8 @@ def computMatchesNew(Data):
                     'RecepientBld_ID': [], 'Height': [], 'Rays': []}
     edgeidx = 1
     for bldidx,bld in enumerate(NewBld[:-1]):
-        print('Building ' + str(bldidx) + ' is currently treated')
+        print('\r', end='')
+        print('Building ' + str(bldidx) + ' is currently treated', end='', flush=True)
         offsetidx = bldidx +1
         for bldidx1, bld1 in enumerate(NewBld[offsetidx:]):
             #print('Building ' + str(bldidx) + ' with building ' + str(bldidx1 + offsetidx))
@@ -258,6 +260,7 @@ def computMatchesNew(Data):
                                 Matches[EdgeDone]['RecepientBld_ID'].append(Data['Bld_ID'][bldidx])
                                 Matches[EdgeDone]['Rays'].append([start_coordinates, goal_coordinates])
 
+    print('\nAll building treated')
     j = json.dumps(Matches)
     PathName = os.path.dirname(Data['PathName'])
     FileName = os.path.basename(Data['PathName'])
@@ -282,6 +285,8 @@ if __name__ == '__main__' :
     MainPath = os.getcwd()
     ConfigFromArg = Read_Arguments()
     config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()),'CoreFiles','DefaultConfig.yml'))
+    configUnit = setConfig.read_yaml(
+        os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfigKeyUnit.yml'))
     geojsonfile = False
     print(ConfigFromArg)
     if type(ConfigFromArg) == str and ConfigFromArg[-4:] == '.yml':
@@ -292,10 +297,16 @@ if __name__ == '__main__' :
     elif ConfigFromArg:
         config = setConfig.ChangeConfigOption(config, ConfigFromArg)
     else:
-        config = setConfig.check4localConfig(config, os.getcwd())
-    config,SepThread = setConfig.checkGlobalConfig(config)
+        config,filefound,msg = setConfig.check4localConfig(config, os.getcwd())
+        if msg: print(msg)
+        print('[Config Info] Config complted by ' + filefound)
+    config = setConfig.checkConfigUnit(config, configUnit)
     if type(config) != dict:
-        print('Something seems wrong in : ' + config)
+        print('[Config Error] Something seems wrong : \n' + config)
+        sys.exit()
+    config, SepThreads = setConfig.checkGlobalConfig(config)
+    if type(config) != dict:
+        print('[Config Error] Something seems wrong in : ' + config)
         sys.exit()
         # the config file is now validated, lets vreate a smaller dict that will called along the process
     Key2Aggregate = ['0_GrlChoices', '1_SimChoices', '2_AdvancedChoices']
@@ -306,7 +317,7 @@ if __name__ == '__main__' :
     if CaseChoices['Verbose']: print('[OK] Input config. info checked and valid.')
     epluspath = config['0_APP']['PATH_TO_ENERGYPLUS']
     #a first keypath dict needs to be defined to comply with the current paradigme along the code
-    Buildingsfile = os.path.abspath(config['1_DATA']['Buildingsfile'])
+    Buildingsfile = os.path.abspath(config['1_DATA']['PATH_TO_DATA'])
     keyPath =  {'epluspath': epluspath, 'Buildingsfile': Buildingsfile,'pythonpath': '','GeojsonProperties':''}
     if geojsonfile:
         keyPath['Buildingsfile'] = ConfigFromArg
@@ -314,7 +325,7 @@ if __name__ == '__main__' :
     GlobKey, MultipleFiles = GrlFct.ListAvailableFiles(keyPath)
     #this function creates the full pool to launch afterward, including the file name and which buildings to simulate
     print('Urban Area is first build by aggregating all building in each geojson files')
-    PolygonEnviro,Folders2Clean = CreatePolygonEnviro(CaseChoices['UUID'],GlobKey,config)
+    PolygonEnviro,Folders2Clean = CreatePolygonEnviro(CaseChoices['BldID'],GlobKey,config)
     print('Lets compute, for each building the shadowing surfaces from others')
     for Enviro in PolygonEnviro:
         computMatchesNew(PolygonEnviro[Enviro])

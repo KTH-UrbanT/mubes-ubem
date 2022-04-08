@@ -405,12 +405,13 @@ class Building:
                 BlocHeight.append(self.height)
 
         #if a polygonew has been seen alone, it means that it should be exruded down to the floor
-        for idx,val in enumerate(MatchedPoly):
-            if val ==0:
-                missedPoly,node = GeomUtilities.CleanPoly(DB.geometry.coordinates[idx][0], DistTol)
-                coord.append(missedPoly)
-                node2remove.append(node)
-                BlocHeight.append(DB.geometry.poly3rdcoord[idx])
+        if self.Multipolygon:
+            for idx,val in enumerate(MatchedPoly):
+                if val ==0:
+                    missedPoly,node = GeomUtilities.CleanPoly(DB.geometry.coordinates[idx][0], DistTol)
+                    coord.append(missedPoly)
+                    node2remove.append(node)
+                    BlocHeight.append(DB.geometry.poly3rdcoord[idx])
         # we need to clean the footprint from the node2remove but not if there are part of another bloc
         newbloccoor = []
         for idx, coor in enumerate(coord):

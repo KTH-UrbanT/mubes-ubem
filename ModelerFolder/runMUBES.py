@@ -277,8 +277,12 @@ if __name__ == '__main__' :
                 lastBld = True if done==1 and nbfile+1 == len(File2Launch) else False
                 BldObj,IDFObj,Check = CB_OAT.LaunchOAT(CaseChoices, file['SimDir'], file['keypath'], file['nbBuild'], [1], 0,
                                                       pythonpath,MakePlotOnly = CaseChoices['MakePlotsOnly'])
-                if CaseChoices['Verbose']: print('Figure being completed by ' + str(
-                    round(100 * done, 1)) + ' %')
+                if CaseChoices['Verbose']:
+                    print('Figure being completed by ' + str(round(100 * done, 1)) + ' %')
+                else:
+                    print('\r',end='')
+                    cpt = '----------------------------------------------------------------------------------------------------'
+                    print('Figure being completed by ' + cpt[:int(100 * done)]+str(round(100 * done, 1)) + ' %',end = '',flush = True)
                 if Check == 'OK':
                     LastBldObj = copy.deepcopy(BldObj)
                     LastIDFObj = copy.deepcopy(IDFObj)
