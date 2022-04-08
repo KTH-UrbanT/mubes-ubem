@@ -70,20 +70,20 @@ def readPathfile(Pathways):
                     keyPath[key] = os.path.normcase(line[line.find(':') + 1:-1])
     return keyPath
 
-def ReadGeoJsonFile(keyPath):
+def ReadGeoJsonFile(keyPath,toBuildPool = False):
     #print('Reading Input files,...')
     try:
         BuildObjectDict = ReadGeojsonKeyNames(keyPath['GeojsonProperties'])
         Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'])
         #Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'])
-        Buildingsfile = checkRefCoordinates(Buildingsfile)
-        #Shadingsfile = checkRefCoordinates(Shadingsfile)
+        if not toBuildPool: Buildingsfile = checkRefCoordinates(Buildingsfile)
+        #if not toBuildPool: Shadingsfile = checkRefCoordinates(Shadingsfile)
         return {'BuildObjDict':BuildObjectDict,'Build' :Buildingsfile}#, 'Shades': Shadingsfile}
     except:
         Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'])
         #Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'])
-        Buildingsfile = checkRefCoordinates(Buildingsfile)
-        #Shadingsfile = checkRefCoordinates(Shadingsfile)
+        if not toBuildPool: Buildingsfile = checkRefCoordinates(Buildingsfile)
+        #if not toBuildPool: Shadingsfile = checkRefCoordinates(Shadingsfile)
         return {'Build': Buildingsfile}#, 'Shades': Shadingsfile}
 
 def ListAvailableFiles(keyPath):
@@ -91,33 +91,28 @@ def ListAvailableFiles(keyPath):
     GlobKey = [keyPath]
     # lets see if the input file is a dir with several geojson files
     multipleFiles = []
-    BuildingFiles, WallFiles = ReadGeoJsonDir(GlobKey[0])
+    BuildingFiles = ReadGeoJsonDir(GlobKey[0])
     if BuildingFiles:
         if len(BuildingFiles)>1:
             multipleFiles = [FileName[:-8] for FileName in BuildingFiles]
         MainRootPath = GlobKey[0]['Buildingsfile']
         GlobKey[0]['Buildingsfile'] = os.path.join(MainRootPath, BuildingFiles[0])
-        #GlobKey[0]['Shadingsfile'] = [] if not WallFiles else os.path.join(MainRootPath, WallFiles[0])
         for nb, file in enumerate(BuildingFiles[1:]):
             GlobKey.append(GlobKey[-1].copy())
             GlobKey[-1]['Buildingsfile'] = os.path.join(MainRootPath, file)
-            #GlobKey[-1]['Shadingsfile'] = [] if not WallFiles else os.path.join(MainRootPath, WallFiles[nb + 1])
     return GlobKey, multipleFiles
 
 def ReadGeoJsonDir(keyPath):
     #print('Reading Input dir,...')
     BuildingFiles = []
-    ShadingWallFiles = []
     if os.path.isdir(keyPath['Buildingsfile']):
         FileList = os.listdir(keyPath['Buildingsfile'])
         for nb,file in enumerate(FileList):
-            if 'Buildings' in file and 'geojson' in file:
+            if file[-8:] == '.geojson':
                 #print('Building main input file with file nb: ' + str(nb))
-                BuildingFiles.append(file)
-            if 'Walls' in file and 'geojson' in file:
-                ShadingWallFiles.append(file.replace('Buildings', 'Walls'))
-
-    return BuildingFiles,ShadingWallFiles
+                if not 'Wall' in file:
+                    BuildingFiles.append(file)
+    return BuildingFiles
 
 
 
@@ -358,7 +353,7 @@ def CleanUpLogFiles(MainPath):
         os.remove(os.path.join(MainPath,file))
     MainLogFile.close()
 
-def AppendLogFiles(MainPath):
+def AppendLogFiles(MainPath,BldIDKey):
     file2del = []
     try:
         with open(os.path.join(MainPath, 'AllLogs.log'), 'r') as file:
@@ -377,11 +372,11 @@ def AppendLogFiles(MainPath):
         flagON = False
         for line in Lines:
             NewLines.append(line)
-            if '[Bld ID] 50A_UUID : ' in line:
+            if '[Bld ID] '+BldIDKey+' : ' in line:
                 flagON = True
-                id = line[20:-1]
+                id = line[len('[Bld ID] '+BldIDKey+' : '):-1]
                 try:
-                    with open(os.path.join(MainPath,'Sim_Results', id + '.txt'), 'r') as file:
+                    with open(os.path.join(MainPath,'Sim_Results', BldIDKey+'_'+str(id) + '.txt'), 'r') as file:
                         extralines = file.readlines()
                 except:
                     extralines = ['ERROR : No simulations found for this building\n']

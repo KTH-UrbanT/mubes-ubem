@@ -338,7 +338,7 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[],BldList = []):
 
     #lets get the mandatory variables
     variables=['EP_Elec','EP_Heat','EP_Cool','EP_DHW','SimNum','EPC_Elec','EPC_Heat','EPC_Cool','EPC_Tot',
-               'ATemp','EP_Area','BuildID','BldSimName']
+               'DB_Surf','EP_Area','BuildID','BldSimName']
     # lest build the Res dictionnary
     for key in variables:
         Res[key] = []
@@ -375,23 +375,23 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[],BldList = []):
         Res['EP_Area'].append(BuildObj.EPHeatedArea)
         Res['BldSimName'].append(BuildObj.name)
         try:
-            Res['ATemp'].append(BuildObj.ATemp)
+            Res['DB_Surf'].append(BuildObj.DB_Surf)
         except:
-            Res['ATemp'].append(BuildObj.surface)
+            Res['DB_Surf'].append(BuildObj.surface)
         eleval = 0
         for x in BuildObj.EPCMeters['ElecLoad']:
             if BuildObj.EPCMeters['ElecLoad'][x]:
                 eleval += BuildObj.EPCMeters['ElecLoad'][x]
-        Res['EPC_Elec'].append(eleval/BuildObj.ATemp if BuildObj.ATemp!=0 else 0)
+        Res['EPC_Elec'].append(eleval/BuildObj.DB_Surf if BuildObj.DB_Surf!=0 else 0)
         heatval = 0
         for x in BuildObj.EPCMeters['Heating']:
             heatval += BuildObj.EPCMeters['Heating'][x]
-        Res['EPC_Heat'].append(heatval/BuildObj.ATemp if BuildObj.ATemp!=0 else 0)
+        Res['EPC_Heat'].append(heatval/BuildObj.DB_Surf if BuildObj.DB_Surf!=0 else 0)
         coolval = 0
         for x in BuildObj.EPCMeters['Cooling']:
             coolval += BuildObj.EPCMeters['Cooling'][x]
-        Res['EPC_Cool'].append(coolval/BuildObj.ATemp if BuildObj.ATemp!=0 else 0)
-        Res['EPC_Tot'].append((eleval+heatval+coolval)/BuildObj.ATemp if BuildObj.ATemp!=0 else 0)
+        Res['EPC_Cool'].append(coolval/BuildObj.DB_Surf if BuildObj.DB_Surf!=0 else 0)
+        Res['EPC_Tot'].append((eleval+heatval+coolval)/BuildObj.DB_Surf if BuildObj.DB_Surf!=0 else 0)
 
 #forthe old way of doing things and the new paradigm for global results
         try:

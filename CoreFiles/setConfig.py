@@ -113,11 +113,11 @@ def checkGlobalConfig(config):
         return 'EnergyPlus Weather path',False
     #lets check for the geojsonfile:
     ok = []
-    if os.path.isdir(os.path.abspath(config['1_DATA']['Buildingsfile'])):
-        liste = os.listdir(config['1_DATA']['Buildingsfile'])
+    if os.path.isdir(os.path.abspath(config['1_DATA']['PATH_TO_DATA'])):
+        liste = os.listdir(config['1_DATA']['PATH_TO_DATA'])
         ok = [file for file in liste if '.geojson' in file]
     else:
-        if '.geojson' in config['1_DATA']['Buildingsfile']:
+        if '.geojson' in config['1_DATA']['PATH_TO_DATA']:
             ok = True
     if not ok:
         return 'DATA path',False

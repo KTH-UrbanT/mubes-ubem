@@ -19,8 +19,9 @@ def initiateprocess(MainPath):
             file2run.append(file)
     return file2run
 
-def runcase(file,filepath, epluspath, API = False):
+def runcase(file,filepath, epluspath, API = False,Verbose = False):
     #this function runs a case
+
     ResSimpath = os.path.join(filepath,'Sim_Results')
     if not os.path.exists(ResSimpath):
         os.mkdir(ResSimpath)
@@ -28,6 +29,7 @@ def runcase(file,filepath, epluspath, API = False):
          loadB = pickle.load(handle)
 
     building = loadB['BuildData'] #the building object is loaded in order to be saved afterward with the simulation results
+    if Verbose: print('Simulation of '+building.name+' is being launched')
     Runfile = os.path.join(filepath,file)
     RunDir = os.path.join(filepath,file[:-4])
     #print('Launching :'+file)
@@ -67,9 +69,10 @@ def runcase(file,filepath, epluspath, API = False):
 
 def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,API = False,CTime = [],withFMU = False):
     start = time.time()
+    IdKy = building.BuildID['BldIDKey']
     if API:
         res2export = []
-        res2export.append(['UUID : ', building.BuildID['50A_UUID']])
+        res2export.append( IdKy, building.BuildID[IdKy])
         import pandas as pd
         df = pd.read_csv(os.path.join(RunDir, 'Runout.csv'), sep=',')
         SpaceHeating = 0
@@ -90,7 +93,7 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,API = False,CTime
             ['Total computational time : ', round(CTime, 1), ' seconds'])
         res2export.append(
             ['Total results reporting : ', round(resTime, 1), ' seconds'])
-        Write2file(res2export, os.path.join(ResSimpath, building.BuildID['50A_UUID'] + '.txt'))
+        Write2file(res2export, os.path.join(ResSimpath, IdKy+'_'+building.BuildID[IdKy] + '.txt'))
     else:
         #the resultst are read with html table and energyplus eso files. The html could be avoid, but then some information will have to computes in the building object (could be)
         if withFMU:
@@ -126,7 +129,7 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,API = False,CTime
                 '[Reported Time] Full Computation : '+ str(round(CTime, 2)) + ' seconds')
             res2export.append(
                 '[Reported Time] Read and Save Results : '+ str(round(resTime, 2))+ ' seconds')
-            Write2file(res2export, os.path.join(ResSimpath, building.BuildID['50A_UUID']+'.txt'))
+            Write2file(res2export, os.path.join(ResSimpath, IdKy+'_'+str(building.BuildID[IdKy])+ '.txt'))
 
     os.chdir(filepath)
     if not building.SaveLogFiles:

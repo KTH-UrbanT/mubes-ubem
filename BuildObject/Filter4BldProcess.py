@@ -4,6 +4,7 @@ import CoreFiles.GeneralFunctions as GrlFct
 
 def checkBldFilter(building,LogFile = [],DebugMode = False):
     CaseOk = len(building.BlocHeight) if building.Multipolygon else building.height
+    msg =''
     # if the building have bloc with no Height or if the hiegh is below 1m (shouldn't be as corrected in the Building class now)
     if len(building.BlocHeight) > 0 and min(building.BlocHeight) < 1:
         CaseOk = 0
@@ -19,4 +20,4 @@ def checkBldFilter(building,LogFile = [],DebugMode = False):
         CaseOk = 0
         msg = '[Error] The building has a given number of floor equal to 0...\n'
         if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
-    return CaseOk
+    return CaseOk,msg

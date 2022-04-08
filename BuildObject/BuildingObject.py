@@ -31,17 +31,21 @@ def checkLim(val, ll, ul):
 #get the value from the correct key
 def getDBValue(DB, Keys):
     Val = ''
+    IdKey = ''
     if type(Keys) ==list:
         for key in Keys:
             try:
                 Val = DB[key]
+                IdKey = key
                 break
             except:
                 pass
     else:
-        try: Val = DB[Keys]
+        try:
+            Val = DB[Keys]
+            IdKey = Keys
         except: pass
-    return Val
+    return Val,IdKey
 
 
 #find the wall id for the shading surfaces from surrounding buildings
@@ -104,6 +108,7 @@ class BuildingList:
 
 class Building:
     def __init__(self,name,DataBaseInput,nbcase,MainPath,BuildingFilePath,LogFile,PlotOnly,DebugMode):
+        import time
         Buildingsfile = DataBaseInput['Build']
         DB = Buildingsfile[nbcase]
         config = setConfig.read_yaml('ConfigFile.yml')
@@ -117,7 +122,6 @@ class Building:
             self.CRS = Buildingsfile.crs['properties']['name'] #this is the coordinates reference system for the polygons
         except:
             self.CRS = 'Null'
-
         self.getBEData(BE)
         self.getSimData(SD)
         self.name = name
@@ -131,18 +135,12 @@ class Building:
         self.footprint,  self.BlocHeight, self.BlocNbFloor = self.getfootprint(DB,LogFile,self.nbfloor,DebugMode)
         self.AggregFootprint = self.getAggregatedFootprint()
         self.RefCoord = self.getRefCoord()
-        self.ATemp = self.getsurface(DB, DBL,LogFile,DebugMode)
+        self.DB_Surf = self.getsurface(DB, DBL,LogFile,DebugMode)
         self.SharedBld, self.VolumeCorRatio = self.IsSameFormularIdBuilding(Buildingsfile, nbcase, LogFile, DBL,DebugMode)
         self.BlocHeight, self.BlocNbFloor, self.StoreyHeigth = self.EvenFloorCorrection(self.BlocHeight, self.nbfloor, self.BlocNbFloor, self.footprint, LogFile,DebugMode)
         self.EPHeatedArea = self.getEPHeatedArea(LogFile,DebugMode)
         self.AdjacentWalls = [] #this will be appended in the getshade function if any present
-        try:
-            self.shades = self.getshade(nbcase, Buildingsfile,LogFile, PlotOnly=PlotOnly,DebugMode=DebugMode)
-        except:
-            msg = '[Shadowing Error] Json or GeoJson or file failed, no shading are considered\n'
-            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
-            self.shades = {}
-            pass
+        self.shades = self.getshade(nbcase, Buildingsfile,LogFile, PlotOnly=PlotOnly,DebugMode=DebugMode)
         self.Materials = config['3_SIM']['BaseMaterial']
         self.InternalMass = config['3_SIM']['InternalMass']
         self.edgesHeights = self.getEdgesHeights()
@@ -211,7 +209,7 @@ class Building:
             for key in Meas['Heating'].keys():
                 val += Meas['Heating'][key]
             totHeat.append(val)
-        # correction on the ATemp if it is the same on all (should be)
+        # correction on the DDB_SurfBSurf if it is the same on all (should be)
         HeatDiff = [totHeat[idx + 1] - A for idx, A in enumerate(totHeat[:-1])]
         if all(v == 0 for v in HeatDiff):
             newval = 0
@@ -225,7 +223,7 @@ class Building:
                         newval += self.EPCMeters['Heating'][key]
             msg = '[EPCs correction] The EPCs total heat needs for the each shared buildings is :'+str(totHeat)+'\n'
             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
-            msg = '[EPCs correction] All EPCs metrix will be modified by the Volume ratio as for ATemp\n'
+            msg = '[EPCs correction] All EPCs metrix will be modified by the Volume ratio as for the DBSurface\n'
             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
             msg = '[EPCs correction] For example, the Heat needs is corrected from : '+ str(totHeat[0])+ ' to : '+ str(newval)+'\n'
             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
@@ -243,10 +241,10 @@ class Building:
                 pass
         maxHeight=[max(self.BlocHeight)]
         floors = [self.nbfloor]
-        ATemp = [self.ATemp]
+        DB_Surf = [self.DB_Surf]
         Volume = [sum([Polygon(foot).area * self.BlocHeight[idx] for idx,foot in enumerate(self.footprint)])]
         for nb in SharedBld:
-            ATemp.append(self.getsurface(Buildingsfile[nb], DBL))
+            DB_Surf.append(self.getsurface(Buildingsfile[nb], DBL))
             floors.append(self.getnbfloor(Buildingsfile[nb],DBL))
             Bldfootprint,  BldBlocHeight, BldBlocNbFloor = self.getfootprint(Buildingsfile[nb],[],floors[-1])
             maxHeight.append(max(BldBlocHeight))
@@ -261,16 +259,16 @@ class Building:
             msg = '[Nb Floor Cor] nb of floors is thus corrected from : '+ str(self.nbfloor)+ ' to : '+ str(newfloor)+'\n'
             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
             self.nbfloor = newfloor
-            #correction on the ATemp if it is the same on all (should be)
-            Adiff = [ATemp[idx+1]-A for idx,A in enumerate(ATemp[:-1])]
+            #correction on the DB_Surf if it is the same on all (should be)
+            Adiff = [DB_Surf[idx+1]-A for idx,A in enumerate(DB_Surf[:-1])]
             if all(v == 0 for v in Adiff):
                 VolumeCorRatio = Volume[0] / sum(Volume)
-                newATemp = self.ATemp * VolumeCorRatio
-                msg = '[ATemp Cor] The ATemp will also be modified by the volume ratio of this building over the volume sum of all concerned building \n'
+                newATemp = self.DB_Surf * VolumeCorRatio
+                msg = '[DB_Surf Cor] The DB_Surf will also be modified by the volume ratio of this building over the volume sum of all concerned building \n'
                 if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
-                msg = '[ATemp Cor] The ATemp is thus corrected from : '+ str(self.ATemp)+ ' to : '+ str(newATemp)+'\n'
+                msg = '[DB_Surf Cor] The DB_Surf is thus corrected from : '+ str(self.DB_Surf)+ ' to : '+ str(newATemp)+'\n'
                 if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
-                self.ATemp  = newATemp
+                self.DB_Surf  = newATemp
         return SharedBld, VolumeCorRatio
 
 
@@ -304,8 +302,11 @@ class Building:
         for key in self.GE['BuildIDKey']:
             try:
                 BuildID[key] = DB.properties[key]
+                BuildID['BldIDKey'] = key
+                break
             except:
-                pass #BuildID[key] = None
+                BuildID['BldIDKey'] = 'NoBldID'
+                BuildID['NoBldID'] = 'NoBldID'
         if BuildID:
             for key in BuildID:
                 msg = '[Bld ID] '+ key+' : ' + str(BuildID[key]) + '\n'
@@ -353,31 +354,24 @@ class Building:
         #we first need to check if it is Multipolygon
         if self.Multipolygon:
             #then we append all the floor and roof fottprints into one with associate height
+            MatchedPoly = [0]*len((DB.geometry.coordinates))
             for idx1,poly1 in enumerate(DB.geometry.coordinates[:-1]):
                 for idx2,poly2 in enumerate(DB.geometry.coordinates[idx1+1:]):
-                    if poly1 == poly2:
-                        polycoor = []
-                        for j in poly1[0]:
-                            new = (j[0], j[1])
-                            new_coor = new#[]
-                            # for ii in range(len(RefCoord)):
-                            #     new_coor.append((new[ii] - RefCoord[ii]))
-                            polycoor.append(tuple(new_coor))
-                        if polycoor[0]==polycoor[-1]:
-                            polycoor = polycoor[:-1]
-                        #even before skewed angle, we need to check for tiny edge below the tolerance onsdered aftward (0.5m)
-                        pt2remove = []
-                        for edge in Polygon2D(polycoor).edges:
-                            if edge.length < DistTol:
-                                pt2remove.append(edge.p2)
-                        for pt in pt2remove:
-                            if len(polycoor)>3:
-                                polycoor.remove(pt)
-                        newpolycoor, node = core_perim.CheckFootprintNodes(polycoor,5)
+                    if GeomUtilities.chekIdenticalpoly(poly1[0], poly2[0]) and  \
+                            round(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]),1) >0:
+                        MatchedPoly[idx1] = 1
+                        MatchedPoly[idx2+idx1+1] = 1
+                        newpolycoor,node = GeomUtilities.CleanPoly(poly1[0],DistTol)
                         node2remove.append(node)
-                        #polycoor.reverse()
-                        coord.append(polycoor)
-                        BlocHeight.append(round(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]),1))
+                         #polycoor.reverse()
+                        #test of identical polygone maybe (encountered from geojon made out of skethup
+                        skipit = False
+                        for donPoly in coord:
+                            if GeomUtilities.chekIdenticalpoly(donPoly, newpolycoor):
+                                skipit = True #no need to store the same polygone....
+                        if not skipit:
+                            coord.append(newpolycoor)
+                            BlocHeight.append(round(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]),1))
         else:
             #for dealing with 2D files
             singlepoly = False
@@ -387,19 +381,20 @@ class Building:
                     coord.append(tuple(new))
                     singlepoly = True
                 else:
-                    new = []
-                    for jj in j:
-                        new.append(tuple(jj))
-                    # even before skewed angle, we need to check for tiny edge below the tolerance onsdered aftward (0.5m)
-                    pt2remove = []
-                    for edge in Polygon2D(new).edges:
-                        if edge.length < DistTol:
-                            pt2remove.append(edge.p2)
-                    for pt in pt2remove:
-                        if len(new) > 3:
-                            new.remove(pt)
-                    newpolycoor, node = core_perim.CheckFootprintNodes(new, 5)
-                    coord.append(new)
+                    # new = []
+                    # for jj in j:
+                    #     new.append(tuple(jj))
+                    # # even before skewed angle, we need to check for tiny edge below the tolerance onsdered aftward (0.5m)
+                    # pt2remove = []
+                    # for edge in Polygon2D(new).edges:
+                    #     if edge.length < DistTol:
+                    #         pt2remove.append(edge.p2)
+                    # for pt in pt2remove:
+                    #     if len(new) > 3:
+                    #         new.remove(pt)
+                    # newpolycoor, node = core_perim.CheckFootprintNodes(new, 5)
+                    newpolycoor, node = GeomUtilities.CleanPoly(j, DistTol)
+                    coord.append(newpolycoor)
                     node2remove.append(node)
             if singlepoly:
                 newpolycoor, node = core_perim.CheckFootprintNodes(coord, 5)
@@ -409,6 +404,13 @@ class Building:
                 BlocNbFloor.append(nbfloor)
                 BlocHeight.append(self.height)
 
+        #if a polygonew has been seen alone, it means that it should be exruded down to the floor
+        for idx,val in enumerate(MatchedPoly):
+            if val ==0:
+                missedPoly,node = GeomUtilities.CleanPoly(DB.geometry.coordinates[idx][0], DistTol)
+                coord.append(missedPoly)
+                node2remove.append(node)
+                BlocHeight.append(DB.geometry.poly3rdcoord[idx])
         # we need to clean the footprint from the node2remove but not if there are part of another bloc
         newbloccoor = []
         for idx, coor in enumerate(coord):
@@ -436,9 +438,16 @@ class Building:
             for i in range(len(coord) - idx - 1):
                 if Polygon(coor).contains(Polygon(coord[idx + i + 1])):
                     poly2merge.append([idx, idx + i + 1])
+                if Polygon(coord[idx + i + 1]).contains(Polygon(coor)):
+                    poly2merge.append([idx + i + 1,idx])
         try:
             for i, idx in enumerate(poly2merge):
+                #lets check if it's a tower of smaller foorptin than the base:
+                SmallerTower = False
+                if BlocHeight[idx[1]]-BlocHeight[idx[0]]>0:
+                    SmallerTower = True
                 newtry = False
+
                 if newtry :
 
                     newSurface = GeomUtilities.mergeHole(coord[idx[0]],coord[idx[1]])
@@ -451,8 +460,12 @@ class Building:
                     coord[idx[0]] = [(xs[nbv], ys[nbv]) for nbv in range(len(xs))]
                     if len(new_surfaces) > 1:
                         xs, ys, zs = zip(*list(new_surfaces[1]))
-                        coord[idx[1]] = [(xs[nbv], ys[nbv]) for nbv in range(len(xs))]
-                        BlocHeight[idx[1]] = BlocHeight[idx[0]]
+                        if SmallerTower:
+                            coord.append([(xs[nbv], ys[nbv]) for nbv in range(len(xs))])
+                            BlocHeight.append(BlocHeight[idx[0]])
+                        else:
+                            coord[idx[1]] = [(xs[nbv], ys[nbv]) for nbv in range(len(xs))]
+                            BlocHeight[idx[1]] = BlocHeight[idx[0]]
                     else:
                         coord.pop(idx[1])
                         BlocHeight.pop(idx[1])
@@ -490,6 +503,11 @@ class Building:
             msg = '[Geom Warning] This building has at least one edge length below 2m\n'
             #print(msg[:-1])
             if DebugMode : GrlFct.Write2LogFile(msg, LogFile)
+        #lets make a final check of the polygon orientation
+        #for energy plu inputs, floor needs to be clockwise oriented
+        for poly in coord:
+            if GeomUtilities.is_clockwise(poly):
+                poly.reverse()
         return coord, BlocHeight, BlocNbFloor
 
     def EvenFloorCorrection(self,BlocHeight,nbfloor,BlocNbFloor,coord,LogFile,DebugMode=False):
@@ -539,52 +557,57 @@ class Building:
             self.BlocFootprintArea.append(Polygon(foot).area)
         msg = '[Geom Info] Blocs footprint areas : '+ str(self.BlocFootprintArea)+'\n'
         if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
-        msg = '[Geom Info] The total heated area is : ' + str(EPHeatedArea)+' for a declared ATemp of : '+str(self.ATemp)+' --> discrepancy of : '+str(round((self.ATemp-EPHeatedArea)/self.ATemp*100,2))+'\n'
+        msg = '[Geom Info] The total heated area is : ' + str(EPHeatedArea)+' for a declared DB_Surf of : '+str(self.DB_Surf)+' --> discrepancy of : '+str(round((self.DB_Surf-EPHeatedArea)/self.DB_Surf*100,2))+'\n'
         if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         return EPHeatedArea
 
     def getsurface(self,DB, DBL,LogFile = [],DebugMode = False):
-        "Get the surface from the input file, ATemp"
-        try: ATemp = int(getDBValue(DB.properties, DBL['surface_key']))
-        except: ATemp = 1
-        if ATemp == 1:
-            msg = '[Geom Error] Atemp not recognized as number, fixed to 1\n'
+        "Get the surface from the input file, DB_Surf"
+        DB_Surf, IdKey = getDBValue(DB.properties, DBL['surface_key'])
+        try: DB_Surf = int(DB_Surf)
+        except: DB_Surf = 1
+        if DB_Surf == 1:
+            msg = '[Geom Error] Surface ID not recognized as number, fixed to 1\n'
             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
-        ATemp = checkLim(ATemp,DBL['surface_lim'][0],DBL['surface_lim'][1])
-        self.ATempOr= ATemp     #this is to keep the original value as some correction might done afterward if more then 1 bld is present in 1 Id
-        return ATemp
+        DB_Surf = checkLim(DB_Surf,DBL['surface_lim'][0],DBL['surface_lim'][1])
+        self.DBSurfOriginal= DB_Surf     #this is to keep the original value as some correction might done afterward if more then 1 bld is present in 1 Id
+        return int(DB_Surf)
 
     def getnbfloor(self,DB, DBL,LogFile = [], DebugMode = False):
         "Get the number of floor above ground"
-        try: nbfloor=int(getDBValue(DB.properties, DBL['nbfloor_key']))
+        nbfloor, IdKey = getDBValue(DB.properties, DBL['nbfloor_key'])
+        try: nbfloor = int(nbfloor)
         except: nbfloor = 0
         if nbfloor == 0:
             msg = '[EPCs Warning] The nb of floors is 0. It will be defined using the max bloc height and a storey height of 3m\n'
             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         nbfloor = checkLim(nbfloor,DBL['nbfloor_lim'][0],DBL['nbfloor_lim'][1])
-        return nbfloor
+        return int(nbfloor)
 
     def getnbStairwell(self,DB, DBL):
         "Get the number of stariwell, need for natural stack effect on infiltration"
-        try: nbStairwell = int(getDBValue(DB.properties, DBL['nbStairwell_key']))
+        nbStairwell, IdKey = getDBValue(DB.properties, DBL['nbStairwell_key'])
+        try: nbStairwell = int(nbStairwell)
         except: nbStairwell=0
         nbStairwell = checkLim(nbStairwell,DBL['nbStairwell_lim'][0],DBL['nbStairwell_lim'][1])
-        return nbStairwell
+        return int(nbStairwell)
 
 
     def getnbBasefloor(self,DB, DBL):
         "Get the number of floor below ground"
-        try: nbBasefloor = int(getDBValue(DB.properties, DBL['nbBasefloor_key']))
+        nbBasefloor, IdKey = getDBValue(DB.properties, DBL['nbBasefloor_key'])
+        try: nbBasefloor = int(nbBasefloor)
         except: nbBasefloor = 0
         nbBasefloor = checkLim(nbBasefloor,DBL['nbBasefloor_lim'][0],DBL['nbBasefloor_lim'][1])
-        return nbBasefloor
+        return int(nbBasefloor)
 
     def getyear(self,DB, DBL):
         "Get the year of construction in the input file"
-        try: year = int(getDBValue(DB.properties, DBL['year_key']))
+        year, IdKey = getDBValue(DB.properties, DBL['year_key'])
+        try: year = int(year)
         except: year = 1900
         year = checkLim(year,DBL['year_lim'][0],DBL['year_lim'][1])
-        return year
+        return int(year)
 
     def getEPCMeters(self,DB,EPC,LogFile = [], DebugMode = False):
         "Get the EPC meters values"
@@ -602,17 +625,19 @@ class Building:
 
     def getnbAppartments(self, DB, DBL):
         "Get the number of appartment in the building"
-        try: nbApp = int(getDBValue(DB.properties, DBL['nbAppartments_key']))
+        nbApp, IdKey = getDBValue(DB.properties, DBL['nbAppartments_key'])
+        try: nbApp = int(nbApp)
         except: nbApp = 0
         nbApp = checkLim(nbApp,DBL['nbAppartments_lim'][0],DBL['nbAppartments_lim'][1])
-        return nbApp
+        return int(nbApp)
 
     def getheight(self, DB, DBL):
         "Get the building height from the input file, but not used if 3D coordinates in the footprints"
-        try: height = int(getDBValue(DB.properties, DBL['height_key']))
+        height, IdKey = getDBValue(DB.properties, DBL['height_key'])
+        try: height = int(height)
         except: height = 0
         height = checkLim(height,DBL['height_lim'][0],DBL['height_lim'][1])
-        return height
+        return int(height)
 
     def getAggregatedFootprint(self):
         # lets compute the aggregaded external footprint of the different blocs
@@ -662,14 +687,17 @@ class Building:
         GeJsonFile = []
         shades = {}
         BuildingFileName = os.path.basename(self.BuildingFilePath)
-        if os.path.isfile(os.path.join(os.path.dirname(self.BuildingFilePath),
-                                       BuildingFileName[:BuildingFileName.index('.')] + '_Walls.json')):
-            JSONFile = os.path.join(os.path.dirname(self.BuildingFilePath),
-                                       BuildingFileName[:BuildingFileName.index('.')] + '_Walls.json')
-        elif os.path.isfile(os.path.join(os.path.dirname(self.BuildingFilePath),
-                                       BuildingFileName.replace('Buildings', 'Walls'))):
-            GeJsonFile = os.path.join(os.path.dirname(self.BuildingFilePath),
-                                        BuildingFileName.replace('Buildings', 'Walls'))
+        JSonTest = os.path.join(os.path.dirname(self.BuildingFilePath),BuildingFileName[:BuildingFileName.index('.')] + '_Walls.json')
+        GeoJsonTest = os.path.join(os.path.dirname(self.BuildingFilePath),BuildingFileName.replace('Buildings', 'Walls'))
+        GeoJsonTest1 = True  if 'Walls' in GeoJsonTest else False
+        if os.path.isfile(JSonTest):
+            JSONFile = JSonTest
+        elif  GeoJsonTest and GeoJsonTest1:
+            GeJsonFile = GeoJsonTest
+        else:
+            msg = '[Shadowing Info] No Shadowing wall file were found\n'
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+            return shades
 
         if JSONFile:
             msg = '[Shadowing Info] Shadowing walls are taken from a json file\n'
@@ -677,13 +705,11 @@ class Building:
             with open(JSONFile) as json_file:
                 ShadowingWalls = json.load(json_file)
             return self.getShadesFromJson(ShadowingWalls)
-        elif GeJsonFile:
+        if GeJsonFile:
             msg = '[Shadowing Info] Shadowing walls are taken from a GeoJson file\n'
             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
             Shadingsfile = MUBES_pygeoj.load(GeJsonFile)
             Shadingsfile = GrlFct.checkRefCoordinates(Shadingsfile)
-
-
             try:
                 GE = self.GE
                 shadesID = Buildingsfile[nbcase].properties[GE['ShadingIdKey']]
@@ -720,8 +746,6 @@ class Building:
                     if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
                     #print(msg[:-1])
                     continue
-                if ShadeWall[GE['ShadingIdKey']] =='V67656-3':
-                    a=1
                 confirmed,currentShadingElement,OverlapCode = GeomUtilities.checkShadeWithFootprint(RelativeAgregFootprint,
                                 currentShadingElement,ShadeWall[GE['ShadingIdKey']],tol = self.GE['DistanceTolerance'])
                 if confirmed:
@@ -754,10 +778,7 @@ class Building:
                 shades[wallId]['distance'] = dist
             return shades
 
-        else:
-            msg = '[Shadowing Info] No Shadowing wall file were found\n'
-            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
-            return shades
+
 
 
     def getVentSyst(self, DB,VentSystDict,LogFile,DebugMode):
@@ -781,7 +802,8 @@ class Building:
 
     def getAreaBasedFlowRate(self, DB, DBL, BE):
         "Get the airflow rates based on the floor area"
-        try: AreaBasedFlowRate = float(getDBValue(DB.properties, DBL['AreaBasedFlowRate_key']))
+        val,key = getDBValue(DB.properties, DBL['AreaBasedFlowRate_key'])
+        try: AreaBasedFlowRate = float(val)
         except : AreaBasedFlowRate = BE['AreaBasedFlowRate']
         AreaBasedFlowRate = checkLim(AreaBasedFlowRate,DBL['AreaBasedFlowRate_lim'][0],DBL['AreaBasedFlowRate_lim'][1])
         return AreaBasedFlowRate

@@ -78,7 +78,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
     if FirstRun:
         LogFile = open(os.path.join(SimDir, 'Build_'+str(nbcase)+'_Logs.log'), 'w')
         msg = 'Building ' + str(nbcase) + ' is starting\n'
-        #if Verbose: print(msg[:-1])
+        if Verbose: print(msg[:-1])
         GrlFct.Write2LogFile(msg,LogFile)
     else:
         LogFile = False
@@ -103,13 +103,11 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
 
 
         #Rounds of check if we continue with this building or not, see DB_Filter4Simulation.py if other filter are to add
-        CaseOK = checkBldFilter(building,LogFile,DebugMode = DebugMode)
+        CaseOK,msg = checkBldFilter(building,LogFile,DebugMode = DebugMode)
         if not CaseOK:
-            msg =  '[Error] This Building/bloc is not valid to continue, please check DB_Filter4Simulation.py to see what is of concerned or turn on DebugMode\n'
             print(msg[:-1])
             os.chdir(MainPath)
             if FirstRun:
-                GrlFct.Write2LogFile(msg, LogFile)
                 GrlFct.Write2LogFile('##############################################################\n', LogFile)
                 return building,idf, 'NOK'
         if DebugMode: GrlFct.Write2LogFile('[Time report] Building Initialisation phase : '+

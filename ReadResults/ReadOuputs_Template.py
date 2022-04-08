@@ -26,15 +26,16 @@ import Utilities
 
 
 def plotAreaVal(GlobRes,FigName,name):
-    refVar= '[''BuildID''][''50A_UUID'']'
-    reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
+    key = GlobRes[0]['BuildID'][0]['BldIDKey']
+    refVar= '[''BuildID''][key]'
+    reference = [GlobRes[0]['BuildID'][i][key] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
     #definition of the reference for comparison
     signe = ['.','s','>','<','d','o','.','s','>','<','d','o']
     for nb in GlobRes:
         Res = GlobRes[nb]
-        locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
+        locref = [GlobRes[nb]['BuildID'][i][key] for i in range(len(GlobRes[nb]['BuildID']))]
         index_y,varx = Utilities.getSortedIdx(reference,locref)
-        varyref = [Res['ATemp'][idx] for idx in index_y]
+        varyref = [Res['DB_Surf'][idx] for idx in index_y]
         if nb==0:
             Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0],varx, [varyref], 'Building num', ['ATemp'],
                                          'Areas (m2)', 'x')
@@ -49,14 +50,15 @@ def plotAreaVal(GlobRes,FigName,name):
 
 
 def plotErrorFile(GlobRes,FigName,name,legend = True):
-    #reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
+    key = GlobRes[0]['BuildID'][0]['BldIDKey']
+    #reference = [GlobRes[0]['BuildID'][i][key] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
     #definition of the reference for comparison
     signe = ['.','s','>','<','d','o','.','s','>','<','d','o']
     offset = 0
     tot = 0
     for nb in GlobRes:
         Res = GlobRes[nb]
-        #locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
+        #locref = [GlobRes[nb]['BuildID'][i][key] for i in range(len(GlobRes[nb]['BuildID']))]
         #index_y,varx = Utilities.getSortedIdx(reference,locref)
         vary = Res['Warnings']
         varx = [int(x) for x in np.linspace(offset, offset + len(vary), len(vary))]
@@ -78,13 +80,14 @@ def plotErrorFile(GlobRes,FigName,name,legend = True):
 
 
 def plotDim(GlobRes,FigName,name):
-    refVar= '[''BuildID''][''50A_UUID'']'
-    reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
+    key = GlobRes[0]['BuildID'][0]['BldIDKey']
+    refVar= '[''BuildID''][key]'
+    reference = [GlobRes[0]['BuildID'][i][key] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
     #definition of the reference for comparison
     signe = ['.','s','>','<','d','o','.','s','>','<','d','o']
     for nb in GlobRes:
         Res = GlobRes[nb]
-        locref = [Res['BuildID'][i]['50A_UUID'] for i in range(len(Res['BuildID']))]
+        locref = [Res['BuildID'][i][key] for i in range(len(Res['BuildID']))]
         index_y,varx = Utilities.getSortedIdx(reference,locref)
         footprint = Res['BlocFootprintArea']
         try:
@@ -120,14 +123,15 @@ def plotDim(GlobRes,FigName,name):
 
 
 def plotEnergy(GlobRes,FigName,name):
-    refVar = '[''BuildID''][''50A_UUID'']'
-    reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(
+    refVar = '[''BuildID''][key]'
+    key = GlobRes[0]['BuildID'][0]['BldIDKey']
+    reference = [GlobRes[0]['BuildID'][i][key] for i in range(
         len(GlobRes[0]['BuildID']))]  # we need this reference because some building are missing is somme simulation !!!
     # definition of the reference for comparison
     signe = ['.', 's', '>', '<', 'd', 'o', '.', 's', '>', '<', 'd', 'o']
     for nb in GlobRes:
         Res = GlobRes[nb]
-        locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
+        locref = [GlobRes[nb]['BuildID'][i][key] for i in range(len(GlobRes[nb]['BuildID']))]
         index_y, varx = Utilities.getSortedIdx(reference, locref)
         varyref = [Res['EPC_Heat'][idx] for idx in index_y]
         if nb == 0:
@@ -146,15 +150,15 @@ def plotEnergy(GlobRes,FigName,name):
 
 
 def plotTimeSeries(GlobRes,FigName,name,Location,TimeSerieList,Unit,SimNum=[]):
-
-    refVar= '[''BuildID''][''50A_UUID'']'
-    reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
+    key = GlobRes[0]['BuildID'][0]['BldIDKey']
+    refVar= '[''BuildID''][key]'
+    reference = [GlobRes[0]['BuildID'][i][key] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
     signe = ['.','s','>','<','d','o','.','s','>','<','d','o']
     for nb in GlobRes:
         Res = GlobRes[nb]
         if not SimNum:
             SimNum = Res['SimNum']
-        locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
+        locref = [GlobRes[nb]['BuildID'][i][key] for i in range(len(GlobRes[nb]['BuildID']))]
 
         for nbBld in SimNum:
             index_y, varx = Utilities.getSortedIdx(reference, locref)
@@ -174,13 +178,14 @@ def plotTimeSeries(GlobRes,FigName,name,Location,TimeSerieList,Unit,SimNum=[]):
 
 
 def plotIndex(GlobRes,FigName,name):
-    refVar= '[''BuildID''][''50A_UUID'']'
-    reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
+    key = GlobRes[0]['BuildID'][0]['BldIDKey']
+    refVar= '[''BuildID''][key]'
+    reference = [GlobRes[0]['BuildID'][i][key] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
     #definition of the reference for comparison
     signe = ['.','s','>','<','d','o','.','s','>','<','d','o']
     for nb in GlobRes:
         Res = GlobRes[nb]
-        locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
+        locref = [GlobRes[nb]['BuildID'][i][key] for i in range(len(GlobRes[nb]['BuildID']))]
         index_y,varx = Utilities.getSortedIdx(reference,locref)
         vary = [Res['SimNum'][idx] for idx in index_y]
         Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax0'], varx, [vary], 'Building',

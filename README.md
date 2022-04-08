@@ -4,7 +4,7 @@ All inputs are dealt with an exteranl *.yml file
 Several thermal zoning options are proposed from single heated and non heated zones up to core and perimeter zones for each building floor.
 It can launch simulations using parallel computing or can automatically creates FMUs of each building in order to make co-simulation afterward (the co-simulation process, using FMPy, is validated in Windows, Mac and Linux (Ubuntu)).  
 The main input file is in a geojson format. It contains the footprint including height (3D vertexes) of each building's surface as well as some propreties taken from several databases (EPCs, and others).  
-__Rq__:  The platform is continuly under development, newcomers are welcome to join by forking and proposing changes
+__Rq__:  The platform is continually under development, newcomers are welcome to join by forking and proposing changes
 
 ![Minneberg](Minneberg.jpg)
 
@@ -26,7 +26,7 @@ The MUBES_UBEM main folder contains several subfolders:
 __CoreFile__  : contains all the core python scripts for the several levels of the building design process.  
 __ExternalFiles__  : contains commun external files that one would use for all the buildings considered in the process. It currently contains the times series of cold water input temperature for the Domestic Hot Water needs as well as the water taps in l/min. The latter is an output from an other packages ([StROBe](https://github.com/open-ideas/StROBe)) that enables to create stochastics outputs for residential occupancy.    
 __BuildObject__  : contains the building class object, filters to skip building from the input file and some geometric utilities used.  
-__ModelerFolder__ : containes the *runMUBES.py* file as well as two examples of FMU simulations. An example of geojson is also provided. *MakeShadowingWallFile.py* enables to create a Json input file for further shadowing effect consideration.  
+__ModelerFolder__ : contains the *runMUBES.py* file as well as two examples of FMU simulations. An example of geojson is also provided. *MakeShadowingWallFile.py* enables to create a Json input file for further shadowing effect consideration.  
 __ReadResults__ : contains one template to read the results and some functions for post-processing in the Utilities.py file.  
 
 ## Run simulation case

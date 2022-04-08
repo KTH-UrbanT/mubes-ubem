@@ -3,8 +3,9 @@
 
 import itertools
 from shapely.geometry.polygon import Polygon, Point, LineString
-from geomeppy.geom.polygons import Polygon3D
+from geomeppy.geom.polygons import Polygon3D, Polygon2D
 from geomeppy.utilities import almostequal
+from geomeppy.geom import core_perim
 
 def is_clockwise(points):
     # points is your list (or array) of 2d points.
@@ -13,6 +14,31 @@ def is_clockwise(points):
     for p1, p2 in zip(points, points[1:] + [points[0]]):
         s += (p2[0] - p1[0]) * (p2[1] + p1[1])
     return s > 0.0
+
+def RotatePolyOrder(poly):
+    #poly is a list of tuple or list of two coordinates
+    return poly[1:]+[poly[0]]
+
+def chekIdenticalpoly(poly1,poly2):
+    Identical = False
+    if poly1[-1]==poly1[0]:
+        poly1 = poly1[:-1]
+    if poly2[-1] == poly2[0]:
+        poly2 = poly2[:-1]
+    tries = 0
+    finished = False
+    if is_clockwise(poly1) and not is_clockwise(poly2):
+        poly2.reverse()
+    while not finished:
+        if poly1 == poly2:
+            Identical = True
+            finished = True
+        elif tries == len(poly2):
+            finished = True
+        else:
+            tries += 1
+            poly2 = RotatePolyOrder(poly2)
+    return Identical
 
 def mergeHole(poly,hole):
     #the two polygons needs to be in opposite direction to be merge into one with the hole
@@ -53,6 +79,27 @@ def mergeHole(poly,hole):
         section_on_hole.reverse()
     final_poly2 = section_on_poly + section_on_hole
     return [final_poly1,final_poly2]
+
+def CleanPoly(poly,DistTol):
+    polycoor = []
+    for j in poly:
+        new = (j[0], j[1])
+        new_coor = new  # []
+        # for ii in range(len(RefCoord)):
+        #     new_coor.append((new[ii] - RefCoord[ii]))
+        polycoor.append(tuple(new_coor))
+    if polycoor[0] == polycoor[-1]:
+        polycoor = polycoor[:-1]
+    # even before skewed angle, we need to check for tiny edge below the tolerance onsdered aftward (0.5m)
+    pt2remove = []
+    for edge in Polygon2D(polycoor).edges:
+        if edge.length < DistTol:
+            pt2remove.append(edge.p2)
+    for pt in pt2remove:
+        if len(polycoor) > 3:
+            polycoor.remove(pt)
+    newpolycoor, node = core_perim.CheckFootprintNodes(polycoor, 5) #the returned poly is not used finally investigation are to be done !
+    return polycoor, node
 
 def mergeGeomeppy(poly,hole):
     poly = Polygon3D(poly)

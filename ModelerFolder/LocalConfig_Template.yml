@@ -13,3 +13,7 @@
         Verbose : True                          #[Bool] True : Gives messages in the prompt window along the ongoing process
         CPUusage : 0.8                          #[Float] Factor of CPU allowed to be used during parallel computing
         DebugMode : False                       #[Bool] The log file will be feeded by detailed information along the process
+3_SIM :
+    #files are needed to be located in the eather folder of EnergyPlus asthe same path is used afterward to launch the simulation
+    1_WeatherFile :
+        Loc : 'WeatherData/USA_CA_San.Francisco.Intl.AP.724940_TMY3.epw' #[Str] Need to be a epw file. This one is given because installed by default when installing EnergyPlus
