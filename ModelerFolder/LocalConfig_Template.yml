@@ -2,7 +2,7 @@
     PATH_TO_ENERGYPLUS: C:/EnergyPlusV9-1-0                                      #[Str] this is for energyplus.exe path
     PATH_TO_RESULTS: ../../MUBES_SimResults/                                     #[Str] this is the main folder where the results will be stored. it will be created if not exists
 1_DATA:
-    Buildingsfile: ../ModelerFolder/Minneberg_Buildings_v1.geojson               #[Str] Input file or folder in case of several files
+    PATH_TO_DATA : ../ModelerFolder/Minneberg_Buildings_v1.geojson               #[Str] Input file or folder in case of several files
 2_CASE:
     0_GrlChoices :
         CaseName : 'ForTest'                    #[Str] Name of the studied Case, a subfolder of this name will be created in the main folder defined in '0_APP:PATH_TO_RESULTS'
