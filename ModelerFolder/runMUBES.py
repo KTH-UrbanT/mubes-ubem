@@ -111,26 +111,29 @@ def CreatePool2Launch(BldIDs,GlobKey,IDKeys,PassBldObject):
 
 if __name__ == '__main__' :
     #Main script to launch either simulation or plot of the urban area represened in the main geojson file
-    #all inputs can be given inside a yml file. If not specified in a specific yml file, value form the defaultConfig.yml file will be considered
-    #It can be launchedby :
+    #all inputs can be given inside a yml file. If not specified in a specific yml file, value from the defaultConfig.yml file will be considered
+    #It can be launched by :
     #python runMUBES.py     it will load the default yml file and check if a local one is present in the same folder to adapt the default one
     #python runMUBES.py -yml MyConfig.yml   it will consider the specified yml file to adapt the default one
-    #python runMUBES.py -CONFIG {xxxxxxx} json format of the yml file to adapt the default one
-
+    #python runMUBES.py -CONFIG {xxxxxxx} json format of the yml file to adapt the default one for API application
 
     ConfigFromArg = Read_Arguments()
     config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()),'CoreFiles','DefaultConfig.yml'))
     configUnit = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfigKeyUnit.yml'))
-    if type(ConfigFromArg) == str and ConfigFromArg[-4:] == '.yml':
-        localConfig = setConfig.read_yaml(ConfigFromArg)
-        config = setConfig.ChangeConfigOption(config, localConfig)
+    if type(ConfigFromArg) == str:
+        if ConfigFromArg[-4:] == '.yml':
+            localConfig = setConfig.read_yaml(ConfigFromArg)
+            config = setConfig.ChangeConfigOption(config, localConfig)
+        else:
+            print('[Unknown Argument] Please check the available options for arguments : -yml or -CONFIG')
+            sys.exit()
     elif ConfigFromArg:
         config = setConfig.ChangeConfigOption(config, ConfigFromArg)
         config['2_CASE']['0_GrlChoices']['OutputFile'] = 'Outputs4API.txt'
     else:
         config,filefound,msg = setConfig.check4localConfig(config, os.getcwd())
         if msg: print(msg)
-        print('[Config Info] Config complted by ' + filefound)
+        print('[Config Info] Config completed by ' + filefound)
     config = setConfig.checkConfigUnit(config,configUnit)
     if type(config) != dict:
         print('[Config Error] Something seems wrong : \n' + config)
@@ -146,6 +149,8 @@ if __name__ == '__main__' :
         for subkey in config['2_CASE'][key]:
             CaseChoices[subkey] = config['2_CASE'][key][subkey]
     if CaseChoices['Verbose']: print('[OK] Input config. info checked and valid.')
+    if 'See ListOfBuiling_Ids.txt for list of IDs' in CaseChoices['BldID']:
+        CaseChoices['BldID'] = []
     epluspath = config['0_APP']['PATH_TO_ENERGYPLUS']
     #a first keypath dict needs to be defined to comply with the current paradigme along the code
     Buildingsfile = os.path.abspath(config['1_DATA']['PATH_TO_DATA'])
@@ -195,12 +200,12 @@ if __name__ == '__main__' :
                 LocalConfigFile['2_CASE']['1_SimChoices']['BldID'] = CaseChoices['BldID'][idx]
             else:
                 if len(CaseChoices['BldID'])>10:
-                    LocalConfigFile['2_CASE']['1_SimChoices']['BldID'] = '[] # See ListOfBuiling_Ids.txt for list of IDs '
+                    LocalConfigFile['2_CASE']['1_SimChoices']['BldID'] = '# See ListOfBuiling_Ids.txt for list of IDs '
                     writeIds = True
                 else:
                     LocalConfigFile['2_CASE']['1_SimChoices']['BldID'] = CaseChoices['BldID']
                 if CaseChoices['VarName2Change']:
-                    if CaseChoices['Verbose']: print('[Info] It seems that at least one parameter is to be changed but only one simulation is asked. The default value will be used. ')
+                    if CaseChoices['Verbose']: print('[Info] It seems that at least one parameter is to be changed but only one simulation is asked. Parameter default values will be used. ')
                 CaseChoices['VarName2Change'] = []
             with open(os.path.join(SimDir,'ConfigFile.yml'), 'w') as file:
                 documents = yaml.dump(LocalConfigFile, file)

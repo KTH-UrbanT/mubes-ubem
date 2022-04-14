@@ -46,6 +46,9 @@ __Outputs_Template.txt__ : This file proposes a list of available outputs from E
 *__python__ __MakeShadowingWallFile.py__* will built a .json file out of the geojson files in the same location, given in the *LocalConfig.yml*.  
 *__python__ __MakeShadowingWallFile.py__ __-yml__ __path_to_config.yml__* will built a .json file out of the geojson files in the same location, given in the *path_to_config.yml*.  
 *__python__ __MakeShadowingWallFile.py__ __-geojson__ __path_to_geojson.geojson__* will built a .json file out of the geojson files in the same location.  
+Extra argument can be given to choose shadowing resolution with simple neighborhood, extended neighborhood (higher buildings are considered even if behind others), and all surfaces from all buildings.  
+*__-ShadeLimits__ __SimpleSurf__* or *__-ShadeLimits__ __AllSurf__* . Default one is extended with higher buildsings considered.  
+the more shadowing wall is considered the more warnings can be raised by EnergyPlus.  
 
 ## FMU examples
 __FMPySimPlayGroundEx1.py__ and __FMPySimPlayGroundEx2.py__: it uses FMPy package and as been successfully tested for controlling temperature's setpoints, internal loads, or watertaps at each time steps of the simulation. For one who'd like to make co-simulation, a deep understanding is still needed on the EP side as inputs and ouputs are to be defined.  

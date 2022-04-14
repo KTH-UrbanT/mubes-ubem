@@ -36,7 +36,6 @@ def setBuildingLevel(idf,building,LogFile,CorePerim = False,FloorZoning = False,
     #this is the function that requires the longest time
     GeomScripts.createBuilding(LogFile,idf,building, perim = CorePerim,FloorZoning = FloorZoning,ForPlots=ForPlots,DebugMode = DebugMode)
 
-
 def setEnvelopeLevel(idf,building):
     ######################################################################################
     #Envelope Level (within the building level)
@@ -54,7 +53,6 @@ def setZoneLevel(idf,building,FloorZoning = False):
 def setExtraEnergyLoad(idf,building):
     if building.DHWInfos:
         DomesticHotWater.createWaterEqpt(idf,building)
-
 
 def setOutputLevel(idf,building,MainPath,EMSOutputs,OutputsFile):
     #ouputs definitions
@@ -114,8 +112,6 @@ def ReadGeoJsonDir(keyPath):
                     BuildingFiles.append(file)
     return BuildingFiles
 
-
-
 def checkRefCoordinates(GeojsonFile):
     if not GeojsonFile:
         return GeojsonFile
@@ -139,19 +135,20 @@ def checkRefCoordinates(GeojsonFile):
 def ComputeDistance(v1,v2):
     return ((v2[0]-v1[0])**2+(v2[1]-v1[1])**2)**0.5
 
-def MakeAbsoluteCoord(building,idf = []):
+def MakeAbsoluteCoord(building,idf = [],roundfactor = 8):
     # we need to convert change the reference coordinate because precision is needed for boundary conditions definition:
     newfoot = []
     for foot in building.footprint:
-        newfoot.append([(node[0] + building.RefCoord[0], node[1] + building.RefCoord[1]) for node in foot])
+        newfoot.append([(round(node[0] + building.RefCoord[0],roundfactor), round(node[1] + building.RefCoord[1],roundfactor)) for node in foot])
     building.footprint = newfoot
     for shade in building.shades.keys():
-        newcoord = [(node[0] + building.RefCoord[0], node[1] + building.RefCoord[1]) for node in
+        newcoord = [(round(node[0] + building.RefCoord[0],roundfactor), round(node[1] + building.RefCoord[1],roundfactor)) for node in
                     building.shades[shade]['Vertex']]
         building.shades[shade]['Vertex'] = newcoord
-    newwalls = []
+    new_Agreg = [(round(node[0] + building.RefCoord[0],roundfactor), round(node[1] + building.RefCoord[1],roundfactor)) for node in building.AggregFootprint]
+    building.AggregFootprint = new_Agreg
     for Wall in building.AdjacentWalls:
-        newcoord = [(node[0] - building.RefCoord[0], node[1] - building.RefCoord[1]) for node in Wall['geometries']]
+        newcoord = [(round(node[0] + building.RefCoord[0],roundfactor), round(node[1] + building.RefCoord[1],roundfactor)) for node in Wall['geometries']]
         Wall['geometries'] = newcoord
     if idf:
         surfaces = idf.getsurfaces() + idf.getshadingsurfaces() + idf.getsubsurfaces()
@@ -162,16 +159,14 @@ def MakeAbsoluteCoord(building,idf = []):
                     varx = 'Vertex_' + str(i+1) + '_Xcoordinate'
                     vary = 'Vertex_' + str(i+1) + '_Ycoordinate'
                     varz = 'Vertex_' + str(i+1) + '_Zcoordinate'
-                    setattr(surf, varx, x + building.RefCoord[0])
-                    setattr(surf, vary, y + building.RefCoord[1])
-                    setattr(surf, varz, z)
+                    setattr(surf, varx, round(x + building.RefCoord[0],roundfactor))
+                    setattr(surf, vary, round(y + building.RefCoord[1],roundfactor))
+                    setattr(surf, varz, round(z,roundfactor))
                 except:
                     a=1
         return building, idf
     else:
         return building
-
-
 
 def SaveCase(MainPath,SepThreads,CaseName,nbBuild):
     SaveDir = os.path.join(os.path.dirname(os.path.dirname(MainPath)), 'SimResults')
@@ -378,6 +373,7 @@ def AppendLogFiles(MainPath,BldIDKey):
                 try:
                     with open(os.path.join(MainPath,'Sim_Results', BldIDKey+'_'+str(id) + '.txt'), 'r') as file:
                         extralines = file.readlines()
+                    os.remove(os.path.join(MainPath,'Sim_Results', BldIDKey+'_'+str(id) + '.txt'))
                 except:
                     extralines = ['ERROR : No simulations found for this building\n']
             if '[Reported Time]' in line and flagON:

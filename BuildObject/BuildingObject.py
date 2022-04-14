@@ -143,8 +143,8 @@ class Building:
         self.shades = self.getshade(nbcase, Buildingsfile,LogFile, PlotOnly=PlotOnly,DebugMode=DebugMode)
         self.Materials = config['3_SIM']['BaseMaterial']
         self.InternalMass = config['3_SIM']['InternalMass']
-        self.edgesHeights = self.getEdgesHeights()
-        self.MakeRelativeCoord()# we need to convert into local coordinate in order to compute adjacencies with more precision than keeping thousand of km for x and y
+        self.MakeRelativeCoord(roundfactor = 4)# we need to convert into local coordinate in order to compute adjacencies with more precision than keeping thousand of km for x and y
+        #self.edgesHeights = self.getEdgesHeights(roundfactor= 4)
         if not PlotOnly:
             #the attributres above are needed in all case, the one below are needed only if energy simulation is asked for
             self.VentSyst = self.getVentSyst(DB, config['3_SIM']['VentSyst'], LogFile,DebugMode)
@@ -168,26 +168,30 @@ class Building:
             #     else:
             #         self.setTempUpL = [50]*len(BE['setTempUpL'])
 
-    def getEdgesHeights(self):
-        GlobalFootprint = Polygon2D(self.AggregFootprint[:-1])
-        EdgesHeights = {'Edge':[],'Height':[]}
-        for edge in GlobalFootprint.edges:
-            EdgesHeights['Edge'].append([(x,y) for x,y in edge.vertices])
-            EdgesHeights['Height'].append(0)
-        for idx,poly in enumerate(self.footprint):
-            localBloc = Polygon2D(poly)
-            for edge,edge_reversed in zip(localBloc.edges,localBloc.edges_reversed):
-                Heightidx1 = [idx for idx,val in enumerate(GlobalFootprint.edges) if edge == val]
-                Heightidx2 = [idx for idx, val in enumerate(GlobalFootprint.edges_reversed) if edge == val]
-                if Heightidx1 or Heightidx2:
-                    Heigthidx = Heightidx1 if Heightidx1 else Heightidx2
-                    EdgesHeights['Height'][Heigthidx[0]] = self.BlocHeight[idx]
-        return EdgesHeights
+    #No more needed, embedded in the MakeShadowingWallFile
+    # def getEdgesHeights(self,roundfactor = 8):
+    #     GlobalFootprint = Polygon2D(self.AggregFootprint[:-1])
+    #     EdgesHeights = {'Height':[],'Edge':[],'BlocNum': []}
+    #     for edge in GlobalFootprint.edges:
+    #         EdgesHeights['Edge'].append([(round(x+self.RefCoord[0],roundfactor),round(y+self.RefCoord[1],roundfactor)) for x,y in edge.vertices])
+    #         EdgesHeights['Height'].append(0)
+    #         EdgesHeights['BlocNum'].append(0)
+    #     for idx,poly in enumerate(self.footprint):
+    #         localBloc = Polygon2D(poly)
+    #         for edge,edge_reversed in zip(localBloc.edges,localBloc.edges_reversed):
+    #             Heightidx1 = [idx for idx,val in enumerate(GlobalFootprint.edges) if edge == val]
+    #             Heightidx2 = [idx for idx, val in enumerate(GlobalFootprint.edges_reversed) if edge == val]
+    #             if Heightidx1 or Heightidx2:
+    #                 Heigthidx = Heightidx1 if Heightidx1 else Heightidx2
+    #                 EdgesHeights['Height'][Heigthidx[0]] = self.BlocHeight[idx]
+    #     EdgesHeights['BldID']= self.BuildID
+    #     return EdgesHeights
 
-    def MakeRelativeCoord(self):
+    def MakeRelativeCoord(self,roundfactor= 8):
         # we need to convert change the reference coordinate because precision is needed for boundary conditions definition:
         newfoot = []
-        roundfactor = 4
+        x,y = self.RefCoord
+        self.RefCoord = (round(x,roundfactor),round(y,roundfactor))
         for foot in self.footprint:
             newfoot.append([(round(node[0] - self.RefCoord[0],roundfactor), round(node[1] - self.RefCoord[1],roundfactor)) for node in foot])
         self.footprint = newfoot
@@ -196,6 +200,8 @@ class Building:
                         self.shades[shade]['Vertex']]
             self.shades[shade]['Vertex'] = newcoord
         newwalls = []
+        new_Agreg = [(round(node[0] - self.RefCoord[0],roundfactor), round(node[1] - self.RefCoord[1],roundfactor)) for node in self.AggregFootprint]
+        self.AggregFootprint = new_Agreg
         for Wall in self.AdjacentWalls:
             newcoord = [(round(node[0] - self.RefCoord[0],roundfactor), round(node[1] - self.RefCoord[1],roundfactor)) for node in Wall['geometries']]
             Wall['geometries'] = newcoord
@@ -671,7 +677,7 @@ class Building:
         Meancoordx = list(Polygon(RelativeAgregFootprint).centroid.coords)[0][0]
         Meancoordy = list(Polygon(RelativeAgregFootprint).centroid.coords)[0][1]
         for key in ShadowingWalls:
-            if self.BuildID['50A_UUID'] in ShadowingWalls[key]['RecepientBld_ID']:
+            if self.BuildID[self.BuildID['BldIDKey']] in ShadowingWalls[key]['RecepientBld_ID']:
                 x,y = zip(*ShadowingWalls[key]['AbsCoord'])
                 meanPx = sum(x)/2- self.RefCoord[0]
                 meanPy = sum(y) / 2 - self.RefCoord[1]

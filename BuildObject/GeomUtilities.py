@@ -27,7 +27,7 @@ def chekIdenticalpoly(poly1,poly2):
         poly2 = poly2[:-1]
     tries = 0
     finished = False
-    if is_clockwise(poly1) and not is_clockwise(poly2):
+    if is_clockwise(poly1) != is_clockwise(poly2):
         poly2.reverse()
     while not finished:
         if poly1 == poly2:
