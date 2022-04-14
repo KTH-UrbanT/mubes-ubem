@@ -312,13 +312,14 @@ class Building:
                 BuildID[key] = DB.properties[key]
                 BuildID['BldIDKey'] = key
                 break
-            except:
-                BuildID['BldIDKey'] = 'NoBldID'
-                BuildID['NoBldID'] = 'NoBldID'
-        if BuildID:
-            for key in BuildID:
-                msg = '[Bld ID] '+ key+' : ' + str(BuildID[key]) + '\n'
-                GrlFct.Write2LogFile(msg, LogFile)
+            except: pass
+        if not BuildID:
+            BuildID['BldIDKey'] = 'NoBldID'
+            BuildID['NoBldID'] = 'NoBldID'
+        msg = '[Bld ID] '+ 'BldIDKey'+' : ' + str(BuildID['BldIDKey']) + '\n'
+        GrlFct.Write2LogFile(msg, LogFile)
+        msg = '[Bld ID] '+ str(BuildID['BldIDKey'])+' : ' + str(BuildID[BuildID['BldIDKey']]) + '\n'
+        GrlFct.Write2LogFile(msg, LogFile)
         return BuildID
 
     # def getMultipolygon(self,DB):
@@ -644,7 +645,7 @@ class Building:
         "Get the building height from the input file, but not used if 3D coordinates in the footprints"
         height, IdKey = getDBValue(DB.properties, DBL['height_key'])
         try: height = int(height)
-        except: height = 0
+        except: height = 3
         height = checkLim(height,DBL['height_lim'][0],DBL['height_lim'][1])
         return int(height)
 

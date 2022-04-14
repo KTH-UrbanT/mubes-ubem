@@ -183,7 +183,7 @@
     #the other one contains for each shading surface id the vertex point and the building Id in order to catch the height of it.
     #to externalize as much as possible, these elements are reported in the dict below
     GeomElement :
-        BuildIDKey : ['50A_UUID', 'objectid','OBJECTID']   #[List of Str] key word that can be used for the building ID
+        BuildIDKey : ['50A_UUID', 'objectid','OBJECTID','gid']   #[List of Str] key word that can be used for the building ID
         FormularIdKey : 'FormularId'            #[Str] key word for the the EPC correspondance
         ShadingIdKey : 'vaggid'                 #[Str] key word for the shadowing wall given in the geojson file only
         BuildingIdKey : 'byggnadsid'            #[Str] key word for the owner of the shadowing wall given in the geojson file only
@@ -241,7 +241,7 @@
         year_lim :         [0, 2022]
         nbAppartments_key : 'EgenAntalBolgh'
         nbAppartments_lim : [0, 100]
-        height_key : ['height', 'Height','SHAPE.LEN','st_lengthshape','Shape__Length']
+        height_key : ['height', 'Height','SHAPE.LEN','st_lengthshape','Shape__Length','hauteur']
         height_lim :       [0, 100]
         AreaBasedFlowRate_key : 'EgenProjVentFlode'
         AreaBasedFlowRate_lim :     [0.35, 10]
