@@ -15,5 +15,9 @@
         DebugMode : False                       #[Bool] The log file will be feeded by detailed information along the process
 3_SIM :
     #files are needed to be located in the eather folder of EnergyPlus asthe same path is used afterward to launch the simulation
-    1_WeatherFile :
-        Loc : 'WeatherData/USA_CA_San.Francisco.Intl.AP.724940_TMY3.epw' #[Str] Need to be a epw file. This one is given because installed by default when installing EnergyPlus
+    1_WeatherData :
+        WeatherDataFile : 'WeatherData/USA_CA_San.Francisco.Intl.AP.724940_TMY3.epw' #[Str] Need to be a epw file. This one is given because installed by default when installing EnergyPlus
+        Latitude: 37.62                        #[Float] Latitude of the location (+ is North, - is South) [-90,+90]
+        Longitude: -122.40                     #[Float] Longitude of the location (- is West, + is East [-180,180]
+        Time_Zone: -8.0                        #[Float] Time relative to GMT  [-12,14]
+        Elevation: 2.0                         #[Float] Elevation

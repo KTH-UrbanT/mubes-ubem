@@ -118,12 +118,14 @@ class Building:
         EPC = config['3_SIM']['EPCMeters']
         SD = config['3_SIM']['2_SimuData']
         ExEn = config['3_SIM']['ExtraEnergy']
+        WeatherData = config['3_SIM']['1_WeatherData']
         try:
             self.CRS = Buildingsfile.crs['properties']['name'] #this is the coordinates reference system for the polygons
         except:
             self.CRS = 'Null'
         self.getBEData(BE)
         self.getSimData(SD)
+        self.getSimData(WeatherData)
         self.name = name
         self.BuildingFilePath = BuildingFilePath
         self.BuildID = self.getBuildID(DB,LogFile)
@@ -151,7 +153,7 @@ class Building:
             self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB, DBL, BE)
             self.OccupType = self.getOccupType(DB, config['3_SIM']['OccupType'], LogFile,DebugMode)
             self.nbStairwell = self.getnbStairwell(DB, DBL)
-            self.WeatherDataFile = config['3_SIM']['1_WeatherFile']['Loc']
+            #self.WeatherDataFile = WeatherData
             self.year = self.getyear(DB, DBL)
             self.EPCMeters = self.getEPCMeters(DB, EPC, LogFile,DebugMode)
             if len(self.SharedBld) > 0:

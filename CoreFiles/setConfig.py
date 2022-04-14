@@ -106,7 +106,7 @@ def checkGlobalConfig(config):
         print('It seems that the path to EnergyPlus is missing, please specify it in your local.yml')
         return 'EnergyPlus path',False
     #lets check for the weather file needed for EnergyPlus
-    if not os.path.isfile(os.path.join(os.path.abspath(config['0_APP']['PATH_TO_ENERGYPLUS']),config['3_SIM']['1_WeatherFile']['Loc'])):
+    if not os.path.isfile(os.path.join(os.path.abspath(config['0_APP']['PATH_TO_ENERGYPLUS']),config['3_SIM']['1_WeatherData']['WeatherDataFile'])):
         print(' /!\ ERROR /!\ ')
         print('It seems that the given Weatherfile to EnergyPlus is missing')
         print('Please check if : '+config['3_SIM']['1_WeatherFile']['Loc'] +' is present in : '+os.path.abspath(config['0_APP']['PATH_TO_ENERGYPLUS']))

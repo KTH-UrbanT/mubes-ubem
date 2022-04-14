@@ -60,26 +60,26 @@ def setSimparam(idf,building):
 def Location_and_weather(idf,building):
     #Weather_file = "USA_CO_Golden-NREL.724666_TMY3.epw"
     Weather_file = building.WeatherDataFile
-    idf.epw = Weather_file+'.epw'
+    idf.epw = Weather_file if '.epw' in Weather_file[:-4] else Weather_file+'.epw'
     location = idf.idfobjects['SITE:LOCATION'][0]   #there might be some way of taking the information from the weather file directly in the idf object...
     location.Name = Weather_file
-    location.Latitude = 59.65
-    location.Longitude = 17.95
-    location.Time_Zone = +1
-    location.Elevation = 61
+    location.Latitude = building.Latitude
+    location.Longitude = building.Longitude
+    location.Time_Zone = building.Time_Zone
+    location.Elevation = building.Elevation
     ground_Temp = idf.newidfobject('SITE:GROUNDTEMPERATURE:BUILDINGSURFACE')
-    ground_Temp.January_Ground_Temperature = 15
-    ground_Temp.February_Ground_Temperature = 15
-    ground_Temp.March_Ground_Temperature = 15
-    ground_Temp.April_Ground_Temperature = 15
-    ground_Temp.May_Ground_Temperature = 15
-    ground_Temp.June_Ground_Temperature = 15
-    ground_Temp.July_Ground_Temperature = 15
-    ground_Temp.August_Ground_Temperature = 15
-    ground_Temp.September_Ground_Temperature = 15
-    ground_Temp.October_Ground_Temperature = 15
-    ground_Temp.November_Ground_Temperature = 15
-    ground_Temp.December_Ground_Temperature = 15
+    ground_Temp.January_Ground_Temperature = building.YearRoundGroundTemp
+    ground_Temp.February_Ground_Temperature = building.YearRoundGroundTemp
+    ground_Temp.March_Ground_Temperature = building.YearRoundGroundTemp
+    ground_Temp.April_Ground_Temperature = building.YearRoundGroundTemp
+    ground_Temp.May_Ground_Temperature = building.YearRoundGroundTemp
+    ground_Temp.June_Ground_Temperature = building.YearRoundGroundTemp
+    ground_Temp.July_Ground_Temperature = building.YearRoundGroundTemp
+    ground_Temp.August_Ground_Temperature = building.YearRoundGroundTemp
+    ground_Temp.September_Ground_Temperature = building.YearRoundGroundTemp
+    ground_Temp.October_Ground_Temperature = building.YearRoundGroundTemp
+    ground_Temp.November_Ground_Temperature = building.YearRoundGroundTemp
+    ground_Temp.December_Ground_Temperature = building.YearRoundGroundTemp
 
     DesignDay= idf.idfobjects['SIZINGPERIOD:DESIGNDAY']
     for Obj in DesignDay:

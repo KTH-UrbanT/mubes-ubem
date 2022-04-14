@@ -41,8 +41,13 @@
         ECMChange : [float,int]                           #[Float] factor of enhancement of the default value (the default value could also be changed (useful for ECM applied to distributions)
 3_SIM :
     #files are needed to be located in the eather folder of EnergyPlus asthe same path is used afterward to launch the simulation
-    1_WeatherFile :
-        Loc : [str] #[Str] Need to be a epw file. This one is given because installed by default when installing EnergyPlus
+    1_WeatherData :
+        WeatherDataFile : [str] #[Str] Need to be a epw file. This one is given because installed by default when installing EnergyPlus
+        Latitude: [float,int]                  #[Float] Latitude of the location (+ is North, - is South) [-90,+90]
+        Longitude: [float,int]                    #[Float] Longitude of the location (- is West, + is East [-180,180]
+        Time_Zone: [float,int]                      #[Float] Time relative to GMT  [-12,14]
+        Elevation: [float,int]                        #[Float] Elevation
+        YearRoundGroundTemp : [float,int]               #Float] Year round ground temperature. considered constant afterward
     2_SimuData :
         Begin_Day_of_Month : [int]                  #[Int]
         Begin_Month : [int]                         #[Int]
