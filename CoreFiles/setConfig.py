@@ -30,10 +30,11 @@ def check4localConfig(config,path):
     if not filefound:
         localConfig = read_yaml(os.path.join(path, 'LocalConfig_Template.yml'))
         filefound =  os.path.join(path,'LocalConfig_Template.yml')
-    new_config = ChangeConfigOption(config, localConfig)
-    return new_config, filefound, msg
+    new_config, msg1 = ChangeConfigOption(config, localConfig)
+    return new_config, filefound, msg1 if not msg else msg
 
 def ChangeConfigOption(config,localConfig):
+    msg = False
     for Mainkey in localConfig.keys():
         if type(localConfig[Mainkey]) == dict:
             for subkey1 in localConfig[Mainkey].keys():
@@ -41,14 +42,27 @@ def ChangeConfigOption(config,localConfig):
                     for subkey2 in localConfig[Mainkey][subkey1].keys():
                         if type(localConfig[Mainkey][subkey1][subkey2]) == dict:
                             for subkey3 in localConfig[Mainkey][subkey1][subkey2].keys():
-                                config[Mainkey][subkey1][subkey2][subkey3] = localConfig[Mainkey][subkey1][subkey2][subkey3]
+                                if subkey3 not in config[Mainkey][subkey1][subkey2].keys():
+                                    msg = '[Warning Config] '+Mainkey +' : '+ subkey1 +' : '+ subkey2 + ' : '+ subkey3+\
+                                          ' is unknown from the DefaultConfig.yml.It will be ignored.'
+                                else:
+                                    config[Mainkey][subkey1][subkey2][subkey3] = localConfig[Mainkey][subkey1][subkey2][subkey3]
                         else:
-                            config[Mainkey][subkey1][subkey2] = localConfig[Mainkey][subkey1][subkey2]
+                            if subkey2 not in config[Mainkey][subkey1].keys():
+                                msg = '[Warning Config] '+Mainkey +' : '+ subkey1 +' : '+subkey2 + ' is unknown from the DefaultConfig.yml.It will be ignored.'
+                            else:
+                                config[Mainkey][subkey1][subkey2] = localConfig[Mainkey][subkey1][subkey2]
                 else:
-                    config[Mainkey][subkey1] = localConfig[Mainkey][subkey1]
+                    if subkey1 not in config[Mainkey].keys():
+                        msg = '[Warning Config] '+Mainkey +' : '+subkey1 + ' is unknown from the DefaultConfig.yml.It will be ignored.'
+                    else:
+                        config[Mainkey][subkey1] = localConfig[Mainkey][subkey1]
         else:
-            config[Mainkey] = localConfig[Mainkey]
-    return config
+            if Mainkey not in config.keys():
+                msg = '[Warning Config] '+ Mainkey+ ' is unknown from the DefaultConfig.yml.It will be ignored.'
+            else:
+                config[Mainkey] = localConfig[Mainkey]
+    return config,msg
 
 def checkUnit(key):
     if type(key) == list:

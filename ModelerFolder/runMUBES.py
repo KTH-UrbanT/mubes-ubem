@@ -123,12 +123,14 @@ if __name__ == '__main__' :
     if type(ConfigFromArg) == str:
         if ConfigFromArg[-4:] == '.yml':
             localConfig = setConfig.read_yaml(ConfigFromArg)
-            config = setConfig.ChangeConfigOption(config, localConfig)
+            config, msg = setConfig.ChangeConfigOption(config, localConfig)
+            if msg: print(msg)
         else:
             print('[Unknown Argument] Please check the available options for arguments : -yml or -CONFIG')
             sys.exit()
     elif ConfigFromArg:
-        config = setConfig.ChangeConfigOption(config, ConfigFromArg)
+        config, msg = setConfig.ChangeConfigOption(config, ConfigFromArg)
+        if msg: print(msg)
         config['2_CASE']['0_GrlChoices']['OutputFile'] = 'Outputs4API.txt'
     else:
         config,filefound,msg = setConfig.check4localConfig(config, os.getcwd())
