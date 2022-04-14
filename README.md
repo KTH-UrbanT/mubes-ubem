@@ -61,9 +61,9 @@ Ex2 : proposes a couple temperature setpoints and water taps controls for each b
 The __ReadResults__ folder contains also a template for post-processing the results :  
 *ReadOutputs_Template.py* proposes a basic post-processing stage including reading the data, ploting the areas of footprint and the energy needs as well as some times series for specific building number. Its works for simulation done with or without FMUs.  
 *Utilities.py* contains several useful functions for the post-processing stage. The *getData()* is highly helpful. It gathers all the pickle files present in a directory into one dictionnary. It can deal with several CaseNames and overplots results for same Building's Ids by simply appending the path's list.   
-*__python__ __ReadOutputs_Template.py __* will load the results from CaseName given in the *LocalConfig.yml*.  
-*__python__ __ReadOutputs_Template.py __ __-yml__ __path_to_config.yml__* will load the results from CaseName given in the *path_to_config.yml*.  
-*__python__ __ReadOutputs_Template.py __ __-Case__ __[CaseName1,CaseName2,...]__* will load the results from CaseName1 and CaseName2.    
+*__python__ __ReadOutputs_Template.py__* will load the results from CaseName given in the *LocalConfig.yml*.  
+*__python__ __ReadOutputs_Template.py__ __-yml__ __path_to_config.yml__* will load the results from CaseName given in the *path_to_config.yml*.  
+*__python__ __ReadOutputs_Template.py__ __-Case__ __[CaseName1,CaseName2,...]__* will load the results from CaseName1 and CaseName2.    
   
 
 ## Engine structure
