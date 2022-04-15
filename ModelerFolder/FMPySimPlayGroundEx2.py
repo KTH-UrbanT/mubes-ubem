@@ -19,6 +19,7 @@ import time as timedelay
 from CoreFiles import LaunchSim as LaunchSim
 from ReadResults import Utilities
 from BuildObject.BuildingObject import Building
+import CoreFiles.setConfig as setConfig
 
 
 
@@ -191,11 +192,72 @@ def CleanUpSimRes(work_dir,keepLogFolder = False):
       #unable to erase the fmu extracted folder as the dll is still open at this stage of the code....why ? still weird to me
       #shutil.rmtree(buildName)
 
-if __name__ == '__main__':
+def Read_Arguments():
+    #these are defaults values:
+    Config2Launch = []
+    CaseNameArg =[]
+    # Get command-line options.
+    lastIdx = len(sys.argv) - 1
+    currIdx = 1
+    while (currIdx < lastIdx):
+        currArg = sys.argv[currIdx]
+        if (currArg.startswith('-yml')):
+            currIdx += 1
+            Config2Launch = sys.argv[currIdx]
+        if (currArg.startswith('-Case')):
+            currIdx += 1
+            CaseNameArg = sys.argv[currIdx]
+        currIdx += 1
+    return Config2Launch,CaseNameArg
+
+def getPathList(config):
+    CaseName = config['2_CASE']['0_GrlChoices']['CaseName'].split(',')
+    path = []
+    Names4Plots = []
+    congifPath = os.path.abspath(os.path.join(config['0_APP']['PATH_TO_RESULTS'],CaseName[0]))
+    if not os.path.exists(congifPath):
+            print('Sorry, the folder '+CaseName[0]+' does not exist...use -Case or -yml option or change your localConfig.yml')
+            sys.exit()
+    fmufound = False
+    liste = os.listdir(congifPath)
+    for file in liste:
+        if '.fmu' in file[-4:]:
+            fmufound = True
+            break
+    if not fmufound:
+        print('Sorry, but no .fmu were found in ' + str(CaseName[0]))
+        sys.exit()
+    else:
+        path.append(congifPath)
+        if len(CaseName)>1:
+            print('Sorry, but only one CaseName is allowed from now for fmu cosimulation. '+CaseName+' were given as inputs.')
+            sys.exit()
+    return path[0],CaseName[0]
+
+if __name__ == '__main__' :
+
     MainPath = os.getcwd()
-    SavedFolder = 'MUBES_SimResults/ForTest'
-    work_dir = os.path.normcase(
-        os.path.join(os.path.dirname(os.path.dirname(MainPath)), SavedFolder))
+    ConfigFromArg,CaseNameArg = Read_Arguments()
+    config = setConfig.read_yaml(os.path.join(os.path.dirname(MainPath), 'CoreFiles', 'DefaultConfig.yml'))
+    configUnit = setConfig.read_yaml(
+        os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfigKeyUnit.yml'))
+    config, filefound, msg = setConfig.check4localConfig(config, MainPath)
+    #config['2_CASE']['0_GrlChoices']['CaseName'] = 'Simple'
+
+    if CaseNameArg:
+        config['2_CASE']['0_GrlChoices']['CaseName'] = CaseNameArg
+        work_dir,CaseName  = getPathList(config)
+    elif type(ConfigFromArg) == str:
+        if ConfigFromArg[-4:] == '.yml':
+            localConfig = setConfig.read_yaml(ConfigFromArg)
+            config = setConfig.ChangeConfigOption(config, localConfig)
+            work_dir,CaseName  = getPathList(config)
+        else:
+            print('[Unknown Argument] Please check the available options for arguments : -yml or -Case')
+            sys.exit()
+    else:
+        work_dir,CaseName = getPathList(config)
+    print('[Studied Results Folder] '+str(CaseName))
     os.chdir(work_dir)
     filelist = os.listdir(work_dir)
     start_time = 0*24*3600

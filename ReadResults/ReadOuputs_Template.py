@@ -36,6 +36,7 @@ def plotAreaVal(GlobRes,FigName,name):
         Res = GlobRes[nb]
         locref = [GlobRes[nb]['BuildID'][i][key] for i in range(len(GlobRes[nb]['BuildID']))]
         index_y,varx = Utilities.getSortedIdx(reference,locref)
+        varx = [int(Res['SimNum'][idx]) for idx in varx]
         varyref = [Res['DB_Surf'][idx] for idx in index_y]
         if nb==0:
             Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0],varx, [varyref], 'Building num', ['ATemp'],
@@ -64,7 +65,8 @@ def plotErrorFile(GlobRes,FigName,name,legend = True):
         locref = [GlobRes[nb]['BuildID'][i][key] for i in range(len(GlobRes[nb]['BuildID']))]
         index_y,varx = Utilities.getSortedIdx(reference,locref)
         vary = [Res['Warnings'][idx] for idx in index_y]
-        varx = [int(x) for x in np.linspace(offset, offset + len(vary), len(vary))]
+        varx = [int(Res['SimNum'][idx]) for idx in varx]
+        #arx = [int(x) for x in np.linspace(offset, offset + len(vary), len(vary))]
         xtitle = 'Building'
         Warnings = [Res['SimNum'][idx] for idx, val in enumerate(vary) if val > 0]
         if Warnings:
@@ -92,6 +94,7 @@ def plotDim(GlobRes,FigName,name):
         Res = GlobRes[nb]
         locref = [Res['BuildID'][i][key] for i in range(len(Res['BuildID']))]
         index_y,varx = Utilities.getSortedIdx(reference,locref)
+        varx = [int(Res['SimNum'][idx]) for idx in varx]
         footprint = Res['BlocFootprintArea']
         try:
             max(Res['BlocHeight'][0])
@@ -136,6 +139,7 @@ def plotEnergy(GlobRes,FigName,name):
         Res = GlobRes[nb]
         locref = [GlobRes[nb]['BuildID'][i][key] for i in range(len(GlobRes[nb]['BuildID']))]
         index_y, varx = Utilities.getSortedIdx(reference, locref)
+        varx = [int(Res['SimNum'][idx]) for idx in varx]
         varyref = [Res['EPC_Heat'][idx] for idx in index_y]
         if nb == 0:
             Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0], varx, [varyref], 'Building num',
@@ -163,9 +167,9 @@ def plotTimeSeries(GlobRes,FigName,name,Location,TimeSerieList,Unit,SimNum=[]):
             SimNum = Res['SimNum']
         locref = [GlobRes[nb]['BuildID'][i][key] for i in range(len(GlobRes[nb]['BuildID']))]
 
-        for nbBld in SimNum:
+        for num,nbBld in enumerate(SimNum):
             index_y, varx = Utilities.getSortedIdx(reference, locref)
-            vary = Res[Location][index_y[varx.index(nbBld)]][TimeSerieList]
+            vary = Res[Location][index_y[varx.index(num)]][TimeSerieList]
             varx = np.linspace(1,len(vary),len(vary))
             Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0],varx, [vary], 'Time', [name[nb]+'_Bld_'+str(nbBld)+' '+TimeSerieList],
                                      Unit, '--')
