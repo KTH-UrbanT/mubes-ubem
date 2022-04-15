@@ -29,35 +29,6 @@ def giveReturnFromPool(results):
     donothing = 0
     print(results)
 
-def Read_Arguments_Old():
-    #these are defaults values:
-    BldID = []
-    DESO = []
-    CaseName = []
-    DataPath = []
-    # Get command-line options.
-    lastIdx = len(sys.argv) - 1
-    currIdx = 1
-    while (currIdx < lastIdx):
-        currArg = sys.argv[currIdx]
-        if (currArg.startswith('-BldID')):
-            currIdx += 1
-            BldID = sys.argv[currIdx]
-        elif (currArg.startswith('-DESO')):
-            currIdx += 1
-            DESO = int(sys.argv[currIdx])
-        elif (currArg.startswith('-CaseName')):
-            currIdx += 1
-            CaseName = sys.argv[currIdx]
-        elif (currArg.startswith('-DataPath')):
-            currIdx += 1
-            DataPath = sys.argv[currIdx]
-        currIdx += 1
-
-    ListUUID = re.findall("[^,]+", BldID) if BldID else []
-
-    return ListUUID,DESO,CaseName,DataPath
-
 def Read_Arguments():
     #these are defaults values:
     Config2Launch = []

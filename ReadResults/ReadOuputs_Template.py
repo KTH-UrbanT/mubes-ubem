@@ -36,7 +36,7 @@ def plotAreaVal(GlobRes,FigName,name):
         Res = GlobRes[nb]
         locref = [GlobRes[nb]['BuildID'][i][key] for i in range(len(GlobRes[nb]['BuildID']))]
         index_y,varx = Utilities.getSortedIdx(reference,locref)
-        varx = [int(Res['SimNum'][idx]) for idx in varx]
+        varx = [int(Res['SimNum'][idx]) for idx in index_y]
         varyref = [Res['DB_Surf'][idx] for idx in index_y]
         if nb==0:
             Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0],varx, [varyref], 'Building num', ['ATemp'],
@@ -65,7 +65,7 @@ def plotErrorFile(GlobRes,FigName,name,legend = True):
         locref = [GlobRes[nb]['BuildID'][i][key] for i in range(len(GlobRes[nb]['BuildID']))]
         index_y,varx = Utilities.getSortedIdx(reference,locref)
         vary = [Res['Warnings'][idx] for idx in index_y]
-        varx = [int(Res['SimNum'][idx]) for idx in varx]
+        varx = [int(Res['SimNum'][idx]) for idx in index_y]
         #arx = [int(x) for x in np.linspace(offset, offset + len(vary), len(vary))]
         xtitle = 'Building'
         Warnings = [Res['SimNum'][idx] for idx, val in enumerate(vary) if val > 0]
@@ -74,8 +74,9 @@ def plotErrorFile(GlobRes,FigName,name,legend = True):
         Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0],varx, [vary], xtitle, [name[nb]],
                                  'Nb Warnings', signe[np.random.randint(0,10)],legend = legend)
         vary = [Res['Errors'][idx] for idx in index_y]
-        varx = [int(x) for x in np.linspace(offset, offset + len(vary), len(vary))]
-        offset += 0 # (len(vary) + 1) if wanted to be added in x axis along the different cases
+        varx = [int(Res['SimNum'][idx]) for idx in index_y]
+        #varx = [int(x) for x in np.linspace(offset, offset + len(vary), len(vary))]
+        #offset +=  (len(vary) + 1) if wanted to be added in x axis along the different cases
         xtitle = 'Building'
         Errors = [Res['SimNum'][idx] for idx,val in enumerate(vary) if val>0]
         if Errors:
@@ -94,7 +95,7 @@ def plotDim(GlobRes,FigName,name):
         Res = GlobRes[nb]
         locref = [Res['BuildID'][i][key] for i in range(len(Res['BuildID']))]
         index_y,varx = Utilities.getSortedIdx(reference,locref)
-        varx = [int(Res['SimNum'][idx]) for idx in varx]
+        varx = [int(Res['SimNum'][idx]) for idx in index_y]
         footprint = Res['BlocFootprintArea']
         try:
             max(Res['BlocHeight'][0])
@@ -139,7 +140,7 @@ def plotEnergy(GlobRes,FigName,name):
         Res = GlobRes[nb]
         locref = [GlobRes[nb]['BuildID'][i][key] for i in range(len(GlobRes[nb]['BuildID']))]
         index_y, varx = Utilities.getSortedIdx(reference, locref)
-        varx = [int(Res['SimNum'][idx]) for idx in varx]
+        varx = [int(Res['SimNum'][idx]) for idx in index_y]
         varyref = [Res['EPC_Heat'][idx] for idx in index_y]
         if nb == 0:
             Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0], varx, [varyref], 'Building num',
@@ -269,7 +270,6 @@ if __name__ == '__main__' :
     extraVar=['height','StoreyHeigth','nbfloor','BlocHeight','BlocFootprintArea','BlocNbFloor','HeatedArea','NonHeatedArea','OutdoorSite']
     #because we can have several path for several studies we want to overplot.
 
-
     Res = {}
     TimeSerieList=[]
     TimeSerieUnit = []
@@ -288,8 +288,8 @@ if __name__ == '__main__' :
 
 
     #The opening order does not follows the building simulation number while opening the data. Thus, this first graphs provides the correspondance between the other plots, building number and their simulation number
-    IndexFig = Utilities.createSimpleFig()
-    plotIndex(Res, IndexFig, Names4Plots)
+    # IndexFig = Utilities.createSimpleFig()
+    # plotIndex(Res, IndexFig, Names4Plots)
     #this 2nd plot gives the size of the error file. It gives insights if some buildings causses particulary over whole issue in the simulation process
     ErrorFig = Utilities.createMultilFig('',2,linked=False)
     plotErrorFile(Res, ErrorFig, Names4Plots)
