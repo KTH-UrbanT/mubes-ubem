@@ -32,6 +32,7 @@ def giveReturnFromPool(results):
 def Read_Arguments():
     #these are defaults values:
     Config2Launch = []
+    Case2Launch = []
     # Get command-line options.
     lastIdx = len(sys.argv) - 1
     currIdx = 1
@@ -40,12 +41,17 @@ def Read_Arguments():
         if (currArg.startswith('-CONFIG')):
             currIdx += 1
             Config2Launch = json.loads(sys.argv[currIdx])
+            return Config2Launch,Case2Launch
         if (currArg.startswith('-yml')):
             currIdx += 1
             Config2Launch = sys.argv[currIdx]
-            return Config2Launch
+            return Config2Launch,Case2Launch
+        if (currArg.startswith('-Case')):
+            currIdx += 1
+            Case2Launch = sys.argv[currIdx]
+            return Config2Launch,Case2Launch
         currIdx += 1
-    return Config2Launch
+    return Config2Launch,Case2Launch
 
 def CreatePool2Launch(BldIDs,GlobKey,IDKeys,PassBldObject):
     Pool2Launch = []
@@ -88,17 +94,31 @@ if __name__ == '__main__' :
     #python runMUBES.py -yml MyConfig.yml   it will consider the specified yml file to adapt the default one
     #python runMUBES.py -CONFIG {xxxxxxx} json format of the yml file to adapt the default one for API application
 
-    ConfigFromArg = Read_Arguments()
+    ConfigFromArg,Case2Launch = Read_Arguments()
     config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()),'CoreFiles','DefaultConfig.yml'))
     configUnit = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfigKeyUnit.yml'))
-    if type(ConfigFromArg) == str:
+    if Case2Launch:
+        config, filefound, msg = setConfig.check4localConfig(config, os.getcwd())
+        config['2_CASE']['0_GrlChoices']['CaseName'] = Case2Launch
+        print(os.path.join(os.path.abspath(config['0_APP']['PATH_TO_RESULTS']), Case2Launch, 'ConfigFile.yml'))
+        if os.path.isfile(
+                os.path.join(os.path.abspath(config['0_APP']['PATH_TO_RESULTS']), Case2Launch, 'ConfigFile.yml')):
+            localConfig = setConfig.read_yaml(
+                os.path.join(os.path.abspath(config['0_APP']['PATH_TO_RESULTS']), Case2Launch, 'ConfigFile.yml'))
+            config, msg = setConfig.ChangeConfigOption(config, localConfig)
+            if msg: print(msg)
+        else:
+            print('[Unknown Case] the following folder was not found : ' + os.path.join(
+                os.path.abspath(config['0_APP']['PATH_TO_RESULTS']), Case2Launch))
+            sys.exit()
+    elif type(ConfigFromArg) == str:
         if ConfigFromArg[-4:] == '.yml':
             localConfig = setConfig.read_yaml(ConfigFromArg)
             config, msg = setConfig.ChangeConfigOption(config, localConfig)
             if msg: print(msg)
         else:
-            print('[Unknown Argument] Please check the available options for arguments : -yml or -CONFIG')
-            sys.exit()
+             print('[Unknown Argument] Please check the available options for arguments : -yml or -CONFIG')
+             sys.exit()
     elif ConfigFromArg:
         config, msg = setConfig.ChangeConfigOption(config, ConfigFromArg)
         if msg: print(msg)
@@ -247,6 +267,8 @@ if __name__ == '__main__' :
         WindSize = 50
         totalsize = 0
         offset = 0
+        cpt = '--------------------'
+        cpt1 = '                    '
         for ListKey in File2Launch:
             totalsize += len(File2Launch[ListKey])
         for nbfile,ListKey in enumerate(File2Launch):
@@ -259,8 +281,7 @@ if __name__ == '__main__' :
                     print('Figure being completed by ' + str(round(100 * done, 1)) + ' %')
                 else:
                     print('\r',end='')
-                    cpt = '----------------------------------------------------------------------------------------------------'
-                    print('Figure being completed by ' + cpt[:int(100 * done)]+str(round(100 * done, 1)) + ' %',end = '',flush = True)
+                    print('Figure being completed by ' + cpt[:int(20 * done)]+cpt1[int(20 * done):]+str(round(100 * done, 1)) + ' %',end = '',flush = True)
                 if Check == 'OK':
                     LastBldObj = copy.deepcopy(BldObj)
                     LastIDFObj = copy.deepcopy(IDFObj)
