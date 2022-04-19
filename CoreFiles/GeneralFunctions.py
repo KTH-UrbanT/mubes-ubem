@@ -10,13 +10,14 @@ import CoreFiles.DomesticHotWater as DomesticHotWater
 import CoreFiles.MUBES_pygeoj as MUBES_pygeoj
 import CoreFiles.BuildFMUs as BuildFMUs
 from openpyxl import load_workbook
-from SALib.sample import latin
+import openturns as ot
 import shutil
 import pickle
 import pyproj
+import numpy as np
 
-def appendBuildCase(StudiedCase,epluspath,nbcase,DataBaseInput,MainPath,LogFile,PlotOnly = False):
-    StudiedCase.addBuilding('Building'+str(nbcase),DataBaseInput,nbcase,MainPath,epluspath,LogFile,PlotOnly)
+def appendBuildCase(StudiedCase,keypath,nbcase,DataBaseInput,MainPath,LogFile,PlotOnly = False, DebugMode = False):
+    StudiedCase.addBuilding('Building'+str(nbcase),DataBaseInput,nbcase,MainPath,keypath,LogFile,PlotOnly, DebugMode)
     idf = StudiedCase.building[-1]['BuildIDF']
     building = StudiedCase.building[-1]['BuildData']
     return idf, building
@@ -28,13 +29,12 @@ def setSimLevel(idf,building):
     Sim_param.Location_and_weather(idf,building)
     Sim_param.setSimparam(idf,building)
 
-def setBuildingLevel(idf,building,LogFile,CorePerim = False,FloorZoning = False,ForPlots = False):
+def setBuildingLevel(idf,building,LogFile,CorePerim = False,FloorZoning = False,ForPlots = False,DebugMode = False):
     ######################################################################################
     #Building Level
     ######################################################################################
     #this is the function that requires the longest time
-    GeomScripts.createBuilding(LogFile,idf,building, perim = CorePerim,FloorZoning = FloorZoning,ForPlots=ForPlots)
-
+    GeomScripts.createBuilding(LogFile,idf,building, perim = CorePerim,FloorZoning = FloorZoning,ForPlots=ForPlots,DebugMode = DebugMode)
 
 def setEnvelopeLevel(idf,building):
     ######################################################################################
@@ -54,7 +54,6 @@ def setExtraEnergyLoad(idf,building):
     if building.DHWInfos:
         DomesticHotWater.createWaterEqpt(idf,building)
 
-
 def setOutputLevel(idf,building,MainPath,EMSOutputs,OutputsFile):
     #ouputs definitions
     Set_Outputs.AddOutputs(idf,building,MainPath,EMSOutputs,OutputsFile)
@@ -69,39 +68,53 @@ def readPathfile(Pathways):
                     keyPath[key] = os.path.normcase(line[line.find(':') + 1:-1])
     return keyPath
 
-def ReadGeoJsonFile(keyPath):
-    print('Reading Input files,...')
+def ReadGeoJsonFile(keyPath,toBuildPool = False):
+    #print('Reading Input files,...')
     try:
         BuildObjectDict = ReadGeojsonKeyNames(keyPath['GeojsonProperties'])
         Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'])
-        Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'])
-        Buildingsfile = checkRefCoordinates(Buildingsfile)
-        Shadingsfile = checkRefCoordinates(Shadingsfile)
-        return {'BuildObjDict':BuildObjectDict,'Build' :Buildingsfile, 'Shades': Shadingsfile}
+        #Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'])
+        if not toBuildPool: Buildingsfile = checkRefCoordinates(Buildingsfile)
+        #if not toBuildPool: Shadingsfile = checkRefCoordinates(Shadingsfile)
+        return {'BuildObjDict':BuildObjectDict,'Build' :Buildingsfile}#, 'Shades': Shadingsfile}
     except:
         Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'])
-        Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'])
-        Buildingsfile = checkRefCoordinates(Buildingsfile)
-        Shadingsfile = checkRefCoordinates(Shadingsfile)
-        return {'Build': Buildingsfile, 'Shades': Shadingsfile}
+        #Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'])
+        if not toBuildPool: Buildingsfile = checkRefCoordinates(Buildingsfile)
+        #if not toBuildPool: Shadingsfile = checkRefCoordinates(Shadingsfile)
+        return {'Build': Buildingsfile}#, 'Shades': Shadingsfile}
+
+def ListAvailableFiles(keyPath):
+    # reading the pathfiles and the geojsonfile
+    GlobKey = [keyPath]
+    # lets see if the input file is a dir with several geojson files
+    multipleFiles = []
+    BuildingFiles = ReadGeoJsonDir(GlobKey[0])
+    if BuildingFiles:
+        if len(BuildingFiles)>1:
+            multipleFiles = [FileName[:-8] for FileName in BuildingFiles]
+        MainRootPath = GlobKey[0]['Buildingsfile']
+        GlobKey[0]['Buildingsfile'] = os.path.join(MainRootPath, BuildingFiles[0])
+        for nb, file in enumerate(BuildingFiles[1:]):
+            GlobKey.append(GlobKey[-1].copy())
+            GlobKey[-1]['Buildingsfile'] = os.path.join(MainRootPath, file)
+    return GlobKey, multipleFiles
 
 def ReadGeoJsonDir(keyPath):
-    print('Reading Input dir,...')
+    #print('Reading Input dir,...')
     BuildingFiles = []
-    ShadingWallFiles = []
     if os.path.isdir(keyPath['Buildingsfile']):
         FileList = os.listdir(keyPath['Buildingsfile'])
         for nb,file in enumerate(FileList):
-            if 'Buildings' in file:
-                print('Building main input file with file nb: ' + str(nb))
-                BuildingFiles.append(file)
-                ShadingWallFiles.append(file.replace('Buildings', 'Walls'))
-
-    return BuildingFiles,ShadingWallFiles
-
-
+            if file[-8:] == '.geojson':
+                #print('Building main input file with file nb: ' + str(nb))
+                if not 'Wall' in file:
+                    BuildingFiles.append(file)
+    return BuildingFiles
 
 def checkRefCoordinates(GeojsonFile):
+    if not GeojsonFile:
+        return GeojsonFile
     if 'EPSG' in GeojsonFile.crs['properties']['name']:
         return GeojsonFile
     ##The coordinate system depends on the input file, thus, if specific filter or conversion from one to another,
@@ -122,36 +135,38 @@ def checkRefCoordinates(GeojsonFile):
 def ComputeDistance(v1,v2):
     return ((v2[0]-v1[0])**2+(v2[1]-v1[1])**2)**0.5
 
-def MakeAbsoluteCoord(idf,building):
+def MakeAbsoluteCoord(building,idf = [],roundfactor = 8):
     # we need to convert change the reference coordinate because precision is needed for boundary conditions definition:
     newfoot = []
     for foot in building.footprint:
-        newfoot.append([(node[0] + building.RefCoord[0], node[1] + building.RefCoord[1]) for node in foot])
+        newfoot.append([(round(node[0] + building.RefCoord[0],roundfactor), round(node[1] + building.RefCoord[1],roundfactor)) for node in foot])
     building.footprint = newfoot
     for shade in building.shades.keys():
-        newcoord = [(node[0] + building.RefCoord[0], node[1] + building.RefCoord[1]) for node in
+        newcoord = [(round(node[0] + building.RefCoord[0],roundfactor), round(node[1] + building.RefCoord[1],roundfactor)) for node in
                     building.shades[shade]['Vertex']]
         building.shades[shade]['Vertex'] = newcoord
-    newwalls = []
+    new_Agreg = [(round(node[0] + building.RefCoord[0],roundfactor), round(node[1] + building.RefCoord[1],roundfactor)) for node in building.AggregFootprint]
+    building.AggregFootprint = new_Agreg
     for Wall in building.AdjacentWalls:
-        newcoord = [(node[0] - building.RefCoord[0], node[1] - building.RefCoord[1]) for node in Wall['geometries']]
+        newcoord = [(round(node[0] + building.RefCoord[0],roundfactor), round(node[1] + building.RefCoord[1],roundfactor)) for node in Wall['geometries']]
         Wall['geometries'] = newcoord
-    surfaces = idf.getsurfaces() + idf.getshadingsurfaces() + idf.getsubsurfaces()
-    for surf in surfaces:
-        for i,node in enumerate(surf.coords):
-            try:
-                x,y,z = node[0], node[1], node[2]
-                varx = 'Vertex_' + str(i+1) + '_Xcoordinate'
-                vary = 'Vertex_' + str(i+1) + '_Ycoordinate'
-                varz = 'Vertex_' + str(i+1) + '_Zcoordinate'
-                setattr(surf, varx, x + building.RefCoord[0])
-                setattr(surf, vary, y + building.RefCoord[1])
-                setattr(surf, varz, z)
-            except:
-                a=1
-    return idf,building
-
-
+    if idf:
+        surfaces = idf.getsurfaces() + idf.getshadingsurfaces() + idf.getsubsurfaces()
+        for surf in surfaces:
+            for i,node in enumerate(surf.coords):
+                try:
+                    x,y,z = node[0], node[1], node[2]
+                    varx = 'Vertex_' + str(i+1) + '_Xcoordinate'
+                    vary = 'Vertex_' + str(i+1) + '_Ycoordinate'
+                    varz = 'Vertex_' + str(i+1) + '_Zcoordinate'
+                    setattr(surf, varx, round(x + building.RefCoord[0],roundfactor))
+                    setattr(surf, vary, round(y + building.RefCoord[1],roundfactor))
+                    setattr(surf, varz, round(z,roundfactor))
+                except:
+                    a=1
+        return building, idf
+    else:
+        return building
 
 def SaveCase(MainPath,SepThreads,CaseName,nbBuild):
     SaveDir = os.path.join(os.path.dirname(os.path.dirname(MainPath)), 'SimResults')
@@ -173,56 +188,98 @@ def SaveCase(MainPath,SepThreads,CaseName,nbBuild):
         except:
             pass
 
-def CreateSimDir(CurrentPath,CaseName,SepThreads,nbBuild,idx,MultipleFile = '',Refresh = False):
-    if not os.path.exists(os.path.join(os.path.dirname(os.path.dirname(CurrentPath)),'MUBES_SimResults')):
-        os.mkdir(os.path.join(os.path.dirname(os.path.dirname(CurrentPath)),'MUBES_SimResults'))
-    SimDir = os.path.normcase(
-        os.path.join(os.path.dirname(os.path.dirname(CurrentPath)), os.path.join('MUBES_SimResults', CaseName)))
+def CreateSimDir(CurrentPath,DestinationPath,CaseName,SepThreads,nbBuild,idx,MultipleFile = '',Refresh = False,Verbose = False):
+    if not os.path.exists(DestinationPath):
+        os.mkdir(os.path.abspath(DestinationPath))
+        if Verbose: print(DestinationPath +' folder is created')
+    SimDir = os.path.join(os.path.abspath(DestinationPath), CaseName)
     if not os.path.exists(SimDir):
         os.mkdir(SimDir)
+        if Verbose: print('[Prep. phase] '+CaseName + ' folder is created')
     elif idx == 0 and Refresh:
         shutil.rmtree(SimDir)
         os.mkdir(SimDir)
+        if Verbose: print('[Prep. phase] '+CaseName + ' folder is emptied')
     if SepThreads:
-        SimDir = os.path.normcase(
-            os.path.join(SimDir, 'Build_' + str(nbBuild)))
+        SimDir = os.path.join(SimDir, 'Build_' + str(nbBuild))
         if not os.path.exists(SimDir):
             os.mkdir(SimDir)
+            if Verbose: print('[Prep. phase] '+CaseName +  '/Build_' + str(nbBuild)+' folder is created')
         elif idx == 0 and Refresh:
             shutil.rmtree(SimDir)
             os.mkdir(SimDir)
+            if Verbose: print('[Prep. phase] '+CaseName + '/Build_' + str(nbBuild)+' folder is emptied')
     if len(MultipleFile)> 0 :
         SimDir = os.path.normcase(
             os.path.join(SimDir, MultipleFile))
         if not os.path.exists(SimDir):
             os.mkdir(SimDir)
+            if Verbose: print('[Prep. phase] '+CaseName + '/'+MultipleFile+ ' folder is created')
         elif idx == 0 and Refresh:
             shutil.rmtree(SimDir)
             os.mkdir(SimDir)
+            if Verbose: print('[Prep. phase] '+CaseName + '/' + MultipleFile + ' folder is emptied')
     return SimDir
 
-def getParamSample(VarName2Change,Bounds,nbruns):
+def getDistType(ParamMethod,Bounds):
+    if 'Normal' in ParamMethod:
+        return ot.Normal((Bounds[1]+Bounds[0])/2,(Bounds[1]-Bounds[0])/6)
+    elif 'Triangular' in ParamMethod:
+        return ot.Triangular(Bounds[0],(Bounds[1]+Bounds[0])/2, Bounds[1])
+    else:
+        #the Uniform law is by default
+        return ot.Uniform(Bounds[0],Bounds[1])
+
+def getParamSample(VarName2Change,Bounds,nbruns,ParamMethods):
     # Sampling process if someis define int eh function's arguments
     # It is currently using the latin hyper cube methods for the sampling generation (latin.sample)
-    Param = [1]
-    if len(VarName2Change) > 0:
-        problem = {}
-        problem['names'] = VarName2Change
-        problem['bounds'] = Bounds  # ,
-        problem['num_vars'] = len(VarName2Change)
-        # problem = read_param_file(MainPath+'\\liste_param.txt')
-        Param = latin.sample(problem, nbruns)
-    return Param
+    Dist = {}
+    LinearVal = {}
+    varMethodIdx = {'Idx':[],'Method':[]}
+    LinearIdx = 0
+    DistIdx = 0
+    for idx,param in enumerate(VarName2Change):
+        if 'Linear' in ParamMethods[idx]:
+            LinearVal[param] = np.linspace(Bounds[idx][0],Bounds[idx][1],nbruns)
+            varMethodIdx['Method'].append('Linear')
+            varMethodIdx['Idx'].append(LinearIdx)
+            LinearIdx+=1
+        else:
+            Dist[param] = getDistType(ParamMethods[idx],Bounds[idx])
+            varMethodIdx['Method'].append('Dist')
+            varMethodIdx['Idx'].append(DistIdx)
+            DistIdx +=1
+    if Dist:
+        MakeDist = ot.ComposedDistribution([Dist[x] for x in Dist.keys()])
+        OTSample = np.array(ot.LHSExperiment(MakeDist, nbruns).generate())
+    if LinearVal:
+        LinSample = np.array([[LinearVal[key][x] for key in LinearVal.keys()] for x in range(nbruns)])
+    if Dist and LinearVal:
+        #both dict need to be implemented but keeping the order of  VarName2change list
+        newSample = []
+        for idx,mthd in enumerate(varMethodIdx['Method']):
+            if idx==0:
+                newSample = LinSample[:,varMethodIdx['Idx'][idx]].reshape(nbruns,1) if mthd=='Linear' else \
+                                        OTSample[:,varMethodIdx['Idx'][idx]].reshape(nbruns,1)
+            else:
+                newSample = np.append(newSample,LinSample[:,varMethodIdx['Idx'][idx]].reshape(nbruns,1) if \
+                         mthd=='Linear' else OTSample[:,varMethodIdx['Idx'][idx]].reshape(nbruns,1),axis = 1)
+        return newSample
+    elif Dist:
+        return OTSample
+    elif LinearVal:
+        return LinSample
+    return [1]
 
-def CreatFMU(idf,building,nbcase,epluspath,SimDir, i,varOut,LogFile):
+def CreatFMU(idf,building,nbcase,epluspath,SimDir, i,varOut,LogFile,DebugMode):
     print('Building FMU under process...Please wait around 30sec')
     #get the heated zones first and set them into a zonelist
     BuildFMUs.setFMUsINOut(idf, building,varOut)
     idf.saveas('Building_' + str(nbcase) + 'v' + str(i) + '.idf')
     BuildFMUs.buildEplusFMU(epluspath, building.WeatherDataFile, os.path.join(SimDir,'Building_' + str(nbcase) + 'v' + str(i) + '.idf'))
     print('FMU created for this building')
-    Write2LogFile('FMU created for this building\n',LogFile)
-    Write2LogFile('##############################################################\n',LogFile)
+    if DebugMode: Write2LogFile('FMU created for this building\n',LogFile)
+    if DebugMode: Write2LogFile('##############################################################\n',LogFile)
 
 def ReadGeojsonKeyNames(GeojsonProperties):
     #this is currently ot used....
@@ -287,10 +344,50 @@ def CleanUpLogFiles(MainPath):
         file1.close()
         for line in Lines:
             Write2LogFile(line,MainLogFile)
+        Write2LogFile('#############################################################\n', MainLogFile)
         os.remove(os.path.join(MainPath,file))
     MainLogFile.close()
 
-def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shadingsfile,nbcase,DB_Data,LogFile=[]):
+def AppendLogFiles(MainPath,BldIDKey):
+    file2del = []
+    try:
+        with open(os.path.join(MainPath, 'AllLogs.log'), 'r') as file:
+            Lines = file.readlines()
+        file2del = 'AllLogs.log'
+    except:
+        Liste = os.listdir(MainPath)
+        for file in Liste:
+            if 'Logs.log' in file:
+                with open(os.path.join(MainPath, file), 'r') as extrafile:
+                    Lines = extrafile.readlines()
+                file2del = file
+                break
+    if file2del:
+        NewLines = []
+        flagON = False
+        for line in Lines:
+            NewLines.append(line)
+            if '[Bld ID] '+BldIDKey+' : ' in line:
+                flagON = True
+                id = line[len('[Bld ID] '+BldIDKey+' : '):-1]
+                try:
+                    with open(os.path.join(MainPath,'Sim_Results', BldIDKey+'_'+str(id) + '.txt'), 'r') as file:
+                        extralines = file.readlines()
+                    os.remove(os.path.join(MainPath,'Sim_Results', BldIDKey+'_'+str(id) + '.txt'))
+                except:
+                    extralines = ['ERROR : No simulations found for this building\n']
+            if '[Reported Time]' in line and flagON:
+                for extraline in extralines:
+                    NewLines.append(extraline)
+                flagON = False
+        FinalLogFile = open(os.path.join(MainPath, 'FinalLogsCompiled.log'), 'w')
+        for line in NewLines:
+            Write2LogFile(line, FinalLogFile)
+        FinalLogFile.close()
+        os.remove(os.path.join(MainPath, file2del))
+
+#def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shadingsfile,nbcase,LogFile=[]):
+def setChangedParam(building, ParamVal, VarName2Change, MainPath, Buildingsfile, nbcase, LogFile=[]):
     #there is a loop file along the variable name to change and if specific ation are required it should be define here
     # if the variable to change are embedded into several layer of dictionnaries than there is a need to make checks and change accordingly to the correct element
     # here are examples for InternalMass impact using 'InternalMass' keyword in the VarName2Change list to play with the 'WeightperZoneArea' parameter
@@ -319,7 +416,8 @@ def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shad
             setattr(building, var, exttmass)
         elif 'MaxShadingDist' in var:
             building.MaxShadingDist = round(ParamVal[varnum], roundVal)
-            building.shades = building.getshade(Buildingsfile[nbcase], Shadingsfile, Buildingsfile,DB_Data.GeomElement,LogFile,PlotOnly = False)
+            #building.shades = building.getshade(Buildingsfile[nbcase], Shadingsfile, Buildingsfile,LogFile,PlotOnly = False)
+            building.shades = building.getshade(nbcase, Buildingsfile, LogFile,PlotOnly=False)
         elif 'IntLoadCurveShape' in var:
             building.IntLoadCurveShape = max(round(ParamVal[varnum], roundVal),1e-6)
             building.IntLoad = building.getIntLoad(MainPath, LogFile)
@@ -332,15 +430,19 @@ def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shad
             except:
                 print('This one needs special care : '+var)
 
-def SetParamSample(SimDir,nbruns,VarName2Change,Bounds,SepThreads):
+def SetParamSample(SimDir,CaseChoices,SepThreads):
     #the parameter are constructed. the oupute gives a matrix ofn parameter to change with nbruns values to simulate
+    nbruns = CaseChoices['NbRuns']
+    VarName2Change = CaseChoices['VarName2Change']
+    Bounds = CaseChoices['Bounds']
+    ParamMethods = CaseChoices['ParamMethods']
     if SepThreads:
         Paramfile = os.path.join(SimDir, 'ParamSample.pickle')#os.path.join(os.path.dirname(SimDir), 'ParamSample.pickle')
         if os.path.isfile(Paramfile):
             with open(Paramfile, 'rb') as handle:
                 ParamSample = pickle.load(handle)
         else:
-            ParamSample = getParamSample(VarName2Change,Bounds,nbruns)
+            ParamSample = getParamSample(VarName2Change,Bounds,nbruns,ParamMethods)
             if nbruns>1:
                 with open(Paramfile, 'wb') as handle:
                     pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -350,11 +452,104 @@ def SetParamSample(SimDir,nbruns,VarName2Change,Bounds,SepThreads):
             with open(Paramfile, 'rb') as handle:
                 ParamSample = pickle.load(handle)
         else:
-            ParamSample = getParamSample(VarName2Change, Bounds, nbruns)
+            ParamSample = getParamSample(VarName2Change, Bounds, nbruns,ParamMethods)
             if nbruns > 1:
                 with open(Paramfile, 'wb') as handle:
                     pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    return ParamSample
+    #lets add a sepcial case for making a sample from posteriors
+    if CaseChoices['FromPosteriors']:
+        CaseChoices['VarName2Change'] = []
+        BldNum = int(SimDir[-SimDir[::-1].index('_'):])
+        with open(os.path.join(CaseChoices['PosteriorsDataPath'], 'GlobalMatchedParam.pickle'), 'rb') as handle:
+            MatchedData = pickle.load(handle)
+        for paramName in MatchedData[CaseChoices['CalibTimeBasis']][BldNum].keys():
+            if type(MatchedData[CaseChoices['CalibTimeBasis']][BldNum][paramName]) == np.ndarray:
+                CaseChoices['VarName2Change'].append(paramName)
+        ParamSample = []
+        if CaseChoices['VarName2Change']:
+            nbmatches = len(MatchedData[CaseChoices['CalibTimeBasis']][BldNum][CaseChoices['VarName2Change'][0]])
+            if nbmatches < 100:
+                return ParamSample,CaseChoices
+            else:
+                for i in range(nbmatches):
+                    ParamSet = [float(MatchedData[CaseChoices['CalibTimeBasis']][BldNum][key][i]) for key in CaseChoices['VarName2Change']]
+                    if CaseChoices['ECMParam']:
+                        try: ParamSet[int(CaseChoices['VarName2Change'].index(CaseChoices['ECMParam']))] *= float(CaseChoices['ECMChange'])
+                        except: pass
+                    ParamSample.append(ParamSet)
+                if CaseChoices['ECMParam']:
+                    import random
+                    random.shuffle(ParamSample)
+                    ParamSample = ParamSample[:100]
+                ParamSample = np.array(ParamSample)
+                CaseChoices['NbRuns'] = len(ParamSample[:,0])
+                with open(Paramfile, 'wb') as handle:
+                    pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    return ParamSample,CaseChoices
+
+def ReadData(line,seperator,header = False):
+    Val = [line[:line.index(seperator)]]
+    remainline = line[line.index(seperator) + 1:]
+    stillhere = 1
+    while stillhere == 1:
+        try:
+            Val.append(remainline[:remainline.index(seperator)])
+            remainline = remainline[remainline.index(seperator) + 1:]
+        except:
+            stillhere = 0
+    Val.append(remainline[:-1])
+    if header:
+        Outputs = {}
+        for i in Val:
+            Outputs[i] =[]
+    else:
+        Outputs = Val
+    return Outputs
+
+def getInputFile(path,seperator):
+    with open(path, 'r') as handle:
+        FileLines = handle.readlines()
+    Header = ReadData(FileLines[0],seperator,header=True)
+    for i,line in enumerate(FileLines[1:]):
+            Val = ReadData(line,seperator)
+            try: float(Val[0].replace(',','.'))
+            except: break
+            for id,key in enumerate(Header.keys()):
+                Header[key].append(Val[id].replace(',','.'))
+    return Header
+
+def ManageGlobalPlots(BldObj,IdfObj,FigCenter,WindSize, PlotBldOnly,nbcase = [],LastBld = False):
+    FigCenter.append(BldObj.RefCoord)
+    refx = sum([center[0] for center in FigCenter]) / len(FigCenter)
+    refy = sum([center[1] for center in FigCenter]) / len(FigCenter)
+    FigCentroid = BldObj.RefCoord if PlotBldOnly else (refx, refy)
+    # we need to transform the prvious relatve coordinates into absolute one in order to make plot of several building keeping their location
+    if PlotBldOnly:
+        FigCentroid = (0,0)
+    else:
+        BldObj,IdfObj = MakeAbsoluteCoord(BldObj,IdfObj)
+
+    # compåuting the window size for visualization
+    for poly in BldObj.footprint:
+        for vertex in poly:
+            WindSize = max(ComputeDistance(FigCentroid, vertex), WindSize)
+    surf = IdfObj.getsurfaces()
+    ok2plot = False
+    nbadiab = 0
+    adiabsurf = []
+    for s in surf:
+        if s.Outside_Boundary_Condition == 'adiabatic':
+            ok2plot = True
+            if s.Name[:s.Name.index('_')] not in adiabsurf:
+                adiabsurf.append(s.Name[:s.Name.index('_')])
+                nbadiab += 1
+    RoofSpecialColor = "firebrick"
+    if nbcase in [39]:
+        RoofSpecialColor = 'limegreen'
+    IdfObj.view_model(test= True if PlotBldOnly+LastBld>0 else False, FigCenter=FigCentroid, WindSize=2 * WindSize,
+                       RoofSpecialColor=RoofSpecialColor)
+    return FigCenter,WindSize
+
 
 if __name__ == '__main__' :
     print('GeneralFunctions.py')

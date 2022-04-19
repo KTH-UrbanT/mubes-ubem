@@ -7,6 +7,7 @@
 #the core file are intergated into a specific folder intregrated in the pathway file
 import os, sys
 from subprocess import check_call
+# import CoreFiles.Set_Outputs as Set_Outputs
 
 def CreateZoneList(idf,name,zonelist):
     ZoneListObj= idf.newidfobject(
@@ -94,8 +95,14 @@ def buildEplusFMU(epluspath,weatherpath,Filepath):
     EplusEpwPath = os.path.join(epluspath,os.path.normcase(weatherpath))
     external = False
     if external:
+        import platform
     #One way using check_call, the process is launche externaly to python (even though it is python scripts as well
-        cmd = ['python',os.path.join(Path2FMUs,'EnergyPlusToFMU.py'),'-i',EpluIddPath,'-w',EplusEpwPath,'-d',Filepath]
+        # the process is launche on external terminal window
+        if platform.system() == "Windows":
+            python_exe = "python.exe"
+        else:
+            python_exe = "python"
+        cmd = [python_exe,os.path.join(Path2FMUs,'EnergyPlusToFMU.py'),'-i',EpluIddPath,'-w',EplusEpwPath,'-d',Filepath]
         check_call(cmd, stdout=open(os.devnull, "w"))
     else:
         EnergyPlusToFMU.exportEnergyPlusAsFMU(showDiagnostics=False, litter=False, iddFileName =EpluIddPath , wthFileName =EplusEpwPath, fmiVersion = 1, idfFileName = Filepath)

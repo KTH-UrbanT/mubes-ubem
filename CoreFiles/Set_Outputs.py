@@ -51,6 +51,11 @@ def AddOutputs(idf,building,path,EMSOutputs,OutputsFile):
         setEMS4TotHeatPow(idf, building,zonelist, OutputsVar['Reportedfrequency'], EMSOutputs[1])
         if len(EMSOutputs)>2:
             setEMS4TotDHWPow(idf, building, zonelist, OutputsVar['Reportedfrequency'], EMSOutputs[2])
+
+    # idf.newidfobject("OUTPUT:SQLITE",
+    #                  Option_Type = 'SimpleAndTabular') # could be 'Simple' as well
+
+
     return idf
 
 def getHeatedZones(idf):
@@ -310,26 +315,8 @@ def Read_OutputsEso(CaseName,ExtSurfNames, ZoneOutput):
                     BuildAgregRes[KeyArea][i]['GlobData'] = [sum(x)/2 for x in zip(BuildAgregRes[KeyArea][i]['GlobData'], ZoneAgregRes[key][i]['GlobData'])]
                 else:
                     BuildAgregRes[KeyArea][i]['GlobData'] = [sum(x) for x in zip(BuildAgregRes[KeyArea][i]['GlobData'], ZoneAgregRes[key][i]['GlobData'])]
-    if ZoneOutput:
-        #we need to make it comply with the keys of the Building Level (as these are used further in the ReadMe mostly)
-        #so all levels are stored in a three keys dictionary
-        NewZoneAgregRes = {}
-        NewZoneAgregRes['HeatedArea'] = {}
-        NewZoneAgregRes['NonHeatedArea'] = {}
-        NewZoneAgregRes['Other'] = {}
-        for key in ZoneAgregRes.keys():
-            if 'STOREY' in key:
-                if int(key[6:]) <0:
-                    for name in ZoneAgregRes[key].keys():
-                        NewZoneAgregRes['NonHeatedArea'][key+' '+name] = ZoneAgregRes[key][name]
-                else:
-                    for name in ZoneAgregRes[key].keys():
-                        NewZoneAgregRes['HeatedArea'][key+' '+name] = ZoneAgregRes[key][name]
-            else:
-                for name in ZoneAgregRes[key].keys():
-                    NewZoneAgregRes['Other'][key + ' ' + name] = ZoneAgregRes[key][name]
 
-    return NewZoneAgregRes if ZoneOutput else BuildAgregRes
+    return ZoneAgregRes if ZoneOutput else BuildAgregRes
 
 def Plot_Outputs(res,idf):
     # visualization of the results
@@ -376,3 +363,4 @@ def Read_OutputError(CaseName):
 
 if __name__ == '__main__' :
     print('Set_Outputs Main')
+

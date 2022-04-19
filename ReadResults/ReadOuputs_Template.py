@@ -7,6 +7,7 @@ sys.path.append(path2addgeom)
 import numpy as np
 sys.path.append(os.path.dirname(os.getcwd()))
 import Utilities
+import CoreFiles.setConfig as setConfig
 
 
 # the main idea of this file is to present some way for analyzing the data.
@@ -26,15 +27,17 @@ import Utilities
 
 
 def plotAreaVal(GlobRes,FigName,name):
-    refVar= '[''BuildID''][''50A_UUID'']'
-    reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
+    key = GlobRes[0]['BuildID'][0]['BldIDKey']
+    refVar= '[''BuildID''][key]'
+    reference = [GlobRes[0]['BuildID'][i][key] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
     #definition of the reference for comparison
     signe = ['.','s','>','<','d','o','.','s','>','<','d','o']
     for nb in GlobRes:
         Res = GlobRes[nb]
-        locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
+        locref = [GlobRes[nb]['BuildID'][i][key] for i in range(len(GlobRes[nb]['BuildID']))]
         index_y,varx = Utilities.getSortedIdx(reference,locref)
-        varyref = [Res['ATemp'][idx] for idx in index_y]
+        varx = [int(Res['SimNum'][idx]) for idx in index_y]
+        varyref = [Res['DB_Surf'][idx] for idx in index_y]
         if nb==0:
             Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0],varx, [varyref], 'Building num', ['ATemp'],
                                          'Areas (m2)', 'x')
@@ -49,26 +52,31 @@ def plotAreaVal(GlobRes,FigName,name):
 
 
 def plotErrorFile(GlobRes,FigName,name,legend = True):
-    #reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
+    key = GlobRes[0]['BuildID'][0]['BldIDKey']
+    refVar = '[''BuildID''][key]'
+    reference = [GlobRes[0]['BuildID'][i][key] for i in range(
+        len(GlobRes[0]['BuildID']))]  # we need this reference because some building are missing is somme simulation !!!
     #definition of the reference for comparison
     signe = ['.','s','>','<','d','o','.','s','>','<','d','o']
     offset = 0
     tot = 0
     for nb in GlobRes:
         Res = GlobRes[nb]
-        #locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
-        #index_y,varx = Utilities.getSortedIdx(reference,locref)
-        vary = Res['Warnings']
-        varx = [int(x) for x in np.linspace(offset, offset + len(vary), len(vary))]
+        locref = [GlobRes[nb]['BuildID'][i][key] for i in range(len(GlobRes[nb]['BuildID']))]
+        index_y,varx = Utilities.getSortedIdx(reference,locref)
+        vary = [Res['Warnings'][idx] for idx in index_y]
+        varx = [int(Res['SimNum'][idx]) for idx in index_y]
+        #arx = [int(x) for x in np.linspace(offset, offset + len(vary), len(vary))]
         xtitle = 'Building'
         Warnings = [Res['SimNum'][idx] for idx, val in enumerate(vary) if val > 0]
         if Warnings:
-            print('File nb : ' + str(nb) + ' has simulations with Warnings on buildings : ' + str(Warnings))
+            print('Case nb : ' + str(nb) + ' has simulations with Warnings on buildings : ' + str(Warnings))
         Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0],varx, [vary], xtitle, [name[nb]],
                                  'Nb Warnings', signe[np.random.randint(0,10)],legend = legend)
-        vary = Res['Errors']
-        varx = [int(x) for x in np.linspace(offset, offset + len(vary), len(vary))]
-        offset += (len(vary) + 1)
+        vary = [Res['Errors'][idx] for idx in index_y]
+        varx = [int(Res['SimNum'][idx]) for idx in index_y]
+        #varx = [int(x) for x in np.linspace(offset, offset + len(vary), len(vary))]
+        #offset +=  (len(vary) + 1) if wanted to be added in x axis along the different cases
         xtitle = 'Building'
         Errors = [Res['SimNum'][idx] for idx,val in enumerate(vary) if val>0]
         if Errors:
@@ -78,14 +86,16 @@ def plotErrorFile(GlobRes,FigName,name,legend = True):
 
 
 def plotDim(GlobRes,FigName,name):
-    refVar= '[''BuildID''][''50A_UUID'']'
-    reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
+    key = GlobRes[0]['BuildID'][0]['BldIDKey']
+    refVar= '[''BuildID''][key]'
+    reference = [GlobRes[0]['BuildID'][i][key] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
     #definition of the reference for comparison
     signe = ['.','s','>','<','d','o','.','s','>','<','d','o']
     for nb in GlobRes:
         Res = GlobRes[nb]
-        locref = [Res['BuildID'][i]['50A_UUID'] for i in range(len(Res['BuildID']))]
+        locref = [Res['BuildID'][i][key] for i in range(len(Res['BuildID']))]
         index_y,varx = Utilities.getSortedIdx(reference,locref)
+        varx = [int(Res['SimNum'][idx]) for idx in index_y]
         footprint = Res['BlocFootprintArea']
         try:
             max(Res['BlocHeight'][0])
@@ -120,15 +130,17 @@ def plotDim(GlobRes,FigName,name):
 
 
 def plotEnergy(GlobRes,FigName,name):
-    refVar = '[''BuildID''][''50A_UUID'']'
-    reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(
+    refVar = '[''BuildID''][key]'
+    key = GlobRes[0]['BuildID'][0]['BldIDKey']
+    reference = [GlobRes[0]['BuildID'][i][key] for i in range(
         len(GlobRes[0]['BuildID']))]  # we need this reference because some building are missing is somme simulation !!!
     # definition of the reference for comparison
     signe = ['.', 's', '>', '<', 'd', 'o', '.', 's', '>', '<', 'd', 'o']
     for nb in GlobRes:
         Res = GlobRes[nb]
-        locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
+        locref = [GlobRes[nb]['BuildID'][i][key] for i in range(len(GlobRes[nb]['BuildID']))]
         index_y, varx = Utilities.getSortedIdx(reference, locref)
+        varx = [int(Res['SimNum'][idx]) for idx in index_y]
         varyref = [Res['EPC_Heat'][idx] for idx in index_y]
         if nb == 0:
             Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0], varx, [varyref], 'Building num',
@@ -146,19 +158,19 @@ def plotEnergy(GlobRes,FigName,name):
 
 
 def plotTimeSeries(GlobRes,FigName,name,Location,TimeSerieList,Unit,SimNum=[]):
-
-    refVar= '[''BuildID''][''50A_UUID'']'
-    reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
+    key = GlobRes[0]['BuildID'][0]['BldIDKey']
+    refVar= '[''BuildID''][key]'
+    reference = [GlobRes[0]['BuildID'][i][key] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
     signe = ['.','s','>','<','d','o','.','s','>','<','d','o']
     for nb in GlobRes:
         Res = GlobRes[nb]
         if not SimNum:
             SimNum = Res['SimNum']
-        locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
+        locref = [GlobRes[nb]['BuildID'][i][key] for i in range(len(GlobRes[nb]['BuildID']))]
 
-        for nbBld in SimNum:
+        for num,nbBld in enumerate(SimNum):
             index_y, varx = Utilities.getSortedIdx(reference, locref)
-            vary = Res[Location][index_y[varx.index(nbBld)]][TimeSerieList]
+            vary = Res[Location][index_y[varx.index(num)]][TimeSerieList]
             varx = np.linspace(1,len(vary),len(vary))
             Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax'][0],varx, [vary], 'Time', [name[nb]+'_Bld_'+str(nbBld)+' '+TimeSerieList],
                                      Unit, '--')
@@ -174,44 +186,96 @@ def plotTimeSeries(GlobRes,FigName,name,Location,TimeSerieList,Unit,SimNum=[]):
 
 
 def plotIndex(GlobRes,FigName,name):
-    refVar= '[''BuildID''][''50A_UUID'']'
-    reference = [GlobRes[0]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
+    key = GlobRes[0]['BuildID'][0]['BldIDKey']
+    refVar= '[''BuildID''][key]'
+    reference = [GlobRes[0]['BuildID'][i][key] for i in range(len(GlobRes[0]['BuildID']))]#we need this reference because some building are missing is somme simulation !!!
     #definition of the reference for comparison
     signe = ['.','s','>','<','d','o','.','s','>','<','d','o']
     for nb in GlobRes:
         Res = GlobRes[nb]
-        locref = [GlobRes[nb]['BuildID'][i]['50A_UUID'] for i in range(len(GlobRes[nb]['BuildID']))]
+        locref = [GlobRes[nb]['BuildID'][i][key] for i in range(len(GlobRes[nb]['BuildID']))]
         index_y,varx = Utilities.getSortedIdx(reference,locref)
         vary = [Res['SimNum'][idx] for idx in index_y]
         Utilities.plotBasicGraph(FigName['fig_name'].number, FigName['ax0'], varx, [vary], 'Building',
                                  [name[nb]],
                                  'Building num in the GeojSon file', signe[nb])
 
+def Read_Arguments():
+    #these are defaults values:
+    Config2Launch = []
+    CaseNameArg =[]
+    # Get command-line options.
+    lastIdx = len(sys.argv) - 1
+    currIdx = 1
+    while (currIdx < lastIdx):
+        currArg = sys.argv[currIdx]
+        if (currArg.startswith('-yml')):
+            currIdx += 1
+            Config2Launch = sys.argv[currIdx]
+        if (currArg.startswith('-Case')):
+            currIdx += 1
+            CaseNameArg = sys.argv[currIdx]
+        currIdx += 1
+    return Config2Launch,CaseNameArg
 
+def getPathList(config):
+    CaseNames = config['2_CASE']['0_GrlChoices']['CaseName'].split(',')
+    path = []
+    Names4Plots = []
+    for CaseName in CaseNames:
+        congifPath = os.path.abspath(os.path.join(config['0_APP']['PATH_TO_RESULTS'],
+                                                  CaseName))
+        if not os.path.exists(congifPath):
+            print('Sorry, the folder '+CaseName+' does not exist...use -Case or -yml option or change your localConfig.yml')
+            sys.exit()
+        if os.path.exists(os.path.join(congifPath,'Sim_Results')):
+            path.append(os.path.join(congifPath,'Sim_Results'))
+            Names4Plots.append(CaseName)
+        else:
+            if len(CaseNames)>1:
+                print(
+                    'Sorry, but CaseNames '+str(CaseNames)+' cannot be aggregated because all or some contains several subcases')
+                sys.exit()
+            liste = os.listdir(congifPath)
+            for folder in liste:
+                path.append(os.path.join(congifPath,folder,'Sim_Results'))
+                Names4Plots.append(CaseName + '/' + folder)
+    return path,Names4Plots,CaseNames
 
 if __name__ == '__main__' :
 
-    CaseName= 'ForTest' #Name of the case study to post-process
+    ConfigFromArg,CaseNameArg = Read_Arguments()
+    config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfig.yml'))
+    configUnit = setConfig.read_yaml(
+        os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfigKeyUnit.yml'))
+    LocalConfigPath = os.path.join(os.path.dirname(os.getcwd()),'ModelerFolder')
+    config, filefound, msg = setConfig.check4localConfig(config, LocalConfigPath)
+    #config['2_CASE']['0_GrlChoices']['CaseName'] = 'Simple'
 
+    if CaseNameArg:
+        config['2_CASE']['0_GrlChoices']['CaseName'] = CaseNameArg
+        path, Names4Plots,CaseNames = getPathList(config)
+    elif type(ConfigFromArg) == str:
+        if ConfigFromArg[-4:] == '.yml':
+            localConfig = setConfig.read_yaml(ConfigFromArg)
+            config = setConfig.ChangeConfigOption(config, localConfig)
+            path,Names4Plots,CaseNames = getPathList(config)
+        else:
+            print('[Unknown Argument] Please check the available options for arguments : -yml or -Case')
+            sys.exit()
+    else:
+        path, Names4Plots,CaseNames = getPathList(config)
+    print('[Studied Results Folder] '+str(Names4Plots))
     #Names (attributes) wanted to be taken in the pickle files for post-processing. The time series are agrregated into HeatedArea, NonHeatedArea and OutdoorSite
     extraVar=['height','StoreyHeigth','nbfloor','BlocHeight','BlocFootprintArea','BlocNbFloor','HeatedArea','NonHeatedArea','OutdoorSite']
-    Names4Plots = [CaseName] #because we can have several path for several studies we want to overplot.
-    mainpath = os.path.dirname(os.path.dirname(os.getcwd()))
-    if os.path.exists(mainpath + os.path.normcase('/MUBES_SimResults/'+CaseName+'/Sim_Results')):
-        path = [mainpath + os.path.normcase('/MUBES_SimResults/'+CaseName+'/Sim_Results')]
-    else:
-        path = []
-        Names4Plots = []
-        liste = os.listdir(mainpath + os.path.normcase('/MUBES_SimResults/'+CaseName))
-        for folder in liste:
-            path.append(mainpath + os.path.normcase('/MUBES_SimResults/'+CaseName+'/'+folder+'/Sim_Results'))
-            Names4Plots.append(CaseName+'/'+folder)
+    #because we can have several path for several studies we want to overplot.
 
     Res = {}
     TimeSerieList=[]
     TimeSerieUnit = []
     id =0
     for idx, curPath in enumerate(path):
+        print('Considering results from : '+CaseNames[idx])
         Res[idx] = Utilities.GetData(curPath,extraVar)
         #lets grab the time series name (the chossen ouputs from EP).
         # /!\ the data are taken from the building number 0, thus if for example not an office type, the will be no occupant. Choose another building if needed
@@ -224,11 +288,11 @@ if __name__ == '__main__' :
 
 
     #The opening order does not follows the building simulation number while opening the data. Thus, this first graphs provides the correspondance between the other plots, building number and their simulation number
-    IndexFig = Utilities.createSimpleFig()
-    plotIndex(Res, IndexFig, Names4Plots)
+    # IndexFig = Utilities.createSimpleFig()
+    # plotIndex(Res, IndexFig, Names4Plots)
     #this 2nd plot gives the size of the error file. It gives insights if some buildings causses particulary over whole issue in the simulation process
     ErrorFig = Utilities.createMultilFig('',2,linked=False)
-    plotErrorFile(Res, ErrorFig, Names4Plots,legend = False)
+    plotErrorFile(Res, ErrorFig, Names4Plots)
     #this 3rd graph gives the footprint area and the correspondance between EPCs value if available
     AreaFig = Utilities.createMultilFig('',2,linked=False)
     plotAreaVal(Res, AreaFig, Names4Plots)

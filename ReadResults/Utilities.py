@@ -172,8 +172,10 @@ def createMultilFig(title,nbFig,linked=True):
         ax[i].grid()
         if i>0 and linked:
             ax[i].sharex(ax[0])
+
+        if i ==0:
+            plt.title(title)
     #plt.tight_layout()
-    plt.title(title)
     return {'fig_name' : fig_name, 'ax': ax}
 
 def createMultilDblFig(title,nbFigx,nbFigy,linked=True):
@@ -188,13 +190,16 @@ def createMultilDblFig(title,nbFigx,nbFigy,linked=True):
             totfig+=1
             if i>0 and j>0 and linked:
                 ax[i].sharex(ax[0])
+            if i==0 and j==0:
+                plt.title(title)
     #plt.tight_layout()
-    plt.title(title)
     return {'fig_name' : fig_name, 'ax': ax}
 
 #this function enable to create a single graph areas
 def createSimpleFig():
-    fig_name = plt.figure(figsize=(10, 7))
+    fig_name = plt.figure(figsize=(7, 5))
+    plt.rc('font', size=15)
+    #plt.subplots_adjust(bottom=0.3)
     gs = gridspec.GridSpec(4, 1, left=0.1, bottom = 0.1)
     ax0 = plt.subplot(gs[:, 0])
     ax0.grid()
@@ -202,20 +207,29 @@ def createSimpleFig():
     return {'fig_name' : fig_name, 'ax0': ax0}
 
 #basic plots
-def plotBasicGraph(fig_name,ax0,varx,vary,varxname,varyname,title,sign,legend = True, markersize = 5):
+def plotBasicGraph(fig_name,ax0,varx,vary,varxname,varyname,title,sign,color = 'black', legend = True, markersize = 5, xlim =[], ylim = [], mfc = 'none'):
     plt.figure(fig_name)
+
     if len(varyname)>0:
         for nb,var in enumerate(vary):
-            ax0.plot(varx,var,sign,label= varyname[nb], mfc='none',markersize=markersize)
+            ax0.plot(varx,var,sign,label= varyname[nb], mfc=mfc,markersize=markersize,color = color)
         ax0.set_xlabel(varxname)
         ax0.set_ylabel(title)
+        if xlim:
+            ax0.set_xlim(xlim)
+        if ylim:
+            ax0.set_ylim(ylim)
         if legend:
             ax0.legend()
     else:
         for nb,var in enumerate(vary):
-            ax0.plot(varx,var,sign, mfc='none',markersize=markersize)
+            ax0.plot(varx,var,sign, mfc=mfc,markersize=markersize,color = color)
         ax0.set_xlabel(varxname)
         ax0.set_ylabel(title)
+        if xlim:
+            ax0.set_xlim(xlim)
+        if ylim:
+            ax0.set_ylim(ylim)
 
 #this plots variables realtively to their maximum value
 def plotRelative2Max(fig_name,ax0,varx,vary,varxname,varyname):
@@ -261,7 +275,7 @@ def plotHist(fig_name,ax0,vary,varyname):
     ax0.hist(vary,normed=True,label = varyname)
     ax0.legend()
 
-def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
+def GetData(path,extravariables = [], Timeseries = [],BuildNum=[],BldList = []):
     os.chdir(path)
     liste = os.listdir()
     ResBld = {}
@@ -294,18 +308,23 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
     else:
         idxF = ['_'+str(BuildNum[0])+'v','.']
     #now that we found this index, lets go along alll the files
+
     for file in liste:
         if '.pickle' in file:
+            NbRun = int(file[file.index(idxF[0]) + len(idxF[0]):file.index(idxF[1])])
+            if BldList:
+                if NbRun not in BldList:
+                    continue
             try:
-                print(file)
-                SimNumb.append(int(file[file.index(idxF[0]) + len(idxF[0]):file.index(idxF[1])]))
+                #print(file)
+                SimNumb.append(NbRun)
                 try:
                     with open(file, 'rb') as handle:
                         ResBld[SimNumb[-1]] = pickle.load(handle)
                 except:
-                    pass
-                    # with open(file, 'rb') as handle:
-                    #     ResBld[SimNumb[-1]] = pickle5.load(handle)
+                    import pickle5
+                    with open(file, 'rb') as handle:
+                        ResBld[SimNumb[-1]] = pickle5.load(handle)
                 try:
                     Res['ErrFiles'].append(os.path.getsize(file[:file.index('.pickle')]+'.err'))
                     with open(file[:file.index('.pickle')]+'.err') as file:
@@ -319,7 +338,7 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
 
     #lets get the mandatory variables
     variables=['EP_Elec','EP_Heat','EP_Cool','EP_DHW','SimNum','EPC_Elec','EPC_Heat','EPC_Cool','EPC_Tot',
-               'ATemp','EP_Area','BuildID']
+               'DB_Surf','EP_Area','BuildID','BldSimName']
     # lest build the Res dictionnary
     for key in variables:
         Res[key] = []
@@ -354,24 +373,25 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
         except:
             Res['BuildID'].append(None)
         Res['EP_Area'].append(BuildObj.EPHeatedArea)
+        Res['BldSimName'].append(BuildObj.name)
         try:
-            Res['ATemp'].append(BuildObj.ATemp)
+            Res['DB_Surf'].append(BuildObj.DB_Surf)
         except:
-            Res['ATemp'].append(BuildObj.surface)
+            Res['DB_Surf'].append(BuildObj.surface)
         eleval = 0
         for x in BuildObj.EPCMeters['ElecLoad']:
             if BuildObj.EPCMeters['ElecLoad'][x]:
                 eleval += BuildObj.EPCMeters['ElecLoad'][x]
-        Res['EPC_Elec'].append(eleval/BuildObj.ATemp if BuildObj.ATemp!=0 else 0)
+        Res['EPC_Elec'].append(eleval/BuildObj.DB_Surf if BuildObj.DB_Surf!=0 else 0)
         heatval = 0
         for x in BuildObj.EPCMeters['Heating']:
             heatval += BuildObj.EPCMeters['Heating'][x]
-        Res['EPC_Heat'].append(heatval/BuildObj.ATemp if BuildObj.ATemp!=0 else 0)
+        Res['EPC_Heat'].append(heatval/BuildObj.DB_Surf if BuildObj.DB_Surf!=0 else 0)
         coolval = 0
         for x in BuildObj.EPCMeters['Cooling']:
             coolval += BuildObj.EPCMeters['Cooling'][x]
-        Res['EPC_Cool'].append(coolval/BuildObj.ATemp if BuildObj.ATemp!=0 else 0)
-        Res['EPC_Tot'].append((eleval+heatval+coolval)/BuildObj.ATemp if BuildObj.ATemp!=0 else 0)
+        Res['EPC_Cool'].append(coolval/BuildObj.DB_Surf if BuildObj.DB_Surf!=0 else 0)
+        Res['EPC_Tot'].append((eleval+heatval+coolval)/BuildObj.DB_Surf if BuildObj.DB_Surf!=0 else 0)
 
 #forthe old way of doing things and the new paradigm for global results
         try:
@@ -412,7 +432,11 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[]):
                     Res[varName] = np.vstack((Res[varName] ,ResBld[key][Timeseries[key1]['Location']][Timeseries[key1]['Data']]))
         except:
             pass
-
+    #Finaly lets reorder the results by the number of the SimNum :
+    sorted_idx = np.argsort(Res['SimNum'])
+    for key in Res.keys():
+        if Res[key]:
+            Res[key] = [Res[key][idx] for idx in sorted_idx]
     return Res
 
 
