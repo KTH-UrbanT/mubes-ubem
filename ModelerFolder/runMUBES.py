@@ -228,16 +228,17 @@ if __name__ == '__main__' :
                 pool.close()
                 pool.join()
                 #the simulation are launched below using a pool of the earlier created idf files
-                if not CaseChoices['CreateFMU']:
-                    if CaseChoices['Verbose']: print('Simulation runs have begun...')
-                    file2run = LaunchSim.initiateprocess(SimDir)
-                    nbcpu = max(mp.cpu_count()*CaseChoices['CPUusage'],1)
-                    pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
-                    for i in range(len(file2run)):
-                        pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath, CaseChoices['API']), callback=giveReturnFromPool)
-                    pool.close()
-                    pool.join()
-                    GrlFct.AppendLogFiles(SimDir,BldIDKey)
+                if CaseChoices['Verbose']: print('Simulation runs have begun...')
+                file2run = LaunchSim.initiateprocess(SimDir)
+                if not file2run and CaseChoices['Verbose'] :  print(
+                        '[Info] All asked simulations are already done and results available...refreshfolder to remove those')
+                nbcpu = max(mp.cpu_count()*CaseChoices['CPUusage'],1)
+                pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
+                for i in range(len(file2run)):
+                    pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath, CaseChoices['API']), callback=giveReturnFromPool)
+                pool.close()
+                pool.join()
+                GrlFct.AppendLogFiles(SimDir,BldIDKey)
                 if not CaseChoices['Calibration']:
                     Finished = True
                 else:
@@ -330,5 +331,5 @@ if __name__ == '__main__' :
         for ListKey in File2Launch:
             for nbBuild in File2Launch[ListKey]:
                 CB_OAT.LaunchOAT(CaseChoices,SimDir,nbBuild['keypath'],nbBuild['nbBuild'],[1],0,pythonpath)
-    if not File2Launch[0] and CaseChoices['Verbose']:  print('[Info] All asked simulations are already done and results available...refreshfolder to remove those')
+    if not File2Launch[0] and CaseChoices['Verbose'] and CaseChoices['NbRuns']==1:  print('[Info] All asked simulations are already done and results available...refreshfolder to remove those')
     if CaseChoices['Verbose']: print('[Process Finished] runMUBES.py ended successfully')

@@ -445,7 +445,6 @@ if __name__ == '__main__' :
     configUnit = setConfig.read_yaml(
         os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfigKeyUnit.yml'))
     geojsonfile = False
-    print(ConfigFromArg)
     if type(ConfigFromArg) == str and ConfigFromArg[-4:] == '.yml':
         localConfig = setConfig.read_yaml(ConfigFromArg)
         config = setConfig.ChangeConfigOption(config, localConfig)
@@ -456,7 +455,7 @@ if __name__ == '__main__' :
     else:
         config,filefound,msg = setConfig.check4localConfig(config, os.getcwd())
         if msg: print(msg)
-        print('[Config Info] Config complted by ' + filefound)
+        print('[Config Info] Config completed by ' + filefound)
     config = setConfig.checkConfigUnit(config, configUnit)
     if type(config) != dict:
         print('[Config Error] Something seems wrong : \n' + config)
