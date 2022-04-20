@@ -1,3 +1,23 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # @Author  : Xavier Faure
 # @Email   : xavierf@kth.se
 
@@ -18,6 +38,7 @@ import CoreFiles.LaunchSim as LaunchSim
 import CoreFiles.CaseBuilder_OAT as CB_OAT
 import CoreFiles.setConfig as setConfig
 import CoreFiles.CalibUtilities as CalibUtil
+import BuildObject.GeomUtilities as GeomUtilities
 import shutil
 import multiprocessing as mp
 import platform
@@ -53,10 +74,11 @@ def Read_Arguments():
         currIdx += 1
     return Config2Launch,Case2Launch
 
-def CreatePool2Launch(BldIDs,GlobKey,IDKeys,PassBldObject):
+def CreatePool2Launch(BldIDs,GlobKey,IDKeys,PassBldObject,RefBuildNum,RefDist):
     Pool2Launch = []
     NewUUIDList = []
     for nbfile,keyPath in enumerate(GlobKey):
+        print('[Prep. Info] Reading GeoJson file...' )
         DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath,toBuildPool = True if not PassBldObject else False)
         #check of the building to run
         idx = len(Pool2Launch)
@@ -64,8 +86,20 @@ def CreatePool2Launch(BldIDs,GlobKey,IDKeys,PassBldObject):
         for key in IDKeys:
             if key in DataBaseInput['Build'][0].properties.keys():
                 IdKey = key
+                break
         print('[Prep. Info] Buildings will be considered with ID key : '+IdKey )
+        ReducedArea = False
+        if RefBuildNum != 'None':
+            ReducedArea = True
+            ref = DataBaseInput['Build'][RefBuildNum].geometry.centroid
+            ref = ref[0] if type(ref)==list else ref
         for bldNum, Bld in enumerate(DataBaseInput['Build']):
+            if ReducedArea:
+                try: coordCheck = Bld.geometry.centroid
+                except: continue
+                coordCheck = coordCheck[0] if type(coordCheck) == list else coordCheck
+                if GeomUtilities.getDistance(ref,coordCheck)>RefDist:
+                    continue
             if not BldIDs:
                 try: BldID = Bld.properties[IdKey]
                 except: BldID = 'NoBldID'
@@ -84,6 +118,7 @@ def CreatePool2Launch(BldIDs,GlobKey,IDKeys,PassBldObject):
             print('/!\ Please, check you inputs.')
             sys.exit()
         Pool2Launch[idx]['TotBld_and_Origin'] = str(len(Pool2Launch)-idx) +' buildings will be considered from '+os.path.basename(keyPath['Buildingsfile'])
+        print('[Prep. Info] '+ str(len(Pool2Launch)-idx) +' buildings will be considered out of '+str(bldNum+1)+' in the input file ')
     return Pool2Launch,NewUUIDList,DataBaseInput if PassBldObject else [],IdKey
 
 if __name__ == '__main__' :
@@ -152,7 +187,10 @@ if __name__ == '__main__' :
     GlobKey, MultipleFiles = GrlFct.ListAvailableFiles(keyPath)
     #this function creates the full pool to launch afterward, including the file name and which buildings to simulate
     IDKeys = config['3_SIM']['GeomElement']['BuildIDKey']
-    Pool2Launch,CaseChoices['BldID'],CaseChoices['DataBaseInput'],BldIDKey = CreatePool2Launch(CaseChoices['BldID'],GlobKey,IDKeys,CaseChoices['PassBldObject'])
+    if MultipleFiles:
+        CaseChoices['PassBldObject'] = False
+    Pool2Launch,CaseChoices['BldID'],CaseChoices['DataBaseInput'],BldIDKey = CreatePool2Launch(CaseChoices['BldID'],
+                    GlobKey,IDKeys,CaseChoices['PassBldObject'],CaseChoices['RefBuildNum'],CaseChoices['RefPerimeter'])
     ######################################################################################################################
     ########     LAUNCHING MULTIPROCESS PROCESS PART  (nothing should be changed hereafter)   ############################
     ######################################################################################################################
@@ -273,6 +311,7 @@ if __name__ == '__main__' :
         for ListKey in File2Launch:
             totalsize += len(File2Launch[ListKey])
         for nbfile,ListKey in enumerate(File2Launch):
+            GoodBld = 0
             for file_idx,file in enumerate(File2Launch[ListKey]):
                 done = (file_idx+nbfile+1+offset)/totalsize
                 lastBld = True if done==1 and nbfile+1 == len(File2Launch) else False
@@ -282,8 +321,18 @@ if __name__ == '__main__' :
                     print('Figure being completed by ' + str(round(100 * done, 1)) + ' %')
                 else:
                     print('\r',end='')
-                    print('Figure being completed by ' + cpt[:int(20 * done)]+cpt1[int(20 * done):]+str(round(100 * done, 1)) + ' %',end = '',flush = True)
+                    ptcplt = '.' if file_idx%2 else ' '
+                    msg = cpt[:int(20 * done)]+ptcplt+cpt1[int(20 * done):]+str(round(100 * done, 1))
+                    print('Figure being completed by ' + msg + ' %',end = '',flush = True)
+
+                if lastBld:
+                    os.chdir(CurrentPath)
+                    GrlFct.CleanUpLogFiles(file['SimDir'])
+                    if Check == 'OK': GoodBld += 1
+                    print('\nFigure completed with ' + str(GoodBld) + ' out of ' + str(
+                            len(File2Launch[ListKey])) + ' buildings in total')
                 if Check == 'OK':
+                    GoodBld += 1
                     LastBldObj = copy.deepcopy(BldObj)
                     LastIDFObj = copy.deepcopy(IDFObj)
                     FigCenter, WindSize = GrlFct.ManageGlobalPlots(BldObj, IDFObj, FigCenter, WindSize,
@@ -293,8 +342,8 @@ if __name__ == '__main__' :
                                                                    CaseChoices['MakePlotsPerBld'], nbcase=[],
                                                                    LastBld=lastBld)
             offset += file_idx
-            os.chdir(CurrentPath)
-            GrlFct.CleanUpLogFiles(file['SimDir'])
+
+
     elif not SepThreads and not CaseChoices['CreateFMU'] and File2Launch[0]:
         CurrentSimDir = ''
         for ListKey in File2Launch:

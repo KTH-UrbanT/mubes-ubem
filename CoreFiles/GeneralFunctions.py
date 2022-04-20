@@ -119,7 +119,7 @@ def checkRefCoordinates(GeojsonFile):
         return GeojsonFile
     ##The coordinate system depends on the input file, thus, if specific filter or conversion from one to another,
     # it should be done here
-    else:#if "CRS84" in GeojsonFile.crs['properties']['name']:
+    if "CRS84" in GeojsonFile.crs['properties']['name']:
         print('Projecting coordinates of Input file,...')
         transformer = pyproj.Transformer.from_crs("CRS84", "epsg:3950") #this transformation if done for the France's reference
         for idx,obj in enumerate(GeojsonFile):
@@ -131,6 +131,7 @@ def checkRefCoordinates(GeojsonFile):
                 newCoord.append(newpoly)
             obj.geometry.coordinates = newCoord
         return GeojsonFile
+    return GeojsonFile
 
 def ComputeDistance(v1,v2):
     return ((v2[0]-v1[0])**2+(v2[1]-v1[1])**2)**0.5

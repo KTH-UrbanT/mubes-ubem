@@ -1,3 +1,44 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #This files provides the default settings for MUBES
 0_APP :
     #PATH_TO_MUBES_UBEM : ../MUBES_UBEM/                #[Str] this is not currently used
@@ -39,7 +80,9 @@
         PosteriorsDataPath : ''                 #[Str] path to the pickle file to be used to catch the posteriors
         ECMParam : ''                           #[Str] Energy Conservation Measure. Currently done from available posteriors
         ECMChange : 1                           #[Float] factor of enhancement of the default value (the default value could also be changed (useful for ECM applied to distributions)
-        PassBldObject : False                   #[Bool] key word for reading only once the geojson file. but no launch through consol then for each bld
+        PassBldObject : True                   #[Bool] key word for reading only once the geojson file. but no launch through consol then for each bld
+        RefBuildNum : None                      #[Int] building number (order of the GeoJson file) taken as a reference to pick other within the RefPerimeter distance. useful for large DataSets if None it will be ignored
+        RefPerimeter : 500                      #[int] Distance threshold for which all building farer then this threshold for the RefBuildNum are ignored
 3_SIM :
     #files are needed to be located in the eather folder of EnergyPlus asthe same path is used afterward to launch the simulation
     1_WeatherData :
@@ -183,7 +226,7 @@
     #the other one contains for each shading surface id the vertex point and the building Id in order to catch the height of it.
     #to externalize as much as possible, these elements are reported in the dict below
     GeomElement :
-        BuildIDKey : ['50A_UUID', 'objectid','OBJECTID','gid']   #[List of Str] key word that can be used for the building ID
+        BuildIDKey : ['50A_UUID', 'objectid','OBJECTID','gid','igntop202103_bat_l_id']   #[List of Str] key word that can be used for the building ID
         FormularIdKey : 'FormularId'            #[Str] key word for the the EPC correspondance
         ShadingIdKey : 'vaggid'                 #[Str] key word for the shadowing wall given in the geojson file only
         BuildingIdKey : 'byggnadsid'            #[Str] key word for the owner of the shadowing wall given in the geojson file only
@@ -241,7 +284,7 @@
         year_lim :         [0, 2022]
         nbAppartments_key : 'EgenAntalBolgh'
         nbAppartments_lim : [0, 100]
-        height_key : ['height', 'Height','SHAPE.LEN','st_lengthshape','Shape__Length','hauteur']
+        height_key : ['height', 'Height','SHAPE.LEN','st_lengthshape','Shape__Length','hauteur','igntop202103_bat_hauteur']
         height_lim :       [0, 100]
         AreaBasedFlowRate_key : 'EgenProjVentFlode'
         AreaBasedFlowRate_lim :     [0.35, 10]

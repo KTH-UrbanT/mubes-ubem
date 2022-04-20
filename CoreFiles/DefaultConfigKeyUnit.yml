@@ -1,3 +1,38 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #This files provides the default settings for MUBES
 0_APP :
     #PATH_TO_MUBES_UBEM : ../MUBES_UBEM/                #[Str] this is not currently used
@@ -33,12 +68,15 @@
         API : [bool]                             #[Bool] in case the simulation is launched trough an API. Option under development
         CreateFMU : [bool]                       #[Bool] True: creates FMU for each building specified in the BldID. No simulation is launched afterward. FMU will be found in the CaseName folder
         Calibration : [bool]                     #[Bool] if calibration process is desired to be launched (several other inputs are required
-        CalibTimeBasis : [str]                     #[Str] can currently be either 'MonthlyBasis','WeeklyBasis','YearlyBasis'.
-        MeasurePath4Calibration : [str]            #[Str] path to the measured data. File names currently need to quite specific. Under development for full deployment
+        CalibTimeBasis : [str]                   #[Str] can currently be either 'MonthlyBasis','WeeklyBasis','YearlyBasis'.
+        MeasurePath4Calibration : [str]          #[Str] path to the measured data. File names currently need to quite specific. Under development for full deployment
         FromPosteriors : [bool]                  #[Bool] True : Outputs form already made calibration phase will be created. Under development for full deployment
         PosteriorsDataPath : [str]                 #[Str] path to the pickle file to be used to catch the posteriors
         ECMParam : [str]                           #[Str] Energy Conservation Measure. Currently done from available posteriors
         ECMChange : [float,int]                           #[Float] factor of enhancement of the default value (the default value could also be changed (useful for ECM applied to distributions)
+        PassBldObject: [bool]                         #[Bool] key word for reading only once the geojson file. but no launch through consol then for each bld
+        RefBuildNum: [int,str]                         #[Int] building number (order of the GeoJson file) taken as a reference to pick other within the RefPerimeter distance. useful for large DataSets
+        RefPerimeter: [int]                      #[int] Distance threshold for which all building farer then this threshold for the RefBuildNum are ignored
 3_SIM :
     #files are needed to be located in the eather folder of EnergyPlus asthe same path is used afterward to launch the simulation
     1_WeatherData :
