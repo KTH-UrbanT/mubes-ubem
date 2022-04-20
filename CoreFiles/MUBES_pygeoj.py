@@ -157,7 +157,7 @@ class Geometry:
     - **coordinates**: As specified when constructed
     - **bbox**: If the bounding box wasn't specified when constructed then it is calculated on-the-fly.
     """
-    def __init__(self, obj=None, type=None, coordinates=None, bbox=None):
+    def __init__(self, obj=None, type=None, coordinates=None, bbox=None, poly3rdcoord=None, centroid=None):
         """
         Can be created from args, or without any to create an empty one from scratch.
         If obj isn't specified, type, coordinates, and optionally bbox can be set as arguments
@@ -183,6 +183,8 @@ class Geometry:
         elif type and coordinates:
             _data = {"type":type,"coordinates":coordinates}
             if bbox: _data.update({"bbox":bbox})
+            if poly3rdcoord: _data.update({"poly3rdcoord": poly3rdcoord})
+            if centroid: _data.update({"centroid": centroid})
             self._data = _data
         else:
             # empty geometry dictionary
@@ -198,7 +200,7 @@ class Geometry:
         if self.type == "Null":
             return "Geometry(type='Null')"
         else:
-            return "Geometry(type=%s, coordinates=%s, bbox=%s)" % (self.type, self.coordinates, self.bbox)
+            return "Geometry(type=%s, coordinates=%s, bbox=%s, poly3rdcoord=%s , centroid=%s)" % (self.type, self.coordinates, self.bbox, self.poly3rdcoord, self.centroid)
 
     @property
     def __geo_interface__(self):
@@ -216,7 +218,31 @@ class Geometry:
 
     @property
     def poly3rdcoord(self):
-        return self._data["poly3rdcoord"]
+        if self._data.get("poly3rdcoord"): return self._data["poly3rdcoord"]
+        else: return [0 for i in range(len(self._data["coordinates"]))]
+
+    @property
+    def centroid(self):
+        if self._data.get("centroid"): return self._data["centroid"]
+        else:
+            if self.type == "Null":
+                raise Exception("Null geometries do not have bbox")
+            elif self.type == "Point":
+                x, y = self._data["coordinates"]
+                return [x, y, x, y]
+            elif self.type in ("MultiPoint", "LineString"):
+                coordsgen = (point for point in self._data["coordinates"])
+            elif self.type == "MultiLineString":
+                coordsgen = (point for line in self._data["coordinates"] for point in line)
+            elif self.type == "Polygon":
+                coordsgen = (point for point in self._data["coordinates"][
+                    0])  # only the first exterior polygon should matter for bbox, not any of the holes
+            elif self.type == "MultiPolygon":
+                coordsgen = (point[:2] for polygon in self._data["coordinates"] for point in polygon[0])  # only the first exterior polygon should matter for bbox, not any of the holes
+                # coordsgen = (point for polygon in self._data["coordinates"] for point in polygon[0])  # only the first exterior polygon should matter for bbox, not any of the holes
+            x, y = zip(*coordsgen)
+            centroid = ((round(sum(x) / len(x), 1), round(sum(y) / len(y), 1)))
+            return centroid
 
     @property
     def bbox(self):
@@ -257,12 +283,18 @@ class Geometry:
         return self._data["coordinates"]
 
 
-
     @coordinates.setter
     def coordinates(self, value):
         self._data["coordinates"] = value
 
     # Methods
+    def update_poly3rdcoord(self):
+        if "poly3rdcoord" in self._data:
+            del self._data["poly3rdcoord"]
+
+    def update_centroid(self):
+        if "centroid" in self._data:
+            del self._data["centroid"]
 
     def update_bbox(self):
         """
@@ -297,6 +329,7 @@ class Geometry:
         if 'geometries' in self._data:
             self._data['coordinates'] = []
             self._data['poly3rdcoord'] = []
+            self._data['centroid'] = []
             self._data['type'] = self._data['geometries'][0]['type']
             for nbMultipolygon in self._data['geometries']:
                 for polygon in nbMultipolygon['coordinates']: #self._data['geometries'][0]['coordinates']:
@@ -304,21 +337,29 @@ class Geometry:
                     if max([abs(alt[i + 1] - val) for i, val in enumerate(alt[:-1])])==0:
                         self._data['poly3rdcoord'].append(min([point[-1] for point in polygon[0]]))
                         self._data['coordinates'].append([[point[:2] for point in polygon[0]]])
+                        x, y = zip(*self._data['coordinates'][0][-1])
+                        self._data['centroid'].append((round(sum(x) / len(x),1), round(sum(y) / len(y),1)))
             self._data.pop('geometries')
         elif len(self._data['coordinates'])>1 and type(self._data['coordinates'][0][0])==list:
             Multipolygons = self._data['coordinates']
             self._data.pop('coordinates')
             self._data['coordinates'] = []
             self._data['poly3rdcoord'] = []
+            self._data['centroid'] = []
             for polygon in Multipolygons:  # self._data['geometries'][0]['coordinates']:
                 try:
                     alt = [point[2] for point in polygon[0]]  #[point[-1] for point in polygon[0]]
                     if max([abs(alt[i + 1] - val) for i, val in enumerate(alt[:-1])]) == 0:
                         self._data['poly3rdcoord'].append(min([point[-1] for point in polygon[0]]))
                         self._data['coordinates'].append([[point[:2] for point in polygon[0]]])
+                        x, y = zip(*self._data['coordinates'][0][-1])
+                        self._data['centroid'].append((round(sum(x) / len(x),1), round(sum(y) / len(y),1)))
                 except:
                     self._data['coordinates'].append(polygon)       #this exception has been done to eread the json file from https://data.agglo-lehavre.fr/api/v1/file/data/36/RG_BATIMENT_AGREGE_N2/json
                     self._data['poly3rdcoord'].append(0)
+                    if len(polygon[0])>2: x, y = zip(*polygon[0])
+                    else: x, y = zip(*polygon)
+                    self._data['centroid'].append((round(sum(x) / len(x), 1), round(sum(y) / len(y), 1)))
                     #self.type = 'MultiPolygon'
         elif "type" not in self._data or "coordinates" not in self._data:
             raise Exception("A geometry dictionary or instance must have the type and coordinates entries")

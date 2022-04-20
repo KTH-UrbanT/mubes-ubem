@@ -94,7 +94,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
                                                DebugMode = DebugMode,PlotOnly=MakePlotOnly)
         except:
             msg = '[Error] The Building Object Initialisation has failed...\n'
-            print(msg[:-1])
+            if Verbose: print(msg[:-1])
             os.chdir(MainPath)
             if FirstRun:
                 GrlFct.Write2LogFile(msg, LogFile)
@@ -105,7 +105,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
         #Rounds of check if we continue with this building or not, see DB_Filter4Simulation.py if other filter are to add
         CaseOK,msg = checkBldFilter(building,LogFile,DebugMode = DebugMode)
         if not CaseOK:
-            print(msg[:-1])
+            if Verbose: print(msg[:-1])
             os.chdir(MainPath)
             if FirstRun:
                 GrlFct.Write2LogFile('##############################################################\n', LogFile)
@@ -123,7 +123,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
             # print('[Time Report] : The setBuildingLevel took : ',round(end-start,2),' sec')
         except:
             msg = '[Error] The setBuildingLevel failed...\n'
-            print(msg[:-1])
+            if Verbose: print(msg[:-1])
             os.chdir(MainPath)
             if FirstRun:
                 GrlFct.Write2LogFile(msg, LogFile)
@@ -168,7 +168,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
         # print('[Time Report] : The setEnvelopeLevel took : ', round(end - start, 2), ' sec')
     except:
         msg = '[Error] The setEnvelopeLevel failed...\n'
-        print(msg[:-1])
+        if Verbose: print(msg[:-1])
         os.chdir(MainPath)
         if FirstRun:
             GrlFct.Write2LogFile(msg, LogFile)
@@ -190,7 +190,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
         # print('[Time Report] : The setZoneLevel took : ', round(end - start, 2), ' sec')
     except:
         msg = '[Error] The setZoneLevel failed...\n'
-        print(msg[:-1])
+        if Verbose: print(msg[:-1])
         os.chdir(MainPath)
         if FirstRun:
             GrlFct.Write2LogFile(msg, LogFile)
@@ -206,7 +206,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
         GrlFct.setExtraEnergyLoad(idf,building)
     except:
         msg = '[Error] The setExtraEnergyLoad definition failed...\n'
-        print(msg[:-1])
+        if Verbose: print(msg[:-1])
         os.chdir(MainPath)
         if FirstRun:
             GrlFct.Write2LogFile(msg, LogFile)
@@ -233,7 +233,7 @@ def LaunchProcess(SimDir,FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,F
         #special ending process if FMU is wanted
     except:
         msg = '[Error] The Output definition failed...\n'
-        print(msg[:-1])
+        if Verbose: print(msg[:-1])
         os.chdir(MainPath)
         if FirstRun:
             GrlFct.Write2LogFile(msg, LogFile)

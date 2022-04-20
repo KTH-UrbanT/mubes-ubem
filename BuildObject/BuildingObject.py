@@ -67,8 +67,7 @@ def findWallId(Id, Shadingsfile, ref,GE):
             finished = 1
         else:
             ii = ii+1
-        if ii>len(Shadingsfile):
-            print('No finded Wall Id ....')
+        if ii>=len(Shadingsfile):
             finished = 1
     return ShadeWall
 
@@ -417,10 +416,13 @@ class Building:
         if self.Multipolygon:
             for idx,val in enumerate(MatchedPoly):
                 if val ==0:
-                    missedPoly,node = GeomUtilities.CleanPoly(DB.geometry.coordinates[idx][0], DistTol)
+                    if len(DB.geometry.coordinates[idx][0]) > 2 : poly = DB.geometry.coordinates[idx][0]
+                    else: poly = DB.geometry.coordinates[idx]
+                    missedPoly,node = GeomUtilities.CleanPoly(poly, DistTol)
                     coord.append(missedPoly)
                     node2remove.append(node)
-                    BlocHeight.append(DB.geometry.poly3rdcoord[idx])
+                    height = DB.geometry.poly3rdcoord[idx] if DB.geometry.poly3rdcoord[idx]>0 else self.height
+                    BlocHeight.append(height)
         # we need to clean the footprint from the node2remove but not if there are part of another bloc
         newbloccoor = []
         for idx, coor in enumerate(coord):
@@ -702,7 +704,7 @@ class Building:
         GeoJsonTest1 = True  if 'Walls' in GeoJsonTest else False
         if os.path.isfile(JSonTest):
             JSONFile = JSonTest
-        elif  GeoJsonTest and GeoJsonTest1:
+        elif os.path.isfile(GeoJsonTest) and GeoJsonTest1:
             GeJsonFile = GeoJsonTest
         else:
             msg = '[Shadowing Info] No Shadowing wall file were found\n'
@@ -743,6 +745,10 @@ class Building:
                 else:
                     wallId = shadesID[idlist[ii] + 1:idlist[ii + 1]]
                 ShadeWall = findWallId(wallId, Shadingsfile, ref, GE)
+                if not ShadeWall:
+                    msg = '[Shading Info] The wallId :'+str(wallId)+' is not found in the Wall file'
+                    if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+                    continue
                 if not 'height' in ShadeWall.keys():
                     ShadeWall['height'] = findBuildId(ShadeWall[GE['BuildingIdKey']], Buildingsfile,GE)
                     if ShadeWall['height']==None:

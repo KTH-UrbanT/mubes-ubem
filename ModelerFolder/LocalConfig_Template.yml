@@ -12,7 +12,7 @@
         MakePlotsPerBld : False                 #[Bool] True : a figure is created for each building including it's shadowing surfaces (if present)
         Verbose : True                          #[Bool] True : Gives messages in the prompt window along the ongoing process
         CPUusage : 0.8                          #[Float] Factor of CPU allowed to be used during parallel computing
-        DebugMode : False                       #[Bool] The log file will be feeded by detailed information along the process
+        DebugMode : True                       #[Bool] The log file will be feeded by detailed information along the process
     1_SimChoices :
         CorePerim : False                       #[Bool] True : core and perimeter zone thermal modelling
         FloorZoning : False                     #[Bool] True : each floor is considered as a zone or for core zone construction
