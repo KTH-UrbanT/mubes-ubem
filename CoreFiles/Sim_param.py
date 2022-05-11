@@ -17,7 +17,7 @@ def setSimparam(idf,building):
 
     shadow_param = idf.newidfobject('SHADOWCALCULATION')
     #ShadowCalculation options for energyPlus v9.1.0
-    if idf.idd_version == (9, 1, 0):
+    if idf.idd_version in [(9, 1, 0),(9, 2, 0)]:
         shadow_param.Calculation_Frequency = 20  #number of days acounted for the method. not used if TimestepFrequency is choosen in Calculation_Method
         shadow_param.Calculation_Method = 'AverageOverDaysInFrequency'     #or TimestepFrequency
         shadow_param.Sky_Diffuse_Modeling_Algorithm = 'SimpleSkyDiffuseModeling' #unless there is changes in the transmittance of shadings along the year (DetailedSkyDiffuseModeling)

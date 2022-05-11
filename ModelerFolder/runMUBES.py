@@ -18,88 +18,14 @@ import CoreFiles.LaunchSim as LaunchSim
 import CoreFiles.CaseBuilder_OAT as CB_OAT
 import CoreFiles.setConfig as setConfig
 import CoreFiles.CalibUtilities as CalibUtil
-import BuildObject.GeomUtilities as GeomUtilities
 import shutil
 import multiprocessing as mp
-import platform
-import json
 import yaml
 import copy
 
 def giveReturnFromPool(results):
-    donothing = 0
+    doNothing = 0
     print(results)
-
-def Read_Arguments():
-    #these are defaults values:
-    Config2Launch = []
-    Case2Launch = []
-    # Get command-line options.
-    lastIdx = len(sys.argv) - 1
-    currIdx = 1
-    while (currIdx < lastIdx):
-        currArg = sys.argv[currIdx]
-        if (currArg.startswith('-CONFIG')):
-            currIdx += 1
-            Config2Launch = json.loads(sys.argv[currIdx])
-            return Config2Launch,Case2Launch
-        if (currArg.startswith('-yml')):
-            currIdx += 1
-            Config2Launch = sys.argv[currIdx]
-            return Config2Launch,Case2Launch
-        if (currArg.startswith('-Case')):
-            currIdx += 1
-            Case2Launch = sys.argv[currIdx]
-            return Config2Launch,Case2Launch
-        currIdx += 1
-    return Config2Launch,Case2Launch
-
-def CreatePool2Launch(BldIDs,GlobKey,IDKeys,PassBldObject,RefBuildNum,RefDist):
-    Pool2Launch = []
-    NewUUIDList = []
-    for nbfile,keyPath in enumerate(GlobKey):
-        print('[Prep. Info] Reading GeoJson file...' )
-        DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath,toBuildPool = True if not PassBldObject else False)
-        #check of the building to run
-        idx = len(Pool2Launch)
-        IdKey = 'NoBldID'
-        for key in IDKeys:
-            if key in DataBaseInput['Build'][0].properties.keys():
-                IdKey = key
-                break
-        print('[Prep. Info] Buildings will be considered with ID key : '+IdKey )
-        ReducedArea = False
-        if RefBuildNum != 'None':
-            ReducedArea = True
-            ref = DataBaseInput['Build'][RefBuildNum].geometry.centroid
-            ref = ref[0] if type(ref)==list else ref
-        for bldNum, Bld in enumerate(DataBaseInput['Build']):
-            if ReducedArea:
-                try: coordCheck = Bld.geometry.centroid
-                except: continue
-                coordCheck = coordCheck[0] if type(coordCheck) == list else coordCheck
-                if GeomUtilities.getDistance(ref,coordCheck)>RefDist:
-                    continue
-            if not BldIDs:
-                try: BldID = Bld.properties[IdKey]
-                except: BldID = 'NoBldID'
-                Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum,'BuildID':BldID ,'TotBld_and_Origin':'' })
-                try: NewUUIDList.append(Bld.properties[IdKey])
-                except: pass
-            else:
-                try:
-                    if Bld.properties[IdKey] in BldIDs:
-                        Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum,'BuildID':Bld.properties[IdKey], 'TotBld_and_Origin':'' })
-                        NewUUIDList.append(Bld.properties[IdKey])
-                except: pass
-        if not Pool2Launch:
-            print('###  INPUT ERROR ### ')
-            print('/!\ None of the building BldID were found in the input GeoJson file...')
-            print('/!\ Please, check you inputs.')
-            sys.exit()
-        Pool2Launch[idx]['TotBld_and_Origin'] = str(len(Pool2Launch)-idx) +' buildings will be considered from '+os.path.basename(keyPath['Buildingsfile'])
-        print('[Prep. Info] '+ str(len(Pool2Launch)-idx) +' buildings will be considered out of '+str(bldNum+1)+' in the input file ')
-    return Pool2Launch,NewUUIDList,DataBaseInput if PassBldObject else [],IdKey
 
 if __name__ == '__main__' :
     #Main script to launch either simulation or plot of the urban area represened in the main geojson file
@@ -108,77 +34,17 @@ if __name__ == '__main__' :
     #python runMUBES.py     it will load the default yml file and check if a local one is present in the same folder to adapt the default one
     #python runMUBES.py -yml MyConfig.yml   it will consider the specified yml file to adapt the default one
     #python runMUBES.py -CONFIG {xxxxxxx} json format of the yml file to adapt the default one for API application
+    #python runMUBES.py -Case CaseName  it will launch the config file in the CaseName folder in the PATH_2_RESULTS main folder
 
-    ConfigFromArg,Case2Launch = Read_Arguments()
-    config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()),'CoreFiles','DefaultConfig.yml'))
-    configUnit = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfigKeyUnit.yml'))
-    if Case2Launch:
-        config, filefound, msg = setConfig.check4localConfig(config, os.getcwd())
-        config['2_CASE']['0_GrlChoices']['CaseName'] = Case2Launch
-        print(os.path.join(os.path.abspath(config['0_APP']['PATH_TO_RESULTS']), Case2Launch, 'ConfigFile.yml'))
-        if os.path.isfile(
-                os.path.join(os.path.abspath(config['0_APP']['PATH_TO_RESULTS']), Case2Launch, 'ConfigFile.yml')):
-            localConfig = setConfig.read_yaml(
-                os.path.join(os.path.abspath(config['0_APP']['PATH_TO_RESULTS']), Case2Launch, 'ConfigFile.yml'))
-            config, msg = setConfig.ChangeConfigOption(config, localConfig)
-            if msg: print(msg)
-        else:
-            print('[Unknown Case] the following folder was not found : ' + os.path.join(
-                os.path.abspath(config['0_APP']['PATH_TO_RESULTS']), Case2Launch))
-            sys.exit()
-    elif type(ConfigFromArg) == str:
-        if ConfigFromArg[-4:] == '.yml':
-            localConfig = setConfig.read_yaml(ConfigFromArg)
-            config, msg = setConfig.ChangeConfigOption(config, localConfig)
-            if msg: print(msg)
-        else:
-             print('[Unknown Argument] Please check the available options for arguments : -yml or -CONFIG')
-             sys.exit()
-    elif ConfigFromArg:
-        config, msg = setConfig.ChangeConfigOption(config, ConfigFromArg)
-        if msg: print(msg)
-        config['2_CASE']['0_GrlChoices']['OutputFile'] = 'Outputs4API.txt'
-    else:
-        config,filefound,msg = setConfig.check4localConfig(config, os.getcwd())
-        if msg: print(msg)
-        print('[Config Info] Config completed by ' + filefound)
-    config = setConfig.checkConfigUnit(config,configUnit)
-    if type(config) != dict:
-        print('[Config Error] Something seems wrong : \n' + config)
+    CaseChoices,config, SepThreads,Pool2Launch, MultipleFiles = setConfig.getConfig()
+    if CaseChoices['MakePolygonPlots']:
+        GrlFct.MakePolygonPlots(CaseChoices, Pool2Launch)
         sys.exit()
-    config, SepThreads = setConfig.checkGlobalConfig(config)
-    if type(config) != dict:
-        print('[Config Error] Something seems wrong in : ' + config)
-        sys.exit()
-    #the config file is now validated, lets vreate a smaller dict that will called along the process
-    Key2Aggregate = ['0_GrlChoices', '1_SimChoices', '2_AdvancedChoices']
-    CaseChoices = {}
-    for key in Key2Aggregate:
-        for subkey in config['2_CASE'][key]:
-            CaseChoices[subkey] = config['2_CASE'][key][subkey]
-    if CaseChoices['Verbose']: print('[OK] Input config. info checked and valid.')
-    if 'See ListOfBuiling_Ids.txt for list of IDs' in CaseChoices['BldID']:
-        CaseChoices['BldID'] = []
     epluspath = config['0_APP']['PATH_TO_ENERGYPLUS']
-    #a first keypath dict needs to be defined to comply with the current paradigme along the code
-    Buildingsfile = os.path.abspath(config['1_DATA']['PATH_TO_DATA'])
-    keyPath = {'epluspath': epluspath, 'Buildingsfile': Buildingsfile, 'pythonpath': '','GeojsonProperties': ''}
-    #this function makes the list of dictionnary with single input files if several are present inthe sample folder
-    GlobKey, MultipleFiles = GrlFct.ListAvailableFiles(keyPath)
-    #this function creates the full pool to launch afterward, including the file name and which buildings to simulate
-    IDKeys = config['3_SIM']['GeomElement']['BuildIDKey']
-    if MultipleFiles:
-        CaseChoices['PassBldObject'] = False
-    Pool2Launch,CaseChoices['BldID'],CaseChoices['DataBaseInput'],BldIDKey = CreatePool2Launch(CaseChoices['BldID'],
-                    GlobKey,IDKeys,CaseChoices['PassBldObject'],CaseChoices['RefBuildNum'],CaseChoices['RefPerimeter'])
-    ######################################################################################################################
-    ########     LAUNCHING MULTIPROCESS PROCESS PART  (nothing should be changed hereafter)   ############################
-    ######################################################################################################################
     nbcpu = max(mp.cpu_count() * CaseChoices['CPUusage'], 1)
     nbBuild = 0
     FigCenter = []
     CurrentPath = os.getcwd()
-    pythonpath = keyPath['pythonpath']
     MultipleFileidx = 0
     MultipleFileName = ''
     if MultipleFiles:
@@ -192,6 +58,7 @@ if __name__ == '__main__' :
                 MultipleFileidx += 1
             if CaseChoices['Verbose']: print('[Prep. phase] '+Case['TotBld_and_Origin'])
         keypath = Case['keypath']
+        pythonpath = keypath['pythonpath']
         nbBuild = Case['BuildNum2Launch'] #this will be used in case the file has to be read again (launched through prompt cmd)
         CaseChoices['FirstRun'] = True
         #First, lets create the folder for the building and simulation processes
@@ -256,7 +123,7 @@ if __name__ == '__main__' :
                     pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath, CaseChoices['API']), callback=giveReturnFromPool)
                 pool.close()
                 pool.join()
-                GrlFct.AppendLogFiles(SimDir,BldIDKey)
+                GrlFct.AppendLogFiles(SimDir,CaseChoices['BldIDKey'])
                 if not CaseChoices['Calibration']:
                     Finished = True
                 else:
@@ -275,13 +142,14 @@ if __name__ == '__main__' :
         if CaseChoices['Verbose']: print('[Prep.Info] Writing List of Building''s ID file')
         for nbfile,ListKey in enumerate(File2Launch):
             with open(os.path.join(File2Launch[ListKey][0]['SimDir'],'ListOfBuiling_Ids.txt'),'w') as f:
-                msg = 'SimNum' + '\t' + 'BldID_'+str(BldIDKey)
+                msg = 'SimNum' + '\t' + 'BldID_'+str(CaseChoices['BldIDKey'])
                 f.write(msg + '\n')
                 for file in File2Launch[ListKey]:
                     msg = str(file['nbBuild']) + '\t' + str(file['BuildID'])
                     f.write(msg+'\n')
 
     if CaseChoices['MakePlotsOnly']:
+        MakePlotOnly = 2 if CaseChoices['MakePlotsPerBld'] else 1
         FigCenter = []
         WindSize = 50
         totalsize = 0
@@ -296,7 +164,7 @@ if __name__ == '__main__' :
                 done = (file_idx+nbfile+1+offset)/totalsize
                 lastBld = True if done==1 and nbfile+1 == len(File2Launch) else False
                 BldObj,IDFObj,Check = CB_OAT.LaunchOAT(CaseChoices, file['SimDir'], file['keypath'], file['nbBuild'], [1], 0,
-                                                      pythonpath,MakePlotOnly = CaseChoices['MakePlotsOnly'])
+                                                      pythonpath,MakePlotOnly = MakePlotOnly)
                 if CaseChoices['Verbose']:
                     print('Figure being completed by ' + str(round(100 * done, 1)) + ' %')
                 else:
@@ -322,8 +190,8 @@ if __name__ == '__main__' :
                                                                    CaseChoices['MakePlotsPerBld'], nbcase=[],
                                                                    LastBld=lastBld)
             offset += file_idx
-
-
+            os.chdir(CurrentPath)
+            GrlFct.CleanUpLogFiles(file['SimDir'])
     elif not SepThreads and not CaseChoices['CreateFMU'] and File2Launch[0]:
         CurrentSimDir = ''
         for ListKey in File2Launch:
@@ -351,7 +219,7 @@ if __name__ == '__main__' :
                 pool.apply_async(LaunchSim.runcase, args=(file2run[i], CurrentSimDir, epluspath,CaseChoices['API'],CaseChoices['Verbose']), callback=giveReturnFromPool)
             pool.close()
             pool.join()
-            GrlFct.AppendLogFiles(CurrentSimDir,BldIDKey)
+            GrlFct.AppendLogFiles(CurrentSimDir,CaseChoices['BldIDKey'])
     elif CaseChoices['CreateFMU']:
         # now that all the files are created, we can aggregate all the log files into a single one.
         os.chdir(CurrentPath)

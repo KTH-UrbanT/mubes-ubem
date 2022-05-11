@@ -314,7 +314,7 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
     bloclist = []
     AllZone = idf.idfobjects["ZONE"]
     for idx, zone in enumerate(AllZone):
-        bloclist.append(int(zone.Name[zone.Name.rfind('Build')+5:zone.Name.find('Storey')]))
+        bloclist.append(int(zone.Name[zone.Name.rfind('Build')+5:zone.Name.find('_Alt')]))
         zoneStoreylist.append(int(zone.Name[zone.Name.find('Storey')+6:])) #the name ends with Storey # so lets get the storey number this way
     SortedZoneIdx = sorted(range(len(zoneStoreylist)), key=lambda k: zoneStoreylist[k])
     for idx in SortedZoneIdx:

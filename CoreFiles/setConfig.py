@@ -1,8 +1,11 @@
 # @Author  : Xavier Faure
 # @Email   : xavierf@kth.se
 
-import yaml, os
+import yaml, os, sys, json
 import distutils.spawn
+import CoreFiles.GeneralFunctions as GrlFct
+import BuildObject.GeomUtilities as GeomUtilities
+import BuildObject.BuildingObject as BldFct
 
 
 def is_tool(name):
@@ -14,9 +17,8 @@ def read_yaml(file_path):
         config = yaml.safe_load(f)
     return config
 
-def check4localConfig(config,path):
+def check4localConfig(path):
     Liste = os.listdir(path)
-    new_config = config
     filefound = False
     msg = False
     for file in Liste:
@@ -30,8 +32,7 @@ def check4localConfig(config,path):
     if not filefound:
         localConfig = read_yaml(os.path.join(path, 'LocalConfig_Template.yml'))
         filefound =  os.path.join(path,'LocalConfig_Template.yml')
-    new_config, msg1 = ChangeConfigOption(config, localConfig)
-    return new_config, filefound, msg1 if not msg else msg
+    return localConfig, filefound, msg
 
 def ChangeConfigOption(config,localConfig):
     msg = False
@@ -144,41 +145,198 @@ def checkParamtricSimCases(config):
     if len(config['2_CASE']['1_SimChoices']['VarName2Change']) > 0:
         if type(config['2_CASE']['1_SimChoices']['VarName2Change']) != list:
             errormsg = '/!\ The VarName2Change must be a list either empty or a list of strings'
-            return errormsg, SepThreads
+            return config,errormsg, SepThreads
         if len(config['2_CASE']['1_SimChoices']['VarName2Change']) > len(config['2_CASE']['1_SimChoices']['Bounds']) or \
                 len(config['2_CASE']['1_SimChoices']['VarName2Change']) > len(
             config['2_CASE']['1_SimChoices']['ParamMethods']):
             errormsg = '/!\ VarName2Change [list of str], Bounds [list of lists of float or int] and ParamMethods [list of str] must have the same length'
-            return errormsg,SepThreads
+            return config,errormsg,SepThreads
         else:
             for idx, key in enumerate(config['2_CASE']['1_SimChoices']['VarName2Change']):
                 if type(config['2_CASE']['1_SimChoices']['Bounds'][idx]) != list:
                     errormsg = '/!\ Bounds must be a list of lists of 2 values for each VarName2Change'
-                    return errormsg,SepThreads
+                    return config,errormsg,SepThreads
                 elif config['2_CASE']['1_SimChoices']['Bounds'][idx][1] < \
                         config['2_CASE']['1_SimChoices']['Bounds'][idx][0]:
                     errormsg = '/!\ Bounds must be [lower bound, upper bounds] in this order'
-                    return errormsg,SepThreads
+                    return config,errormsg,SepThreads
     if config['2_CASE']['1_SimChoices']['NbRuns'] > 1:
-        SepThreads = True
         if config['2_CASE']['2_AdvancedChoices']['CreateFMU']:
-            errormsg = '/!\ It is asked to ceate FMUs but more than one simulation per building is asked...'
-            return errormsg, SepThreads
+            errormsg = '/!\ It is asked to create FMUs but more than one simulation per building is asked...'
+            return config,errormsg, SepThreads
         if not config['2_CASE']['1_SimChoices']['VarName2Change'] or not config['2_CASE']['1_SimChoices']['Bounds']:
             if not config['2_CASE']['2_AdvancedChoices']['FromPosteriors']:
                 errormsg = '/!\ It is asked to make several runs but no variable is specified with range of variation'
-                return errormsg, SepThreads
-    return errormsg, SepThreads
+                return config,errormsg, SepThreads
+        if config['2_CASE']['0_GrlChoices']['MakePlotsOnly']:
+            config['2_CASE']['1_SimChoices']['NbRuns'] = 1
+            return config,errormsg, SepThreads
+        SepThreads = True
+    return config,errormsg, SepThreads
 
 def checkChoicesCombinations(config):
-    errormsg, SepThreads = checkParamtricSimCases(config)
+    config,errormsg, SepThreads = checkParamtricSimCases(config)
     if errormsg:
         print('###  INPUT ERROR ### ')
         print(errormsg)
         return 'Choices combination issue', SepThreads
     return config,SepThreads
 
-# path2file = 'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_UBEM\\CoreFiles'
-# path2read = os.path.join(path2file,'DefaultConfigTest.yml')
-#
-# tutu = read_yaml(path2read)
+def getConfig(App = ''):
+    if App == 'Shadowing':
+        ConfigFromArg, Case2Launch, ShadeLim = Read_Arguments(App = App)
+    else:
+        ConfigFromArg, Case2Launch = Read_Arguments(App = App)
+    config = read_yaml(os.path.join(os.path.dirname(os.getcwd()),'CoreFiles','DefaultConfig.yml'))
+    configUnit = read_yaml(os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfigKeyUnit.yml'))
+    geojsonfile = False
+    if Case2Launch:
+        localConfig4Path, filefound, msg = check4localConfig(os.getcwd())
+        print(os.path.join(os.path.abspath(config['0_APP']['PATH_TO_RESULTS']), Case2Launch, 'ConfigFile.yml'))
+        if os.path.isfile(
+                os.path.join(os.path.abspath(localConfig4Path['0_APP']['PATH_TO_RESULTS']), Case2Launch, 'ConfigFile.yml')):
+            localConfig = read_yaml(
+                os.path.join(os.path.abspath(localConfig4Path['0_APP']['PATH_TO_RESULTS']), Case2Launch, 'ConfigFile.yml'))
+            config, msg = ChangeConfigOption(config, localConfig)
+            if msg: print(msg)
+        else:
+            print('[Unknown Case] the following folder was not found : ' + os.path.join(
+                os.path.abspath(localConfig4Path['0_APP']['PATH_TO_RESULTS']), Case2Launch))
+            sys.exit()
+    elif type(ConfigFromArg) == str:
+        if ConfigFromArg[-4:] == '.yml':
+            localConfig = read_yaml(ConfigFromArg)
+            config, msg = ChangeConfigOption(config, localConfig)
+            if msg: print(msg)
+        elif ConfigFromArg[-8:] == '.geojson':
+            geojsonfile = True
+        else:
+             print('[Unknown Argument] Please check the available options for arguments : -yml or -CONFIG')
+             sys.exit()
+    elif ConfigFromArg:
+        config, msg = ChangeConfigOption(config, ConfigFromArg)
+        if msg: print(msg)
+        config['2_CASE']['0_GrlChoices']['OutputFile'] = 'Outputs4API.txt'
+    else:
+        localConfig,filefound,msg = check4localConfig(os.getcwd())
+        if msg: print(msg)
+        config, msg = ChangeConfigOption(config, localConfig)
+        if msg: print(msg)
+        print('[Config Info] Config completed by ' + filefound)
+    config = checkConfigUnit(config,configUnit)
+    if type(config) != dict:
+        print('[Config Error] Something seems wrong : \n' + config)
+        sys.exit()
+    config, SepThreads = checkGlobalConfig(config)
+    if type(config) != dict:
+        print('[Config Error] Something seems wrong in : ' + config)
+        sys.exit()
+    Key2Aggregate = ['0_GrlChoices', '1_SimChoices', '2_AdvancedChoices']
+    CaseChoices = {}
+    for key in Key2Aggregate:
+        for subkey in config['2_CASE'][key]:
+            CaseChoices[subkey] = config['2_CASE'][key][subkey]
+    if CaseChoices['Verbose']: print('[OK] Input config. info checked and valid.')
+    if 'See ListOfBuiling_Ids.txt for list of IDs' in CaseChoices['BldID']:
+        CaseChoices['BldID'] = []
+    epluspath = config['0_APP']['PATH_TO_ENERGYPLUS']
+    # a first keypath dict needs to be defined to comply with the current paradigme along the code
+    Buildingsfile = os.path.abspath(config['1_DATA']['PATH_TO_DATA'])
+    keyPath = {'epluspath': epluspath, 'Buildingsfile': Buildingsfile, 'pythonpath': '', 'GeojsonProperties': ''}
+    if geojsonfile:
+        keyPath['Buildingsfile'] = ConfigFromArg
+    # this function makes the list of dictionnary with single input files if several are present inthe sample folder
+    GlobKey, MultipleFiles = GrlFct.ListAvailableFiles(keyPath)
+    if App == 'Shadowing':
+        return GlobKey, config, ShadeLim
+    # this function creates the full pool to launch afterward, including the file name and which buildings to simulate
+    IDKeys = config['3_SIM']['GeomElement']['BuildIDKey']
+    CoordSys = config['1_DATA']['EPSG_REF']
+    if MultipleFiles:
+        CaseChoices['PassBldObject'] = False
+    Pool2Launch, CaseChoices['BldID'], CaseChoices['DataBaseInput'], CaseChoices['BldIDKey'] = CreatePool2Launch(CaseChoices['BldID'],
+                    GlobKey, IDKeys,CaseChoices['PassBldObject'],CaseChoices['RefBuildNum'],CaseChoices['RefPerimeter'],CoordSys)
+    return CaseChoices,config, SepThreads,Pool2Launch,MultipleFiles
+
+def Read_Arguments(App = ''):
+    #these are defaults values:
+    Config2Launch = []
+    Case2Launch = []
+    ShadeLim =[]
+    # Get command-line options.
+    lastIdx = len(sys.argv) - 1
+    currIdx = 1
+    while (currIdx < lastIdx):
+        currArg = sys.argv[currIdx]
+        if (currArg.startswith('-CONFIG')):
+            currIdx += 1
+            Config2Launch = json.loads(sys.argv[currIdx])
+        if (currArg.startswith('-yml')):
+            currIdx += 1
+            Config2Launch = sys.argv[currIdx]
+        if (currArg.startswith('-Case')):
+            currIdx += 1
+            Case2Launch = sys.argv[currIdx]
+        if (currArg.startswith('-ShadeLimits')):
+            currIdx += 1
+            ShadeLim = sys.argv[currIdx]
+        if (currArg.startswith('-geojson')):
+            currIdx += 1
+            Config2Launch = sys.argv[currIdx]
+        currIdx += 1
+    if App == 'Shadowing': return Config2Launch,Case2Launch, ShadeLim
+    else: return Config2Launch,Case2Launch
+
+def CreatePool2Launch(BldIDs,GlobKey,IDKeys,PassBldObject,RefBuildNum,RefDist,CoordSys):
+    Pool2Launch = []
+    NewUUIDList = []
+    for nbfile,keyPath in enumerate(GlobKey):
+        print('[Prep. Info] Reading GeoJson file...' )
+        try : DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath,CoordSys,toBuildPool = True if not PassBldObject else False)
+        except:
+            print('[Error] This input file failed to be loaded : '+str(keyPath['Buildingsfile']))
+            continue
+        #check of the building to run
+        idx = len(Pool2Launch)
+        IdKey = 'NoBldID'
+        Id, BuildIdKey = BldFct.getDBValue(DataBaseInput['Build'][0].properties, IDKeys)
+        if BuildIdKey:
+            IdKey = BuildIdKey
+        print('[Prep. Info] Buildings will be considered with ID key : '+IdKey )
+        ReducedArea = False
+        if type(RefBuildNum)==int:
+            if RefBuildNum > len(DataBaseInput['Build']):
+                print('###  INPUT ERROR ### ')
+                print('/!\ RefBuildNum is greater than the number of object in the input GeoJson file...')
+                print('/!\ Please, check you inputs.')
+                sys.exit()
+            ReducedArea = True
+            ref = DataBaseInput['Build'][RefBuildNum].geometry.centroid
+            ref = ref[0] if type(ref)==list else ref
+        for bldNum, Bld in enumerate(DataBaseInput['Build']):
+            if ReducedArea:
+                try: coordCheck = Bld.geometry.centroid
+                except: continue
+                coordCheck = coordCheck[0] if type(coordCheck) == list else coordCheck
+                if GeomUtilities.getDistance(ref,coordCheck)>RefDist:
+                    continue
+            if not BldIDs:
+                try: BldID = Bld.properties[IdKey]
+                except: BldID = 'NoBldID'
+                Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum,'BuildID':BldID ,'TotBld_and_Origin':'','CoordSys':CoordSys })
+                try: NewUUIDList.append(Bld.properties[IdKey])
+                except: pass
+            else:
+                try:
+                    if Bld.properties[IdKey] in BldIDs:
+                        Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum,'BuildID':Bld.properties[IdKey], 'TotBld_and_Origin':'','CoordSys':CoordSys })
+                        NewUUIDList.append(Bld.properties[IdKey])
+                except: pass
+        if not Pool2Launch:
+            print('###  INPUT ERROR ### ')
+            print('/!\ None of the building BldID were found in the input GeoJson file...')
+            print('/!\ Please, check you inputs.')
+            sys.exit()
+        Pool2Launch[idx]['TotBld_and_Origin'] = str(len(Pool2Launch)-idx) +' buildings will be considered from '+os.path.basename(keyPath['Buildingsfile'])
+        print('[Prep. Info] '+ str(len(Pool2Launch)-idx) +' buildings will be considered out of '+str(bldNum+1)+' in the input file ')
+    return Pool2Launch,NewUUIDList,DataBaseInput if PassBldObject else [],IdKey

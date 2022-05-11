@@ -12,11 +12,27 @@ import os
 import json
 import shutil
 import BuildObject.GeomUtilities as GeomUtilities
-import re
+import re, itertools
 import CoreFiles.ProbGenerator as ProbGenerator
 
 import matplotlib.pyplot as plt
 #this class defines the building characteristics regarding available data in the geojson file
+
+def Makeplot(poly):
+    import matplotlib.pyplot as plt
+    x,y = zip(*poly)
+    plt.plot(x,y,'.-')
+
+def getBlocMatches(BlocAlt,BlocMaxAlt,AltTolerance):
+    BlocAltMAtches = []
+    for i, alt in enumerate(BlocAlt):
+        for j, maxAlt in enumerate(BlocMaxAlt):
+            if abs(alt - maxAlt) < AltTolerance:
+                BlocAltMAtches.append([i + 1, j + 1])
+                break
+        try: BlocAltMAtches[i]
+        except: BlocAltMAtches.append([i + 1, []])
+    return BlocAltMAtches
 
 #function that checks if value is out of limits
 def checkLim(val, ll, ul):
@@ -118,6 +134,7 @@ class Building:
         SD = config['3_SIM']['2_SimuData']
         ExEn = config['3_SIM']['ExtraEnergy']
         WeatherData = config['3_SIM']['1_WeatherData']
+
         try:
             self.CRS = Buildingsfile.crs['properties']['name'] #this is the coordinates reference system for the polygons
         except:
@@ -133,19 +150,22 @@ class Building:
         self.nbBasefloor = self.getnbBasefloor(DB, DBL)
         self.height = self.getheight(DB, DBL)
         self.DistTol = self.GE['DistanceTolerance']
-        self.footprint,  self.BlocHeight, self.BlocNbFloor = self.getfootprint(DB,LogFile,self.nbfloor,DebugMode)
+        self.roundVal = self.GE['VertexPrecision']
+        self.AltTolerance = self.GE['AltitudeTolerance']
+        self.MaxShadingDist = self.GE['MaxShadingDist']
+        self.footprint,  self.BlocHeight, self.BlocNbFloor, self.BlocAlt, self.BlocMaxAlt = self.getfootprint(DB,LogFile,self.nbfloor,DebugMode)
         self.AggregFootprint = self.getAggregatedFootprint()
         self.RefCoord = self.getRefCoord()
         self.DB_Surf = self.getsurface(DB, DBL,LogFile,DebugMode)
         self.SharedBld, self.VolumeCorRatio = self.IsSameFormularIdBuilding(Buildingsfile, nbcase, LogFile, DBL,DebugMode)
         self.BlocHeight, self.BlocNbFloor, self.StoreyHeigth = self.EvenFloorCorrection(self.BlocHeight, self.nbfloor, self.BlocNbFloor, self.footprint, LogFile,DebugMode)
+        self.AdjustBlocDimension()
         self.EPHeatedArea = self.getEPHeatedArea(LogFile,DebugMode)
         self.AdjacentWalls = [] #this will be appended in the getshade function if any present
-        self.shades = self.getshade(nbcase, Buildingsfile,LogFile, PlotOnly=PlotOnly,DebugMode=DebugMode)
+        self.shades = self.getshade(nbcase, DataBaseInput,LogFile, PlotOnly=PlotOnly,DebugMode=DebugMode)
         self.Materials = config['3_SIM']['BaseMaterial']
         self.InternalMass = config['3_SIM']['InternalMass']
         self.MakeRelativeCoord(roundfactor = 4)# we need to convert into local coordinate in order to compute adjacencies with more precision than keeping thousand of km for x and y
-        #self.edgesHeights = self.getEdgesHeights(roundfactor= 4)
         if not PlotOnly:
             #the attributres above are needed in all case, the one below are needed only if energy simulation is asked for
             self.VentSyst = self.getVentSyst(DB, config['3_SIM']['VentSyst'], LogFile,DebugMode)
@@ -161,6 +181,7 @@ class Building:
             #we define the internal load only if it's not for making picture
             self.IntLoad = self.getIntLoad(MainPath,LogFile,DebugMode)
             self.DHWInfos = self.getExtraEnergy(ExEn, MainPath)
+
             #if there are no cooling comsumption, lets considerer a set point at 50deg max
             # for key in self.EPCMeters['Cooling']:
             #     if self.EPCMeters['Cooling'][key]>0:
@@ -278,7 +299,6 @@ class Building:
                 self.DB_Surf  = newATemp
         return SharedBld, VolumeCorRatio
 
-
     def getBEData(self,BE):
         for key in BE.keys():
             setattr(self, key, BE[key])
@@ -306,15 +326,11 @@ class Building:
 
     def getBuildID(self,DB,LogFile):
         BuildID={}
-        for key in self.GE['BuildIDKey']:
-            try:
-                BuildID[key] = DB.properties[key]
-                BuildID['BldIDKey'] = key
-                break
-            except: pass
-        if not BuildID:
+        Id, BuildID['BldIDKey'] = getDBValue(DB.properties, self.GE['BuildIDKey'])
+        if not BuildID['BldIDKey']:
             BuildID['BldIDKey'] = 'NoBldID'
             BuildID['NoBldID'] = 'NoBldID'
+        else: BuildID[BuildID['BldIDKey']] = Id
         msg = '[Bld ID] '+ 'BldIDKey'+' : ' + str(BuildID['BldIDKey']) + '\n'
         GrlFct.Write2LogFile(msg, LogFile)
         msg = '[Bld ID] '+ str(BuildID['BldIDKey'])+' : ' + str(BuildID[BuildID['BldIDKey']]) + '\n'
@@ -349,37 +365,46 @@ class Building:
             y = centroide[0][1]
         #ref = (round(x,8), round(y,8))
         offset = ((2*Polygon(self.AggregFootprint).area)**0.5)/8
-        ref = (x-offset, y-offset) #there might be not a true need for suche precision....
+        ref = (x-offset, y-offset) #there might be not a true need for such precision....
         return ref
 
     def getfootprint(self,DB,LogFile=[],nbfloor=0,DebugMode = False):
         "get the footprint coordinate and the height of each building bloc"
-        DistTol = self.GE['DistanceTolerance']
         coord = []
         node2remove =[]
         BlocHeight = []
         BlocNbFloor = []
+        BlocAlt = []
+        BlocMaxAlt = []
         #we first need to check if it is Multipolygon
         if self.Multipolygon:
             #then we append all the floor and roof fottprints into one with associate height
             MatchedPoly = [0]*len((DB.geometry.coordinates))
             for idx1,poly1 in enumerate(DB.geometry.coordinates[:-1]):
                 for idx2,poly2 in enumerate(DB.geometry.coordinates[idx1+1:]):
-                    if GeomUtilities.chekIdenticalpoly(poly1[0], poly2[0]) and  \
+                    if GeomUtilities.chekIdenticalpoly(poly1, poly2,self.roundVal) and  \
                             round(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]),1) >0:
                         MatchedPoly[idx1] = 1
                         MatchedPoly[idx2+idx1+1] = 1
-                        newpolycoor,node = GeomUtilities.CleanPoly(poly1[0],DistTol)
+                        newpolycoor,node = GeomUtilities.CleanPoly(poly1,self.DistTol,self.roundVal)
+                        if len(newpolycoor)<3:
+                            msg = '[Geom Cor] At least one polygon has been ignored because of the distance thresholds \n'
+                            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+                            continue
                         node2remove.append(node)
                          #polycoor.reverse()
                         #test of identical polygone maybe (encountered from geojon made out of skethup
                         skipit = False
                         for donPoly in coord:
-                            if GeomUtilities.chekIdenticalpoly(donPoly, newpolycoor):
+                            if GeomUtilities.chekIdenticalpoly(donPoly, newpolycoor,self.roundVal):
                                 skipit = True #no need to store the same polygone....
                         if not skipit:
                             coord.append(newpolycoor)
-                            BlocHeight.append(round(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]),1))
+                            #BlocHeight.append(round(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]),1))
+                            #thisis a workaround for upper building part being extruded form the lower level
+                            BlocHeight.append(max(DB.geometry.poly3rdcoord[idx1],DB.geometry.poly3rdcoord[idx2 + idx1 + 1])-min(DB.geometry.poly3rdcoord))
+                            BlocAlt.append(min(DB.geometry.poly3rdcoord[idx1],DB.geometry.poly3rdcoord[idx2+idx1+1]))
+                            BlocMaxAlt.append(max(DB.geometry.poly3rdcoord[idx1],DB.geometry.poly3rdcoord[idx2+idx1+1]))
         else:
             #for dealing with 2D files
             singlepoly = False
@@ -401,7 +426,11 @@ class Building:
                     #     if len(new) > 3:
                     #         new.remove(pt)
                     # newpolycoor, node = core_perim.CheckFootprintNodes(new, 5)
-                    newpolycoor, node = GeomUtilities.CleanPoly(j, DistTol)
+                    newpolycoor, node = GeomUtilities.CleanPoly(j, self.DistTol,self.roundVal)
+                    if len(newpolycoor) < 3:
+                        msg = '[Geom Cor] At least one polygon has been ignored because of the distance thresholds \n'
+                        if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+                        continue
                     coord.append(newpolycoor)
                     node2remove.append(node)
             if singlepoly:
@@ -411,98 +440,151 @@ class Building:
             for i in range(len(coord)):
                 BlocNbFloor.append(nbfloor)
                 BlocHeight.append(self.height)
-
-        #if a polygonew has been seen alone, it means that it should be exruded down to the floor
+                BlocAlt.append(0)
+                BlocMaxAlt.append(self.height)
+        #if a polygon has been seen alone, it means that it should be exruded down to the floor
         if self.Multipolygon:
             for idx,val in enumerate(MatchedPoly):
                 if val ==0:
                     if len(DB.geometry.coordinates[idx][0]) > 2 : poly = DB.geometry.coordinates[idx][0]
                     else: poly = DB.geometry.coordinates[idx]
-                    missedPoly,node = GeomUtilities.CleanPoly(poly, DistTol)
+                    missedPoly,node = GeomUtilities.CleanPoly(poly, self.DistTol,self.roundVal)
+                    if len(missedPoly) < 3:
+                        msg = '[Geom Cor] At least one polygon has been ignored because of the distance thresholds \n'
+                        if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+                        continue
                     coord.append(missedPoly)
                     node2remove.append(node)
                     height = DB.geometry.poly3rdcoord[idx] if DB.geometry.poly3rdcoord[idx]>0 else self.height
                     BlocHeight.append(height)
+                    BlocAlt.append(max(min(DB.geometry.poly3rdcoord),0))
+                    BlocMaxAlt.append(height)
         # we need to clean the footprint from the node2remove but not if there are part of another bloc
+        idx2remove = []
+        for idx,poly in enumerate(coord):
+            if GeomUtilities.getArea(poly)<1:
+                idx2remove.append(idx)
+        if idx2remove:
+            coord = [poly for idx, poly in enumerate(coord) if idx not in idx2remove]
+            BlocAlt = [val for idx, val in enumerate(BlocAlt) if idx not in idx2remove]
+            BlocMaxAlt = [val for idx, val in enumerate(BlocMaxAlt) if idx not in idx2remove]
+            BlocHeight = [val for idx, val in enumerate(BlocHeight) if idx not in idx2remove]
+            node2remove = [nodes for idx, nodes in enumerate(node2remove) if idx not in idx2remove]
+            msg = '[Geom Cor] '+str(len(idx2remove))+' polygons were removed because of area below 1m2 \n'
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+
+        BlocAlt,msg = GeomUtilities.checkAltTolerance(BlocAlt,self.AltTolerance)
+        BlocMaxAlt, msg = GeomUtilities.checkAltTolerance(BlocMaxAlt, self.AltTolerance)
+        if msg and DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+        UpperBloc = False
+        BlocAlt = [round(val,self.roundVal) for val in BlocAlt]
+        BlocMaxAlt = [round(val,self.roundVal) for val in BlocMaxAlt]
+        BlocAltMatches = getBlocMatches(BlocAlt, BlocMaxAlt,self.AltTolerance) #Warning, reported indexes are +1 to avoid having 0 inside. Altitude are matches if below 2m
+
+        if [match[1] for match in BlocAltMatches if match[1]]: UpperBloc = True
+        if UpperBloc:
+            msg = ('[Geom Info] Some polygon''s floor altitude can have been changed to matches with ones positionned below (blocs being above one another). \n')
+            if msg and DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+        BlocAlt = [BlocMaxAlt[matches[1]-1] if matches[1] else BlocAlt[matches[0]-1] for matches in BlocAltMatches]
+        idx2remove = [idx for idx,val in enumerate(BlocAlt) if BlocMaxAlt[idx]-val<self.AltTolerance]
+        if idx2remove:
+            coord = [poly for idx,poly in enumerate(coord) if idx not in idx2remove]
+            BlocAlt = [val for idx, val in enumerate(BlocAlt) if idx not in idx2remove]
+            BlocMaxAlt = [val for idx, val in enumerate(BlocMaxAlt) if idx not in idx2remove]
+            BlocHeight = [val for idx, val in enumerate(BlocHeight) if idx not in idx2remove]
+            node2remove = [val for idx, val in enumerate(node2remove) if idx not in idx2remove]
+            msg = ('[Geom Cor] At least one polygon has been removed because of an altitude equal to the lowest one along all polygons. \n')
+            if msg and DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         newbloccoor = []
+        node2ignoredforPolyMatch = []
         for idx, coor in enumerate(coord):
             newcoor = []
             FilteredNode2remove = []
+            node2ignore = []
             single = False
             for node in node2remove[idx]:
                 single = True
                 for idx1, coor1 in enumerate(coord):
                     if idx != idx1:
-                        if coor[node] in coor1 and coor[node] not in [n for i, n in enumerate(coor1[idx1]) if
+                        if coor[node] in coor1 and coor[node] not in [n for i, n in enumerate(coor1) if
                                                                       i in node2remove[idx1]]:
                             single = False
                 if single:
-                    FilteredNode2remove.append(node)
+                    FilteredNode2remove.append(coor[node])
+                else: node2ignore.append(coor[node])
             for nodeIdx, node in enumerate(coor):
                 if not nodeIdx in FilteredNode2remove:
                     newcoor.append(node)
-            newbloccoor.append(newcoor)
+            if len(newcoor)>2:
+                newbloccoor.append(newcoor)
+                node2ignoredforPolyMatch.append(node2ignore)
+            else:
+                BlocHeight.pop(idx)
+                BlocAlt.pop(idx)
+                BlocMaxAlt.pop(idx)
+                #MatchedPoly.pop(idx) #this is linked to the raw data so it should not be changed
+                msg = '[Geom Cor] The building polygon nb ['+str(idx)+'] that will be ignored : edge below DistanceTolerance or angle below 5deg \n'
+                if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         coord = newbloccoor
         # these following lines are here to highlight holes in footprint and split it into two blocs...
         # it may appear some errors for other building with several blocs and some with holes (these cases havn't been checked)
-        poly2merge = []
-        for idx, coor in enumerate(coord):
-            for i in range(len(coord) - idx - 1):
-                if Polygon(coor).contains(Polygon(coord[idx + i + 1])):
-                    poly2merge.append([idx, idx + i + 1])
-                if Polygon(coord[idx + i + 1]).contains(Polygon(coor)):
-                    poly2merge.append([idx + i + 1,idx])
-        try:
-            for i, idx in enumerate(poly2merge):
-                #lets check if it's a tower of smaller foorptin than the base:
-                SmallerTower = False
-                if BlocHeight[idx[1]]-BlocHeight[idx[0]]>0:
-                    SmallerTower = True
-                newtry = False
-
-                if newtry :
-
-                    newSurface = GeomUtilities.mergeHole(coord[idx[0]],coord[idx[1]])
-                    coord[idx[0]] = newSurface[0]
-                    coord[idx[1]] = newSurface[1]
+        #this a a last check of identical polygon after it has been clean from none usful nodes
+        if self.Multipolygon and 0 in MatchedPoly:
+            IdenticalPoly = []
+            for idx,poly in enumerate(coord):
+                import copy
+                polycor = copy.deepcopy(poly)
+                for vertex in node2ignoredforPolyMatch[idx]:
+                    polycor.remove(vertex)
+                for idx1,poly1 in enumerate(coord[idx+1:]):
+                    polycor1 = copy.deepcopy(poly1)
+                    for vertex in node2ignoredforPolyMatch[idx+1+idx1]:
+                        polycor1.remove(vertex)
+                    if GeomUtilities.chekIdenticalpoly(polycor, polycor1,self.roundVal):
+                        IdenticalPoly.append([idx,idx+1+idx1])
+            OffsetFrompop =0
+            for idx in IdenticalPoly:
+                idx = [idx[0]-OffsetFrompop,idx[1]-OffsetFrompop]
+                if len(coord[idx[0]]) < len(coord[idx[1]]):
+                    idxorder = [idx[1],idx[0]]
                 else:
-                    new_surfaces = GeomUtilities.mergeGeomeppy(coord[idx[0]], coord[idx[1]])
-                    #new_surfaces = break_polygons(Polygon3D(coord[idx[0]]), Polygon3D(coord[idx[1]]))
-                    xs, ys, zs = zip(*list(new_surfaces[0]))
-                    coord[idx[0]] = [(xs[nbv], ys[nbv]) for nbv in range(len(xs))]
-                    if len(new_surfaces) > 1:
-                        xs, ys, zs = zip(*list(new_surfaces[1]))
-                        if SmallerTower:
-                            coord.append([(xs[nbv], ys[nbv]) for nbv in range(len(xs))])
-                            BlocHeight.append(BlocHeight[idx[0]])
-                        else:
-                            coord[idx[1]] = [(xs[nbv], ys[nbv]) for nbv in range(len(xs))]
-                            BlocHeight[idx[1]] = BlocHeight[idx[0]]
-                    else:
-                        coord.pop(idx[1])
-                        BlocHeight.pop(idx[1])
+                    idxorder = [idx[0], idx[1]]
+                coord.pop(idxorder[1])
+                BlocHeight[idxorder[0]] = abs(BlocHeight[idx[0]]-BlocHeight[idx[1]])
+                BlocHeight.pop(idxorder[1])
+                BlocAlt[idxorder[0]] = min(BlocMaxAlt[idx[0]],BlocMaxAlt[idx[1]])
+                BlocAlt.pop(idxorder[1])
+                BlocMaxAlt[idxorder[0]] = max(BlocMaxAlt[idx[0]],BlocMaxAlt[idx[1]])
+                BlocMaxAlt.pop(idxorder[1])
+                OffsetFrompop += 1
 
+        nomoremerge = False
+        pol2avoid = []
+        while not nomoremerge:
+            poly2merge,area2merge,UpperBloc = GeomUtilities.checkForMerge(coord,DebugMode,LogFile,BlocHeight,BlocAlt,UpperBloc)
+            if not poly2merge: nomoremerge = True
+            else: coord = GeomUtilities.MakeMerge(coord,[poly2merge[0]],DebugMode,LogFile,BlocHeight,BlocAlt,BlocMaxAlt)
 
-                msg = '[Geom Cor] There is a hole that will split the main surface in two blocs \n'
-                GrlFct.Write2LogFile(msg, LogFile)
-        except:
-            msg = '[Poly Error] Some error are present in the polygon parts. Some are identified as being inside others...\n'
-            print(msg[:-1])
-            GrlFct.Write2LogFile(msg, LogFile)
-            import matplotlib.pyplot as plt
-            fig = plt.figure(0)
-            for i in coord:
-                xs, ys = zip(*i)
-                plt.plot(xs, ys, '-.')
-            #plt.show()
-            # titre = 'FormularId : '+str(DB.properties['FormularId'])+'\n 50A_UUID : '+str(DB.properties['50A_UUID'])
-            # plt.title(titre)
-            # plt.savefig(self.name+ '.png')
-            # plt.close(fig)
     #before submitting the full coordinates, we need to check correspondance in case of multibloc
-        coord, validFootprint = GeomUtilities.CheckMultiBlocFootprint(coord,tol = DistTol)
+        #this check is made after encountering a specific case that never appeared form now...
+        idx2remove = []
+        for idx, poly in enumerate(coord):
+            if GeomUtilities.getArea(poly) < 1:
+                idx2remove.append(idx)
+        if idx2remove:
+            coord = [poly for idx, poly in enumerate(coord) if idx not in idx2remove]
+            BlocAlt = [val for idx, val in enumerate(BlocAlt) if idx not in idx2remove]
+            BlocMaxAlt = [val for idx, val in enumerate(BlocMaxAlt) if idx not in idx2remove]
+            msg = '[Geom Cor] ' + str(len(idx2remove)) + ' polygons were removed because of area below 1m2 \n'
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+        for idx,poly in enumerate(coord):
+            coord[idx],node = GeomUtilities.CleanPoly(poly,self.DistTol,self.roundVal)
+        coord, validFootprint = GeomUtilities.CheckMultiBlocFootprint(coord,BlocAlt,tol = self.DistTol)
+        if UpperBloc:
+            validFootprint = True
+        #validFootprint = True
         if not validFootprint:
-            msg = '[Poly Error] The different bloc are not adjacent...\n'
+            msg = '[Poly Error] The different bloc cannot be extruded further, please check the input file using MakePolygonPlots = True...\n'
             #print(msg[:-1])
             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
             return
@@ -520,7 +602,22 @@ class Building:
         for poly in coord:
             if GeomUtilities.is_clockwise(poly):
                 poly.reverse()
-        return coord, BlocHeight, BlocNbFloor
+
+        # BlocAlt = [int(val) for val in BlocAlt]
+        # BlocMaxAlt = [int(val) for val in BlocMaxAlt]
+        self.BlocAltMatches = getBlocMatches(BlocAlt, BlocMaxAlt,self.AltTolerance)
+        BlocHeight = [val-val1 for val,val1 in zip(BlocMaxAlt,BlocAlt)]
+        return coord, BlocHeight, BlocNbFloor, BlocAlt,BlocMaxAlt
+
+    def AdjustBlocDimension(self):
+        HeightCors = [h-(mAlt-Alt) for h,mAlt,Alt in zip(self.BlocHeight,self.BlocMaxAlt,self.BlocAlt)]
+        newAlt = []
+        newMaxAlt = []
+        for i,blocMatch in enumerate(self.BlocAltMatches):
+            newAlt.append(round(self.BlocAlt[blocMatch[1]-1]+self.BlocHeight[blocMatch[1]-1] if blocMatch[1] else self.BlocAlt[i],self.roundVal))
+            newMaxAlt.append(round(self.BlocMaxAlt[i] + HeightCors[i],self.roundVal))
+        self.BlocAlt = newAlt
+        self.BlocMaxAlt = newMaxAlt
 
     def EvenFloorCorrection(self,BlocHeight,nbfloor,BlocNbFloor,coord,LogFile,DebugMode=False):
         # we compute a storey height as well to choosen the one that correspond to the highest part of the building afterward
@@ -556,8 +653,7 @@ class Building:
                 try:
                     LogFile.write(
                         '[WARNING] /!\ This bloc as a height below 3m, it has been raized to 3m to enable construction /!\ \n')
-                except:
-                    pass
+                except: pass
         return BlocHeight, BlocNbFloor, StoreyHeigth
 
     def getEPHeatedArea(self,LogFile,DebugMode):
@@ -579,7 +675,7 @@ class Building:
         try: DB_Surf = int(DB_Surf)
         except: DB_Surf = 1
         if DB_Surf == 1:
-            msg = '[Geom Error] Surface ID not recognized as number, fixed to 1\n'
+            msg = '[Geom Info] Surface ID not recognized as number, fixed to 1\n'
             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         DB_Surf = checkLim(DB_Surf,DBL['surface_lim'][0],DBL['surface_lim'][1])
         self.DBSurfOriginal= DB_Surf     #this is to keep the original value as some correction might done afterward if more then 1 bld is present in 1 Id
@@ -693,11 +789,13 @@ class Building:
                 shades[key]['distance'] = dist
         return shades
 
-    def getshade(self, nbcase, Buildingsfile,LogFile, PlotOnly=True, DebugMode=False):
+    def getshade(self, nbcase, DataBaseInput,LogFile, PlotOnly=True, DebugMode=False):
         "Get all the shading surfaces to be build for surrounding building effect"
+        shades = {}
+        if PlotOnly ==1: #if its 1 it means that a general plot with all buildings is asked, so ne need to even consider the shadings
+            return shades
         JSONFile = []
         GeJsonFile = []
-        shades = {}
         BuildingFileName = os.path.basename(self.BuildingFilePath)
         JSonTest = os.path.join(os.path.dirname(self.BuildingFilePath),BuildingFileName[:BuildingFileName.index('.')] + '_Walls.json')
         GeoJsonTest = os.path.join(os.path.dirname(self.BuildingFilePath),BuildingFileName.replace('Buildings', 'Walls'))
@@ -714,14 +812,16 @@ class Building:
         if JSONFile:
             msg = '[Shadowing Info] Shadowing walls are taken from a json file\n'
             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
-            with open(JSONFile) as json_file:
-                ShadowingWalls = json.load(json_file)
-            return self.getShadesFromJson(ShadowingWalls)
+            return self.getShadesFromJson(DataBaseInput['Shades'])
         if GeJsonFile:
             msg = '[Shadowing Info] Shadowing walls are taken from a GeoJson file\n'
             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
-            Shadingsfile = MUBES_pygeoj.load(GeJsonFile)
-            Shadingsfile = GrlFct.checkRefCoordinates(Shadingsfile)
+            self.BlocAlt = [0] * len(self.BlocAlt)
+            self.BlocMaxAlt = [val for val in self.BlocHeight]
+            msg = '[Geom Info] Altitudes are fixed to 0 (ground level) as shadowing wall heights were computed without altitude\n'
+            if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+            Shadingsfile = DataBaseInput['Shades']
+            Buildingsfile = DataBaseInput['Build']
             try:
                 GE = self.GE
                 shadesID = Buildingsfile[nbcase].properties[GE['ShadingIdKey']]
@@ -782,7 +882,7 @@ class Building:
                     if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
                     continue
                 if OverlapCode== 999:
-                    msg = '[Shadowing Error] This Shading wall goes inside the building...It is dropped, shading Id : ' + ShadeWall[
+                    msg = '[Shadowing Info] This Shading wall goes inside the building...It is dropped, shading Id : ' + ShadeWall[
                               GE['ShadingIdKey']] + '\n'
                     #print(msg[:-1])
                     if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
@@ -836,6 +936,7 @@ class Building:
                     OccupType[key[:-4]] = 0
             if '_Rate' in key:
                 self.OccupRate[key[:-5]] = OccupTypeDict[key]
+        if sum([OccupType[i] for i in OccupType.keys()]): OccupType['Residential'] = 1
         msg = '[Usage Info] This building has ' + str(1 - OccupType['Residential']) + ' % of none residential occupancy type\n'
         if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         return OccupType

@@ -215,7 +215,10 @@ if __name__ == '__main__' :
     config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfig.yml'))
     configUnit = setConfig.read_yaml(
         os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfigKeyUnit.yml'))
-    config, filefound, msg = setConfig.check4localConfig(config, os.getcwd())
+    localConfig, filefound, msg = setConfig.check4localConfig(os.getcwd())
+    if msg: print(msg)
+    config, msg = setConfig.ChangeConfigOption(config, localConfig)
+    if msg: print(msg)
     #config['2_CASE']['0_GrlChoices']['CaseName'] = 'Simple'
 
     if CaseNameArg:

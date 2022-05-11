@@ -9,12 +9,14 @@ import CoreFiles.Load_and_occupancy as Load_and_occupancy
 import CoreFiles.DomesticHotWater as DomesticHotWater
 import CoreFiles.MUBES_pygeoj as MUBES_pygeoj
 import CoreFiles.BuildFMUs as BuildFMUs
+import ReadResults.Utilities as Utilities
 from openpyxl import load_workbook
 import openturns as ot
 import shutil
 import pickle
 import pyproj
 import numpy as np
+import json
 
 def appendBuildCase(StudiedCase,keypath,nbcase,DataBaseInput,MainPath,LogFile,PlotOnly = False, DebugMode = False):
     StudiedCase.addBuilding('Building'+str(nbcase),DataBaseInput,nbcase,MainPath,keypath,LogFile,PlotOnly, DebugMode)
@@ -68,21 +70,47 @@ def readPathfile(Pathways):
                     keyPath[key] = os.path.normcase(line[line.find(':') + 1:-1])
     return keyPath
 
-def ReadGeoJsonFile(keyPath,toBuildPool = False):
+def ReadGeoJsonFile(keyPath,CoordSys = '',toBuildPool = False):
     #print('Reading Input files,...')
     try:
         BuildObjectDict = ReadGeojsonKeyNames(keyPath['GeojsonProperties'])
         Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'])
-        #Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'])
-        if not toBuildPool: Buildingsfile = checkRefCoordinates(Buildingsfile)
+        if not toBuildPool: Buildingsfile = checkRefCoordinates(Buildingsfile,CoordSys)
+        Shadingsfile = getShadowingFile(keyPath['Buildingsfile'],CoordSys)
         #if not toBuildPool: Shadingsfile = checkRefCoordinates(Shadingsfile)
-        return {'BuildObjDict':BuildObjectDict,'Build' :Buildingsfile}#, 'Shades': Shadingsfile}
+        return {'BuildObjDict':BuildObjectDict,'Build' :Buildingsfile, 'Shades': Shadingsfile}
     except:
         Buildingsfile = MUBES_pygeoj.load(keyPath['Buildingsfile'])
-        #Shadingsfile = MUBES_pygeoj.load(keyPath['Shadingsfile'])
-        if not toBuildPool: Buildingsfile = checkRefCoordinates(Buildingsfile)
+        if not toBuildPool: Buildingsfile = checkRefCoordinates(Buildingsfile,CoordSys)
+        Shadingsfile = getShadowingFile(keyPath['Buildingsfile'],CoordSys)
         #if not toBuildPool: Shadingsfile = checkRefCoordinates(Shadingsfile)
-        return {'Build': Buildingsfile}#, 'Shades': Shadingsfile}
+        return {'Build': Buildingsfile, 'Shades': Shadingsfile}
+
+def getShadowingFile(BuildingFilePath,CoordSys):
+    Shadingsfile = []
+    JSONFile = []
+    GeJsonFile = []
+    BuildingFileName = os.path.basename(BuildingFilePath)
+    JSonTest = os.path.join(os.path.dirname(BuildingFilePath),
+                            BuildingFileName[:BuildingFileName.index('.')] + '_Walls.json')
+    GeoJsonTest = os.path.join(os.path.dirname(BuildingFilePath), BuildingFileName.replace('Buildings', 'Walls'))
+    GeoJsonTest1 = True if 'Walls' in GeoJsonTest else False
+    if os.path.isfile(JSonTest):
+        JSONFile = JSonTest
+    elif os.path.isfile(GeoJsonTest) and GeoJsonTest1:
+        GeJsonFile = GeoJsonTest
+    else:
+        msg = '[Prep. Info] No shadowing wall file found'
+    if JSONFile:
+        msg = '[Prep. Info] json shadowing walls file found'
+        with open(JSONFile) as json_file:
+            Shadingsfile = json.load(json_file)
+    if GeJsonFile:
+        msg = '[Prep. Info] Geojson shadowing walls file found'
+        Shadingsfile = MUBES_pygeoj.load(GeJsonFile)
+        Shadingsfile = checkRefCoordinates(Shadingsfile,CoordSys)
+    print(msg)
+    return Shadingsfile
 
 def ListAvailableFiles(keyPath):
     # reading the pathfiles and the geojsonfile
@@ -112,29 +140,41 @@ def ReadGeoJsonDir(keyPath):
                     BuildingFiles.append(file)
     return BuildingFiles
 
-def checkRefCoordinates(GeojsonFile):
+def checkRefCoordinates(GeojsonFile,CoordSys):
     if not GeojsonFile:
         return GeojsonFile
-    if 'EPSG' in GeojsonFile.crs['properties']['name']:
-        return GeojsonFile
-    ##The coordinate system depends on the input file, thus, if specific filter or conversion from one to another,
-    # it should be done here
-    if "CRS84" in GeojsonFile.crs['properties']['name']:
-        print('Projecting coordinates of Input file,...')
-        transformer = pyproj.Transformer.from_crs("CRS84", "epsg:3950") #this transformation if done for the France's reference
-        for idx,obj in enumerate(GeojsonFile):
-            newCoord = []
-            for poly in obj.geometry.coordinates:
-                newpoly = []
-                for vertex in poly:
-                    newpoly.append(list(transformer.transform(vertex[0], vertex[1])))
-                newCoord.append(newpoly)
-            obj.geometry.coordinates = newCoord
-        return GeojsonFile
+    # if 'EPSG' in GeojsonFile.crs['properties']['name']:
+    #     return GeojsonFile
+    # ##The coordinate system depends on the input file, thus, if specific filter or conversion from one to another,
+    # # it should be done here
+    if type(CoordSys)==int:
+        GeojsonFile = MakeCoordConversion(GeojsonFile, CoordSys)
+    #GeojsonFile = MakeCoordConversion(GeojsonFile, CoordSys)
     return GeojsonFile
+
+def MakeCoordConversion(GeojsonFile,CoordSys):
+    print('Projecting coordinates of Input file,...')
+    transformer = pyproj.Transformer.from_crs("CRS84", "epsg:" + str(
+        CoordSys))  # this transformation if done for the France's reference
+    for idx, obj in enumerate(GeojsonFile):
+        newCoord = []
+        for poly in obj.geometry.coordinates:
+            newpoly = []
+            for vertex in poly:
+                newvertex = list(transformer.transform(vertex[0], vertex[1]))
+                newpoly.append(
+                    newvertex)  # the reversed list and this signe were added after looking at google map and the plot for boston city
+            newCoord.append(newpoly)
+        obj.geometry.coordinates = newCoord
+        obj.geometry.update_centroid()
+    return GeojsonFile
+
 
 def ComputeDistance(v1,v2):
     return ((v2[0]-v1[0])**2+(v2[1]-v1[1])**2)**0.5
+
+def MakePolygonPlots(CaseChoices,Pool2Launch):
+    Utilities.makePolyPlots(CaseChoices,Pool2Launch)
 
 def MakeAbsoluteCoord(building,idf = [],roundfactor = 8):
     # we need to convert change the reference coordinate because precision is needed for boundary conditions definition:
@@ -388,7 +428,7 @@ def AppendLogFiles(MainPath,BldIDKey):
         os.remove(os.path.join(MainPath, file2del))
 
 #def setChangedParam(building,ParamVal,VarName2Change,MainPath,Buildingsfile,Shadingsfile,nbcase,LogFile=[]):
-def setChangedParam(building, ParamVal, VarName2Change, MainPath, Buildingsfile, nbcase, LogFile=[]):
+def setChangedParam(building, ParamVal, VarName2Change, MainPath, DataBaseInput, nbcase, LogFile=[]):
     #there is a loop file along the variable name to change and if specific ation are required it should be define here
     # if the variable to change are embedded into several layer of dictionnaries than there is a need to make checks and change accordingly to the correct element
     # here are examples for InternalMass impact using 'InternalMass' keyword in the VarName2Change list to play with the 'WeightperZoneArea' parameter
@@ -417,8 +457,6 @@ def setChangedParam(building, ParamVal, VarName2Change, MainPath, Buildingsfile,
             setattr(building, var, exttmass)
         elif 'MaxShadingDist' in var:
             building.MaxShadingDist = round(ParamVal[varnum], roundVal)
-            #building.shades = building.getshade(Buildingsfile[nbcase], Shadingsfile, Buildingsfile,LogFile,PlotOnly = False)
-            building.shades = building.getshade(nbcase, Buildingsfile, LogFile,PlotOnly=False)
         elif 'IntLoadCurveShape' in var:
             building.IntLoadCurveShape = max(round(ParamVal[varnum], roundVal),1e-6)
             building.IntLoad = building.getIntLoad(MainPath, LogFile)
@@ -545,8 +583,6 @@ def ManageGlobalPlots(BldObj,IdfObj,FigCenter,WindSize, PlotBldOnly,nbcase = [],
                 adiabsurf.append(s.Name[:s.Name.index('_')])
                 nbadiab += 1
     RoofSpecialColor = "firebrick"
-    if nbcase in [39]:
-        RoofSpecialColor = 'limegreen'
     IdfObj.view_model(test= True if PlotBldOnly+LastBld>0 else False, FigCenter=FigCentroid, WindSize=2 * WindSize,
                        RoofSpecialColor=RoofSpecialColor)
     return FigCenter,WindSize

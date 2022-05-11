@@ -8,10 +8,10 @@ import CoreFiles.Envelope_Param as Envelope_Param
 import CoreFiles.GeneralFunctions as GrlFct
 import itertools
 
-def BuildBloc(idf,perim,bloc,bloc_coord,Height,nbstories,nbBasementstories,BasementstoriesHeight,Perim_depth):
+def BuildBloc(idf,perim,bloc,bloc_coord,Height,nbstories,nbBasementstories,BasementstoriesHeight,Perim_depth,altitude):
     if perim:
         idf.add_block(
-            name='Build' + str(bloc),
+            name='Build' + str(bloc) + '_Alt'+str(altitude),
             coordinates=bloc_coord,
             height=Height,
             num_stories=nbstories + nbBasementstories,
@@ -23,9 +23,10 @@ def BuildBloc(idf,perim,bloc,bloc_coord,Height,nbstories,nbBasementstories,Basem
         )
     else:
         idf.add_block(
-            name='Build' + str(bloc),
+            name='Build' + str(bloc) + '_Alt'+str(altitude),
             coordinates=bloc_coord,
             height=Height,
+            altitude = altitude,
             num_stories=nbstories + nbBasementstories,
             # building.nbfloor+building.nbBasefloor, #it defines the numbers of zones !
             below_ground_stories=nbBasementstories,
@@ -44,9 +45,10 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False,DebugM
         BasementstoriesHeight = 2.5 if FloorZoning else 2.5*building.nbBasefloor
         Perim_depth = 3 #the perimeter depth is fixed to 3m and is reduced if some issue are encountered.
         matched = False
+        altitude = building.BlocAlt[bloc] if ForPlots==1 else building.BlocAlt[bloc]-min(building.BlocAlt)
         while not matched:
             try:
-                BuildBloc(idf, perim, bloc, bloc_coord, Height, nbstories, nbBasementstories, BasementstoriesHeight, Perim_depth)
+                BuildBloc(idf, perim, bloc, bloc_coord, Height, nbstories, nbBasementstories, BasementstoriesHeight, Perim_depth,altitude)
                 matched = True
             except:
                 Perim_depth = Perim_depth/2
@@ -59,7 +61,8 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False,DebugM
 
     # the shading walls around the building are created with the function below
     # these are used in the function that defines the boundary conditions
-    createShadings(building, idf)
+    #before ggoing trhough the matching surface identification, we need to make shading surfaces being adjanacencies...
+    createAdjacentWalls(building, idf)
     #this function enable to create all the boundary conditions for all surfaces
     try:
         # import time
@@ -81,7 +84,7 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False,DebugM
     # it should thus be only the roof surfaces. Non convex internal zone are not concerned as Solar distribution is 'FullExterior'
     try:
         if not ForPlots:
-            split2convex(idf)
+            split2convex(idf,DebugMode,LogFile)
     except:
         msg ='[Error - Convex] The Split2convex function failed for this building....\n'
         if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
@@ -90,7 +93,7 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False,DebugM
 def createRapidGeomElem(idf,building):
     #envelop can be created now and allocated to the correct surfaces
     createEnvelope(idf, building)
-
+    createShadings(building, idf)
     #create parition walls
     #from EP9.2 there is a dedicated construction type (to be tried as well), but 'Fullexeterior' option is still required
     #see https://unmethours.com/question/42542/interior-air-walls-for-splitting-nonconvex-zones/
@@ -99,13 +102,28 @@ def createRapidGeomElem(idf,building):
     createAirwallsCstr(idf)
     return idf
 
-def createShadings(building,idf):
+def createAdjacentWalls(building,idf):
     for ii,sh in enumerate(building.shades):
-        if building.shades[sh]['distance'] <= building.GE['MaxShadingDist']:
+        if building.shades[sh]['distance'] == 0 and (building.shades[sh]['height']-min(building.BlocAlt))>0:
             idf.add_shading_block(
                 name='Shading_'+sh,
                 coordinates=building.shades[sh]['Vertex'], #[GeomElement['VertexKey']],
-                height=building.shades[sh]['height'],
+                height=building.shades[sh]['height']-min(building.BlocAlt),
+                )
+            #Because adding a shading bloc creates two identical surfaces, lets remove one to avoid too big input files
+            newshade = idf.idfobjects["SHADING:SITE:DETAILED"]
+            for i in newshade:
+                if i.Name in ('Shading_'+sh+'_2'):
+                    idf.removeidfobject(i)
+    return idf
+
+def createShadings(building,idf):
+    for ii,sh in enumerate(building.shades):
+        if building.shades[sh]['distance'] <= building.MaxShadingDist and building.shades[sh]['distance'] > 0 and  (building.shades[sh]['height']-min(building.BlocAlt))>0:
+            idf.add_shading_block(
+                name='Shading_'+sh,
+                coordinates=building.shades[sh]['Vertex'], #[GeomElement['VertexKey']],
+                height=building.shades[sh]['height']-min(building.BlocAlt),
                 )
             #Because adding a shading bloc creates two identical surfaces, lets remove one to avoid too big input files
             newshade = idf.idfobjects["SHADING:SITE:DETAILED"]
@@ -126,13 +144,13 @@ def createEnvelope(idf,building):
     Envelope_Param.createNewConstruction(idf, 'Project Heated1rstFloor Rev', 'Heated1rstFloor')
     # special loop to assign the construction that seperates the basement to the other storeis.
     for idx, zone in enumerate(idf.idfobjects["ZONE"]):
-        storey = int(zone.Name[zone.Name.find(
-            'Storey') + 6:])  # the name ends with Storey # so lets get the storey number this way
+        storey = int(zone.Name[zone.Name.find('Storey') + 6:])  # the name ends with Storey # so lets get the storey number this way
+        alt = float(zone.Name[zone.Name.find('_Alt') + 4:zone.Name.find('Storey')])
         sur2lookat = (s for s in zone.zonesurfaces if s.key not in ['INTERNALMASS'])
         for s in sur2lookat:
             if s.Surface_Type in 'ceiling' and storey == -1:  # which mean that we are on the basements just below ground
                 s.Construction_Name = 'Project Heated1rstFloor Rev'  #this will enable to reverse the construction for the cieling compared to the floor of the adjacent zone
-            if s.Surface_Type in 'floor' and storey == 0:  # which mean that we are on the first floors just above basement this states that whether or not there is basement zone, the floor slab is defined by this layer
+            if s.Surface_Type in 'floor' and storey == 0 and int(alt)==0:  # which mean that we are on the first floors just above basement this states that whether or not there is basement zone, the floor slab is defined by this layer
                 s.Construction_Name = 'Project Heated1rstFloor'
     #for all construction, see if some other material than default exist
     cstr = idf.idfobjects['CONSTRUCTION']
@@ -224,7 +242,7 @@ def createAirwallsCstr(idf):
     return idf
 
 
-def split2convex(idf):
+def split2convex(idf,DebugMode,LogFile):
     surlist = idf.idfobjects['BUILDINGSURFACE:DETAILED']
     idxi = []
     for i, j in enumerate(surlist):
@@ -270,7 +288,8 @@ def split2convex(idf):
                 nbmove += 1
                 if nbmove > len(coord2split):
                     TrianglesOK = True
-                    print('[Splitting Area Warning] The smallest surfaces remain below the threshold for all possible order combination')
+                    msg = '[Warning - Convex] The splitting surface process to make them all convex failed to find all surfaces above 0.1m2...\n'
+                    if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         stillleft = True
         while stillleft:
             mergeTrigle, stillleft = MergeTri(trigle)
@@ -294,7 +313,9 @@ def split2convex(idf):
                 Wind_Exposure=surf2treat.Wind_Exposure,
             )
             surftri.setcoords(new_coord)
-            if 'Roof' in surf2treat.Name and surftri.tilt == 180:
+            if 'roof' in surf2treat.Name.lower() and surftri.tilt == 180:
+                    surftri.setcoords(reversed(new_coord))
+            if 'floor' in surf2treat.Name.lower() and surftri.tilt == 0:
                     surftri.setcoords(reversed(new_coord))
         idf.removeidfobject(surf2treat)
     return idf

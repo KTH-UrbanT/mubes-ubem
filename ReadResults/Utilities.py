@@ -1,16 +1,118 @@
 #this file is just a tank of utilities for ploting stuff mainly.
 #It creates the figures and the plots
-import os
+import os,sys
 import pickle#5 as pickle
 #import pickle5
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import numpy as np
+import CoreFiles.GeneralFunctions as GrlFct
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn import metrics
 import pandas as pd
 
+def makePolyPlots(CaseChoices,Pool2Launch):
+    forced2D = False
+    if CaseChoices['DataBaseInput']: Need2LoadFile = False
+    else : Need2LoadFile = True
+    cpt = '--------------------'
+    cpt1 = '                    '
+    totalsize = len(Pool2Launch)
+    plot3d = False
+    for idx, Case in enumerate(Pool2Launch):
+        if Case['TotBld_and_Origin']:
+            if Need2LoadFile:
+                DataBaseInput = GrlFct.ReadGeoJsonFile(Case['keypath'], Case['CoordSys'], toBuildPool=False)
+                DataBase = DataBaseInput['Build']
+            else:
+                DataBaseInput = CaseChoices['DataBaseInput']
+                DataBase = DataBaseInput['Build']
+
+        if idx ==0:
+            if max(DataBase[0].geometry.poly3rdcoord) > 0 and not forced2D: plot3d = True
+            if not CaseChoices['MakePlotsPerBld']:
+                # fig = plt.figure(figsize=(100,100))
+                fig = plt.figure()
+                if plot3d: ax = plt.axes(projection="3d")
+                else: ax = fig.add_subplot(111)
+        done = (idx + 1 ) / totalsize
+        print('\r', end='')
+        ptcplt = '.' if idx % 2 else ' '
+        msg = cpt[:int(20 * done)] + ptcplt + cpt1[int(20 * done):] + str(round(100 * done, 1))
+        print('Figure being completed by ' + msg + ' %', end='', flush=True)
+        if CaseChoices['MakePlotsPerBld']:
+            fig = plt.figure()
+            if plot3d: ax = plt.axes(projection="3d")
+            else: ax = fig.add_subplot(111)
+        BldObj = DataBase[Case['BuildNum2Launch']]
+        coords = BldObj.geometry.coordinates
+        propreties = BldObj.properties
+        for i,poly in enumerate(coords):
+            if len(poly) > 1:
+                poly2plot = poly
+            else:
+                poly2plot = poly[0]
+            x, y = zip(*poly2plot)
+            if plot3d:
+                z = [BldObj.geometry.poly3rdcoord[i]]*len(x)
+                plt.plot(x, y,z, '-')
+            else:
+                plt.plot(x, y, '-')
+        if CaseChoices['MakePlotsPerBld'] or len(Pool2Launch)==1:
+            try : titlemsg = str(CaseChoices['BldIDKey']) + ' : ' + str(
+                        propreties[CaseChoices['BldIDKey']])
+            except: titlemsg = 'No BldId found in the GeoJSON'
+            plt.title(titlemsg + ' / Building num in the file : ' + str(
+                        Case['BuildNum2Launch']) +
+                              '\n ' + str(len(coords)) + ' polygons found')
+            if plot3d: setPolygonPlotAxis(ax)
+            else: ax.set_aspect('equal', adjustable='box')
+        if CaseChoices['MakePlotsPerBld'] and len(Pool2Launch)>1 : plt.show()
+    if plot3d: setPolygonPlotAxis(ax)
+    else: ax.set_aspect('equal', adjustable='box')
+    if len(Pool2Launch)==1 and plot3d:
+        makeMultiPolyplots(DataBase[Pool2Launch[0]['BuildNum2Launch']])
+    # fig.savefig('C:\\Users\\xav77\\Documents\\FAURE\\DataBase\\France\\Stockbis.eps', format='eps', dpi=1200)
+    plt.show()
+
+def makeMultiPolyplots(BldObj):
+    coords = BldObj.geometry.coordinates
+    h = np.unique([round(val,5) for val in BldObj.geometry.poly3rdcoord])
+    for i in range(len(h)):
+        plt.figure(i+2)
+    plt.figure(i+3)
+    for i, poly in enumerate(coords):
+        fignum = np.where(h == round(BldObj.geometry.poly3rdcoord[i],5))[0]+2
+        makeplot(fignum,poly,title = 'Horizontal polygon found at altitude : '+str(round(BldObj.geometry.poly3rdcoord[i],5)))
+        makeplot(len(h)+2,poly,title = 'All horizontal polygons from global upperview')
+
+def makeplot(fignum,poly,title = ''):
+    fig = plt.figure(fignum)
+    ax = fig.add_subplot(111)
+    if len(poly) > 1:
+        poly2plot = poly
+    else:
+        poly2plot = poly[0]
+    x, y = zip(*poly2plot)
+    # z = [BldObj.geometry.poly3rdcoord[i]] * len(x)
+    plt.plot(x, y,'.-')#, z, '.-')
+    plt.title(title)
+    ax.set_aspect('equal', adjustable='box')
+    #setPolygonPlotAxis(ax)
+
+
+def setPolygonPlotAxis(ax):
+    xlim = ax.get_xlim3d()
+    ylim = ax.get_ylim3d()
+    Rangex = xlim[1]-xlim[0]
+    Rangey = ylim[1] - ylim[0]
+    zlim = ax.get_zlim3d()
+    Rangez = zlim[1] - zlim[0]
+    range = max(Rangex,Rangey)
+    ax.set_xlim3d([xlim[0]-(range-Rangex)/2,xlim[1]+(range-Rangex)/2])
+    ax.set_ylim3d([ylim[0] - (range - Rangey) / 2, ylim[1] + (range - Rangey) / 2])
+    ax.set_zlim3d([zlim[0] - (range - Rangez) / 2, zlim[1] + (range - Rangez) / 2])
 
 def CountAbovethreshold(Data,threshold):
     #give the length of data above a threshold, for hourly Data, it is number of Hrs above the threshold
@@ -378,20 +480,21 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[],BldList = []):
             Res['DB_Surf'].append(BuildObj.DB_Surf)
         except:
             Res['DB_Surf'].append(BuildObj.surface)
+            #Res['DB_Surf'].append(BuildObj.ATemp)
         eleval = 0
         for x in BuildObj.EPCMeters['ElecLoad']:
             if BuildObj.EPCMeters['ElecLoad'][x]:
                 eleval += BuildObj.EPCMeters['ElecLoad'][x]
-        Res['EPC_Elec'].append(eleval/BuildObj.DB_Surf if BuildObj.DB_Surf!=0 else 0)
+        Res['EPC_Elec'].append(eleval/Res['DB_Surf'][-1] if Res['DB_Surf'][-1]!=0 else 0)
         heatval = 0
         for x in BuildObj.EPCMeters['Heating']:
             heatval += BuildObj.EPCMeters['Heating'][x]
-        Res['EPC_Heat'].append(heatval/BuildObj.DB_Surf if BuildObj.DB_Surf!=0 else 0)
+        Res['EPC_Heat'].append(heatval/Res['DB_Surf'][-1] if Res['DB_Surf'][-1]!=0 else 0)
         coolval = 0
         for x in BuildObj.EPCMeters['Cooling']:
             coolval += BuildObj.EPCMeters['Cooling'][x]
-        Res['EPC_Cool'].append(coolval/BuildObj.DB_Surf if BuildObj.DB_Surf!=0 else 0)
-        Res['EPC_Tot'].append((eleval+heatval+coolval)/BuildObj.DB_Surf if BuildObj.DB_Surf!=0 else 0)
+        Res['EPC_Cool'].append(coolval/Res['DB_Surf'][-1] if Res['DB_Surf'][-1]!=0 else 0)
+        Res['EPC_Tot'].append((eleval+heatval+coolval)/Res['DB_Surf'][-1] if Res['DB_Surf'][-1]!=0 else 0)
 
 #forthe old way of doing things and the new paradigm for global results
         try:
