@@ -15,6 +15,7 @@ def BuildBloc(idf,perim,bloc,bloc_coord,Height,nbstories,nbBasementstories,Basem
             coordinates=bloc_coord,
             height=Height,
             num_stories=nbstories + nbBasementstories,
+            altitude=altitude,
             # building.nbfloor+building.nbBasefloor, #it defines the numbers of zones !
             below_ground_stories=nbBasementstories,
             below_ground_storey_height=BasementstoriesHeight if nbBasementstories > 0 else 0,

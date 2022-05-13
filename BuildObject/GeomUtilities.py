@@ -126,7 +126,7 @@ def CleanPoly(poly,DistTol,roundVal):
     polycoor = removeEdge(polycoor, DistTol)
     if len(polycoor)<3: return polycoor, []
     #letscheck for balcony effect (triangle form removing formerly small edges)
-    polycoor = AvoidBalconyEffect(polycoor, DistTol)
+    polycoor = AvoidBalconyEffectNew(polycoor, DistTol)
     if len(polycoor)<3: return polycoor, []
     # lets removes aligned edges only checked from angle
     polycoor = removeAlignedEdges(polycoor)
@@ -149,6 +149,27 @@ def AvoidBalconyEffect(poly,DistTol):
             if getDistance(nodei[1],nodej[1])<DistTol and (nodej[0]-nodei[0])<3:
                 node2remove.append(nodei[0])
                 node2remove.append(nodej[0])
+                break
+        if node2remove:
+            poly = [node for idx,node in enumerate(poly) if idx not in node2remove]
+        else:
+            finished = True
+    return poly
+
+def AvoidBalconyEffectNew(poly,DistTol):
+    finished = False
+    while not finished:
+        node2remove = []
+        for idx,node in enumerate(poly):
+            pt0 = poly[-1 if idx ==0 else idx-1]
+            pt1 = node
+            pt2 = poly[(idx+1)%len(poly)]
+            if getDistance(pt0,pt2)<DistTol:
+                node2remove.append(idx)
+                node2remove.append((idx+1)%len(poly))
+                break
+            elif LineString([pt0,pt1]).distance(Point(pt2)) < DistTol or LineString([pt1,pt2]).distance(Point(pt0)) < DistTol:
+                node2remove.append(idx)
                 break
         if node2remove:
             poly = [node for idx,node in enumerate(poly) if idx not in node2remove]
