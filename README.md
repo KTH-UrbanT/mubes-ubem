@@ -21,6 +21,7 @@ MUBES UBEM is a multi-platform framework that can be run on Windows, Mac or Linu
 4. Install the required Python packages provided in the **requirements.txt** file:
 
 `pip install -r requirements.txt`
+
 5. Rename the [env.default.yml](default/config/env.default.yml) in [default/config](default/config/) folder into env.yml and change the line with a path to EnergyPlus to your local one: 
 
 `PATH_TO_ENERGYPLUS : C:/EnergyPlusV9-1-0`
