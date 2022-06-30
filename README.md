@@ -33,7 +33,7 @@ The portability of FMUs (use at another computer than the one used to generate t
 ⚠️ On Windows 10, a time delay had to be introduced in the original FMU toolkit code to ensure that the intermediate files are removed and the FMU can finish properly (https://github.com/lbl-srg/EnergyPlusToFMU/issues/54).
 
 ## Examples
-You can get started through running the sample scripts provided in the [examples](examples) folder.
+You can get started through running the sample scripts provided in the [examples](examples/examples.md) folder.
 
 ## Documentation
 More details on the structure of UBEM can be found  [here](docs/documentation.md).
