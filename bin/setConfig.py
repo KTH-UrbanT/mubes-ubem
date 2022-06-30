@@ -187,8 +187,9 @@ def getConfig(App = ''):
         ConfigFromArg, Case2Launch, ShadeLim = Read_Arguments(App = App)
     else:
         ConfigFromArg, Case2Launch = Read_Arguments(App = App)
-    config = read_yaml(os.path.join(os.path.dirname(os.getcwd()),'CoreFiles','DefaultConfig.yml'))
-    configUnit = read_yaml(os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfigKeyUnit.yml'))
+    config = read_yaml(os.path.join(os.path.dirname(os.getcwd()),'CoreFiles', '../default/config/DefaultConfig.yml'))
+    configUnit = read_yaml(os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles',
+                                        '../default/config/DefaultConfigKeyUnit.yml'))
     geojsonfile = False
     if Case2Launch:
         localConfig4Path, filefound, msg = check4localConfig(os.getcwd())

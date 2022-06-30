@@ -9,7 +9,7 @@ import re
 path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 sys.path.append(path2addgeom)
 #add the reauired path for all the above folder
-sys.path.append('..')
+sys.path.append('')
 MUBES_Paths = os.path.normcase(os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'MUBES_UBEM'))
 sys.path.append(MUBES_Paths)
 

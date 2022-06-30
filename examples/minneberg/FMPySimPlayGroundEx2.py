@@ -12,7 +12,7 @@ from fmpy.fmi2 import fmi2OK
 from fmpy.simulation import instantiate_fmu
 path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 sys.path.append(path2addgeom)
-sys.path.append('..')
+sys.path.append('../..')
 import shutil
 import pickle
 import time as timedelay
