@@ -6,7 +6,7 @@ import os, sys, platform
 path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 sys.path.append(path2addgeom)
 #add scripts from the project as well
-sys.path.append("..")
+sys.path.append("../..")
 from subprocess import check_call
 from geomeppy import IDF
 import pickle#5 as pickle
