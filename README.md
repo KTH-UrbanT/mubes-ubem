@@ -28,13 +28,13 @@ __examples__ : contains contains several examples that can be first ran in order
 
 
 ## Run simulation case
-__First__ __thing__ : Change the path to EnergyPlus and (if needed) to the Data (geojson files) in the env.yml file (creqated form env.default.yml).  
+__First__ __thing__ : Change the path to EnergyPlus and (if needed) to the Data (geojson files) in the env.yml file (created from env.default.yml).  
 
 *__python__ __mubes_run.py__* will launch the simulation using the *DefaultConfig.yml* file is in __default\config__.    
 *__python__ __mubes_run.py__ __-yml__ __path_to_config.yml__* will launch the simulation using the information given in the path_to_config.yml. The latter can contain only the changes wanted from the DefaultConfig.yml.  
 *__python__ __mubes_run.py__ __-CONFIG__ __{JSON Format}__* will launch the simulation using the information given in the {JSON Format} as arguments. The latter can contain only the changes wanted from the DefaultConfig.yml.  
 
-Examples are given in the __examples__ folder, just launch using the wording above with the path to each yml example file.  
+Examples are given in the __examples__ folder, just launch each example using the wording above with the path to each yml example file.  
 
 __Note__ : *ConfigFile.yml* are systematically saved in the result folder and can thus be used afterward with the *-yml* argument
 
