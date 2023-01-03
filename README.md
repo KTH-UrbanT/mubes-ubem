@@ -22,32 +22,31 @@ The portability of FMUs (used on another computer than the one used to generate 
   
 ## Folder organization
 The MUBES_UBEM main folder contains several subfolders:  
-__CoreFile__  : contains all the core python scripts for the several levels of the building design process.  
-__ExternalFiles__  : contains commun external files that one would use for all the buildings considered in the process. It currently contains the times series of cold water input temperature for the Domestic Hot Water needs as well as the water taps in l/min. The latter is an output from an other packages ([StROBe](https://github.com/open-ideas/StROBe)) that enables to create stochastics outputs for residential occupancy.    
-__BuildObject__  : contains the building class object, filters to skip building from the input file and some geometric utilities used.  
-__ModelerFolder__ : contains the *runMUBES.py* file as well as two examples of FMU simulations. An example of geojson is also provided. *MakeShadowingWallFile.py* enables to create a Json input file for further shadowing effect consideration.  
-__ReadResults__ : contains one template to read the results and some functions for post-processing in the Utilities.py file.  
+__bin__  : contains all the core python scripts organized in different field of concern. The main running function is mubes_run.py.  
+__default__  : contains the default *.yml configuration files. the env.default can be copied paste and renamed env.yml to change the pathways according to the current computer. It also contains the times series of cold water input temperature for the Domestic Hot Water needs as well as the water taps in l/min. The latter is an output from an other packages ([StROBe](https://github.com/open-ideas/StROBe)) that enables to create stochastics outputs for residential occupancy.    
+__examples__ : contains contains several examples that can be first ran in order to get a global insight of what the plateform can do. Just launch the following command line : python.exe ~\bin\mubes_run.py ~\examples\Ex-***. It uses the data given in the ~\examples\minneberg folder)  
+
 
 ## Run simulation case
-__First__ __thing__ : Change the path to EnergyPlus and (if needed) to the Data (geojson files).  
-Simply change the path in the *LocalConfig_Template.yml* file in __ModelerFolder__ and give it another name (for further updates).  
-(Note: see *CoreFile/DefaultConfig.yml* to see all possible changes in  *xxx.yml* files).  
+__First__ __thing__ : Change the path to EnergyPlus and (if needed) to the Data (geojson files) in the env.yml file (creqated form env.default.yml).  
 
-*__python__ __runMUBES.py__* will launch the simulation using the *DefaultConfig.yml* modified by *LocalConfig.yml* file is in __ModelerFolder__.   
-*__python__ __runMUBES.py__ __-yml__ __path_to_config.yml__* will launch the simulation using the information given in the path_to_config.yml. The latter can contain only the changes wanted from the DefaultConfig.yml.  
-*__python__ __runMUBES.py__ __-CONFIG__ __{JSON Format}__* will launch the simulation using the information given in the {JSON Format} as arguments. The latter can contain only the changes wanted from the DefaultConfig.yml.  
+*__python__ __mubes_run.py__* will launch the simulation using the *DefaultConfig.yml* file is in __default\config__.    
+*__python__ __mubes_run.py__ __-yml__ __path_to_config.yml__* will launch the simulation using the information given in the path_to_config.yml. The latter can contain only the changes wanted from the DefaultConfig.yml.  
+*__python__ __mubes_run.py__ __-CONFIG__ __{JSON Format}__* will launch the simulation using the information given in the {JSON Format} as arguments. The latter can contain only the changes wanted from the DefaultConfig.yml.  
+
+Examples are given in the __examples__ folder, just launch using the wording above with the path to each yml example file.  
 
 __Note__ : *ConfigFile.yml* are systematically saved in the result folder and can thus be used afterward with the *-yml* argument
 
-__Outputs_Template.txt__ : This file proposes a list of available outputs from EP. It has been build from a .rdd file from EP. The required outputs should be indicated in this file. It also indicates at which frequency the modeler wants his outputs.  
+__Outputs_Template.txt__  in __bin\outputs__ : This file proposes a list of available outputs from EP. It has been build from a .rdd file from EP. The required outputs should be indicated in this file. It also indicates at which frequency the modeler wants his outputs.  
 
 ## Creating a shadowing wall file
-*__python__ __MakeShadowingWallFile.py__* will built a .json file out of the geojson files in the same location, given in the *LocalConfig.yml*.  
+*__python__ __MakeShadowingWallFile.py__* will built a .json file out of the geojson files in the same location, given in the *Config.yml*.  
 *__python__ __MakeShadowingWallFile.py__ __-yml__ __path_to_config.yml__* will built a .json file out of the geojson files in the same location, given in the *path_to_config.yml*.  
 *__python__ __MakeShadowingWallFile.py__ __-geojson__ __path_to_geojson.geojson__* will built a .json file out of the geojson files in the same location.  
 Extra argument can be given to choose shadowing resolution with simple neighborhood, extended neighborhood (higher buildings are considered even if behind others), and all surfaces from all buildings.  
 Can be added to the above command line :  *__-ShadeLimits__ __SimpleSurf__* or *__-ShadeLimits__ __AllSurf__* .  The default option is extended with higher buildings considered.  
-The more shadowing walls are considered the more warnings can be raised by EnergyPlus.  
+The more shadowing walls are considered the more warnings can be raised by EnergyPlus afterward.  
 
 ## FMU examples
 __FMPySimPlayGroundEx1.py__ and __FMPySimPlayGroundEx2.py__: it uses FMPy package and as been successfully tested for controlling temperature's setpoints, internal loads, or watertaps at each time steps of the simulation. For one who'd like to make co-simulation, a deep understanding is still needed on the EP side as inputs and ouputs are to be defined.  
@@ -58,15 +57,6 @@ Ex2 : proposes a couple temperature setpoints and water taps controls for each b
 *__python__ __FMPySimPlayGroundEx1.py.py__* will load the fmu and launch simulation from CaseName given in the *LocalConfig.yml*.  
 *__python__ __FMPySimPlayGroundEx1.py__ __-yml__ __path_to_config.yml__* will load the fmu and launch simulation from CaseName given in the *path_to_config.yml*.  
 *__python__ __FMPySimPlayGroundEx1.py__ __-Case__ __CaseName__* will load the fmu and launch simulation from CaseName.  
-
-
-## Reading the Ouputs  
-The __ReadResults__ folder contains also a template for post-processing the results :  
-*ReadOutputs_Template.py* proposes a basic post-processing stage including reading the data, ploting the areas of footprint and the energy needs as well as some times series for specific building number. Its works for simulation done with or without FMUs.  
-*Utilities.py* contains several useful functions for the post-processing stage. The *getData()* is highly helpful. It gathers all the pickle files present in a directory into one dictionnary. It can deal with several CaseNames and overplots results for same Building's Ids by simply appending the path's list.   
-*__python__ __ReadOutputs_Template.py__* will load the results from CaseName given in the *LocalConfig.yml*.  
-*__python__ __ReadOutputs_Template.py__ __-yml__ __path_to_config.yml__* will load the results from CaseName given in the *path_to_config.yml*.  
-*__python__ __ReadOutputs_Template.py__ __-Case__ __[CaseName1,CaseName2,...]__* will load the results from CaseName1 and CaseName2.    
   
 
 ## Engine structure
