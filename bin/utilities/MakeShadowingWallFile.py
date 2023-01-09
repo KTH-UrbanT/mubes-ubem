@@ -18,7 +18,7 @@ sys.path.append(MUBES_Paths)
 import core.GeneralFunctions as GrlFct
 from geomeppy.geom.polygons import Polygon2D
 import core.setConfig as setConfig
-from building_geometry.BuildingObject import Building
+from building_geometry.BuildingObject import Building,getBldIDWhenError
 import numpy as np
 import json
 from shapely.geometry import Polygon, LineString, Point
@@ -61,11 +61,15 @@ def CreatePolygonEnviro(GlobKey,config,WithBackSide = True):
         Size = len(DataBaseInput['Build'])
         print('Studying buildings file : '+os.path.basename(keyPath['Buildingsfile']))
         print('Urban Area under construction with:')
+        bldNumidx = 0
         for bldNum, Bld in enumerate(DataBaseInput['Build']):
             print('\r', end='')
             print('--building '+str(bldNum+1) +' / '+str(Size), end='', flush=True)
             try: BldObj = Building('Bld'+str(bldNum), DataBaseInput, bldNum, SimDir,keyPath['Buildingsfile'],LogFile=[],PlotOnly=True, DebugMode=False)
-            except: continue
+            except:
+                BldID = getBldIDWhenError(DataBaseInput, bldNum)
+                print('\nBuilding ', BldID['BldIDKey'] , ' : ', BldID[BldID['BldIDKey']], ' is encountering an issue in its geometry, please check the corresponding input data. It will be ignored in the following')
+                continue
             BldObj = GrlFct.MakeAbsoluteCoord(BldObj,roundfactor=4)
             BldID = BldObj.BuildID[BldObj.BuildID['BldIDKey']]
             if WithBackSide:
@@ -74,16 +78,17 @@ def CreatePolygonEnviro(GlobKey,config,WithBackSide = True):
                     PolygonEnviro[nbfile]['FootPrint'].append(bloc)
                     PolygonEnviro[nbfile]['Bld_Height'].append(BldObj.BlocHeight[blocnum]+BldObj.BlocAlt[blocnum])
                     PolygonEnviro[nbfile]['Bld_ID'].append(BldID)
-                    PolygonEnviro[nbfile]['BldNum'].append(bldNum)
+                    PolygonEnviro[nbfile]['BldNum'].append(bldNumidx)
                     PolygonEnviro[nbfile]['BlocNum'].append(blocnum)
             else:
                 Edges = getBldEdgesAndHeights(BldObj, roundfactor=4)
                 PolygonEnviro[nbfile]['AggregFootPrint'].append(BldObj.AggregFootprint)
                 PolygonEnviro[nbfile]['Bld_ID'].append(BldID)
-                PolygonEnviro[nbfile]['BldNum'].append(bldNum)
+                PolygonEnviro[nbfile]['BldNum'].append(bldNumidx)
                 PolygonEnviro[nbfile]['BlocNum'].append(0)
                 PolygonEnviro[nbfile]['Bld_Height'].append(max(BldObj.BlocHeight)+min(BldObj.BlocAlt))
-            Edges2Store[bldNum] = Edges
+            Edges2Store[bldNumidx] = Edges
+            bldNumidx += 1
         print('\nUrban area constructed')
         PolygonEnviro[nbfile]['EdgesAndHeights'] = Edges2Store
         TotalSimDir.append(SimDir)

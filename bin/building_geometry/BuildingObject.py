@@ -125,6 +125,20 @@ class BuildingList:
         }
         )
 
+def getBldIDWhenError(DataBaseInput,nbcase):
+    Buildingsfile = DataBaseInput['Build']
+    DB = Buildingsfile[nbcase]
+    config = setConfig.read_yaml('ConfigFile.yml')
+    GE = config['3_SIM']['GeomElement']
+    BuildID = {}
+    Id, BuildID['BldIDKey'] = getDBValue(DB.properties, GE['BuildIDKey'])
+    if not BuildID['BldIDKey']:
+        BuildID['BldIDKey'] = 'NoBldID'
+        BuildID['NoBldID'] = 'NoBldID'
+    else:
+        BuildID[BuildID['BldIDKey']] = str(Id)
+    return BuildID
+
 class Building:
     def __init__(self,name,DataBaseInput,nbcase,MainPath,BuildingFilePath,LogFile,PlotOnly,DebugMode):
         import time

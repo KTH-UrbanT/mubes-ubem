@@ -10,7 +10,7 @@ import building_geometry.BuildingObject as BldFct
 
 def is_tool(name):
 #it will return the path of the executable or None if not installed
-  return distutils.spawn.find_executable(name) is not None
+    return distutils.spawn.find_executable(name) is not None
 
 def read_yaml(file_path):
     with open(file_path, "r") as f:
