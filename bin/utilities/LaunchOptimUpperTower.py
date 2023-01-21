@@ -24,7 +24,7 @@ import outputs.output_utilities as Utilities
 
 #this function will launch the optimization pso  algorithm.
 #lets first get the playground : base of building that will have an upper tower to be tuned
-file = os.path.join(MUBES_Paths,'bin','UpperTowerss.pickle')
+file = os.path.join(MUBES_Paths,'bin','UpperTower.pickle')
 import pickle
 with open(file, 'rb') as handle:
     PlayGround = pickle.load(handle)
@@ -73,13 +73,12 @@ def grabParameters(x):
     return param
 
 def constraints(x):
-    #this function gives the constraints to each parameter to be tuned
+    #this function gives the constrain to each parameter to be tuned
     #variable have their own limits given in the bounds
     #other constrains can be given here as function using the global vector of parameter x
     #the below proposed constrain is to be above a minimum of total floor are
-    # the value if 110 000 square meter is proposed (to host at least 1000 family)
-    #as tower can have different height, the constrains is expresse on a volume of 3*110 000 cube meter
-    #more should also lead to more shadowing effect,so we'llk see how the process is optimised
+    #as tower can have different height, the constrain is expresse on a volume
+    #more should also lead to more shadowing effect,so we'll see how the process is optimised
     param = grabParameters(x)
     TowerOK = {}
     totfloor = 0
@@ -126,9 +125,9 @@ def CostFunction(x):
     # this cost function consists in launching MUBES for the entire set of buildings,
     # grab the results afterward and compute the total energy needs at the district scale and the solar radiation from
     # window in total and for each building
-    # the x vectore consist in all the paremter specified to be tuned.
+    # the x vector consist in all the parameters specified to be tuned.
     # the first thing is to compute the new tower out if these
-    # with runMUBES.py, the entire geojson file given will be considered and extra tower from the UpperTowerfile compute
+    # with MUBES_run.py, the entire geojson file given will be considered and extra tower from the UpperTowerfile compute
     currentPath = os.getcwd()
     param = grabParametersnew(x)
     UpperTower = {}
@@ -165,7 +164,7 @@ def CostFunction(x):
             "WeatherData/CAN_ON_Toronto.716240_CWEC.epw", "Latitude": 43.67,"Longitude": -79.63,"Time_Zone": -5.0,"Elevation": 173.0}}}''')
     check_call(cmdline, cwd=os.path.join(MUBES_Paths,'bin'))
     Res_Path = os.path.join(Path2results,'OptimShadow','Sim_Results')
-    extraVar = ['HeatedArea'] #some toher could be added for the sake fo cost_function
+    extraVar = ['HeatedArea'] #some others could be added for the sake of cost_function
     Res = Utilities.GetData(Res_Path, extraVar)
     SolarBeamOnRoofs = 0
     SolarBeamOnRoofsList = []

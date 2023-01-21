@@ -6,8 +6,8 @@ sys.path.append(path2addgeom)
 # sys.path.append(path2addFMU)
 import numpy as np
 sys.path.append(os.path.dirname(os.getcwd()))
-import Utilities
-import CoreFiles.setConfig as setConfig
+import output_utilities as Utilities
+import core.setConfig as setConfig
 
 
 # the main idea of this file is to present some way for analyzing the data.
@@ -240,32 +240,32 @@ def getPathList(config):
     path = []
     Names4Plots = []
     for CaseName in CaseNames:
-        congifPath = os.path.abspath(os.path.join(config['0_APP']['PATH_TO_RESULTS'],
+        configPath = os.path.abspath(os.path.join(config['0_APP']['PATH_TO_RESULTS'],
                                                   CaseName))
-        if not os.path.exists(congifPath):
+        if not os.path.exists(configPath):
             print('Sorry, the folder '+CaseName+' does not exist...use -Case or -yml option or change your localConfig.yml')
             sys.exit()
-        if os.path.exists(os.path.join(congifPath,'Sim_Results')):
-            path.append(os.path.join(congifPath,'Sim_Results'))
+        if os.path.exists(os.path.join(configPath,'Sim_Results')):
+            path.append(os.path.join(configPath,'Sim_Results'))
             Names4Plots.append(CaseName)
         else:
             if len(CaseNames)>1:
                 print(
                     'Sorry, but CaseNames '+str(CaseNames)+' cannot be aggregated because all or some contains several subcases')
                 sys.exit()
-            liste = os.listdir(congifPath)
+            liste = [f for f in os.listdir(configPath) if os.path.isdir(os.path.abspath(f))]
             for folder in liste:
-                path.append(os.path.join(congifPath,folder,'Sim_Results'))
+                path.append(os.path.join(configPath,folder,'Sim_Results'))
                 Names4Plots.append(CaseName + '/' + folder)
     return path,Names4Plots,CaseNames
 
 if __name__ == '__main__' :
 
     ConfigFromArg,CaseNameArg = Read_Arguments()
-    config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfig.yml'))
+    config = setConfig.read_yaml(os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'default','config', 'DefaultConfig.yml'))
     configUnit = setConfig.read_yaml(
-        os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfigKeyUnit.yml'))
-    LocalConfigPath = os.path.join(os.path.dirname(os.getcwd()),'ModelerFolder')
+        os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'default', 'config','DefaultConfigKeyUnit.yml'))
+    LocalConfigPath = os.getcwd() #this can be changed if specific folder to consider is known
     localConfig, filefound, msg = setConfig.check4localConfig(LocalConfigPath)
     if msg: print(msg)
     config, msg = setConfig.ChangeConfigOption(config, localConfig)
@@ -288,21 +288,12 @@ if __name__ == '__main__' :
     print('[Studied Results Folder] '+str(Names4Plots))
     #Names (attributes) wanted to be taken in the pickle files for post-processing. The time series are agrregated into HeatedArea, NonHeatedArea and OutdoorSite
     extraVar=['AirRecovEff',"IntLoadCurveShape","wwr","EnvLeak","setTempLoL","AreaBasedFlowRate","WindowUval","WallInsuThick",'RoofInsuThick','BlocHeight','BlocNbFloor','HeatedArea','BlocFootprintArea','height','MaxShadingDist']
-    #because we can have several path for several studies we want to overplot.
+    #path can be define in hard for specific use:
+    # path = ['C:/Users/FAURE/Documents/prgm_python/KTH_Noah/ForTest']
+    # CaseNames = 'Test'
 
-    #Path can be written in hard for specific test
-    path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\Hammarby2012\\Sim_Results']
-    #path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\tutu\\Sim_Results')
-    path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\Hammarby2021\\Sim_Results')
-    path.append(
-        'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\Hammarby2012Epw2021\\Sim_Results')
-    path.append(
-        'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\Hammarby2021Epw2012\\Sim_Results')
 
-    CaseNames = ['2012','2021','2012b','2021b']
-    #bldliste = [473,28]
     Names4Plots = CaseNames
-
     Res = {}
     TimeSerieList=[]
     TimeSerieUnit = []

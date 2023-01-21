@@ -53,7 +53,7 @@ def CreatePolygonEnviro(GlobKey,config,WithBackSide = True):
             documents = yaml.dump(config, file)
         PolygonEnviro[nbfile] = {'Bld_ID': [], 'EdgesAndHeights': [], 'Bld_Height': [],'BlocNum':[],
                             'AggregFootPrint':[],'FootPrint': [], 'BldNum': [], 'WindowSize': [],
-                            'Centroid': []}
+                            'Centroid': [], 'BlocSurf': []}
         PolygonEnviro[nbfile]['PathName'] = keyPath['Buildingsfile']
         Edges2Store = {}
         NewEdges2Store = {}
@@ -80,6 +80,7 @@ def CreatePolygonEnviro(GlobKey,config,WithBackSide = True):
                     PolygonEnviro[nbfile]['Bld_ID'].append(BldID)
                     PolygonEnviro[nbfile]['BldNum'].append(bldNumidx)
                     PolygonEnviro[nbfile]['BlocNum'].append(blocnum)
+                    PolygonEnviro[nbfile]['BlocSurf'].append(BldObj.BlocFootprintArea[blocnum]*BldObj.BlocNbFloor[blocnum])
             else:
                 Edges = getBldEdgesAndHeights(BldObj, roundfactor=4)
                 PolygonEnviro[nbfile]['AggregFootPrint'].append(BldObj.AggregFootprint)
@@ -87,9 +88,11 @@ def CreatePolygonEnviro(GlobKey,config,WithBackSide = True):
                 PolygonEnviro[nbfile]['BldNum'].append(bldNumidx)
                 PolygonEnviro[nbfile]['BlocNum'].append(0)
                 PolygonEnviro[nbfile]['Bld_Height'].append(max(BldObj.BlocHeight)+min(BldObj.BlocAlt))
+                PolygonEnviro[nbfile]['BlocSurf'].append(BldObj.BlocFootprintArea*BldObj.BlocNbFloor)
             Edges2Store[bldNumidx] = Edges
             bldNumidx += 1
         print('\nUrban area constructed')
+        print('\nFor a total floor Area of ',round(sum(PolygonEnviro[nbfile]['BlocSurf'],0)), ' m²')
         PolygonEnviro[nbfile]['EdgesAndHeights'] = Edges2Store
         TotalSimDir.append(SimDir)
     return PolygonEnviro,TotalSimDir
