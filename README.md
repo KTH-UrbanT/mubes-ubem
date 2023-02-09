@@ -69,7 +69,7 @@ The paradigm of simulation engine is to automate simulation on several different
 ## Credits
 This work is developed within KTH/SEED/RIE/Urban Team, funded by MUBES' project.  
 It has been developed with passion and is still in progress with passion.  
-Hope you'll enjoy :)
+Hope you'll enjoy :) !
 
 ## Citation
 Faure, X.; Johansson, T.; Pasichnyi, O. The Impact of Detail, Shadowing and Thermal Zoning Levels on Urban Building Energy Modelling (UBEM) on a District Scale. Energies 2022, 15, 1525. https://doi.org/10.3390/en15041525
