@@ -260,15 +260,20 @@ def getPathList(config):
     return path,Names4Plots,CaseNames
 
 if __name__ == '__main__' :
-
+    defaultConfigPath = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'default','config')
     ConfigFromArg,CaseNameArg = Read_Arguments()
-    config = setConfig.read_yaml(os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'default','config', 'DefaultConfig.yml'))
-    configUnit = setConfig.read_yaml(
-        os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'default', 'config','DefaultConfigKeyUnit.yml'))
+    config = setConfig.read_yaml(os.path.join(defaultConfigPath, 'DefaultConfig.yml'))
+    configUnit = setConfig.read_yaml(os.path.join(defaultConfigPath,'DefaultConfigKeyUnit.yml'))
+    #lets get the environment variable and try if there is a new made one
+    try: env = setConfig.read_yaml(os.path.join(defaultConfigPath, 'env.yml'))
+    except: env = setConfig.read_yaml(os.path.join(defaultConfigPath, 'env.default.yml'))
+    # make the change for the env variable
+    config, msg = setConfig.ChangeConfigOption(config, env)
+
     LocalConfigPath = os.getcwd() #this can be changed if specific folder to consider is known
-    localConfig, filefound, msg = setConfig.check4localConfig(LocalConfigPath)
+    localConfig, filefound, msg = setConfig.check4localConfig(LocalConfigPath,case = 1)
     if msg: print(msg)
-    config, msg = setConfig.ChangeConfigOption(config, localConfig)
+    if localConfig: config, msg = setConfig.ChangeConfigOption(config, localConfig)
     if msg: print(msg)
     #config['2_CASE']['0_GrlChoices']['CaseName'] = 'Simple'
 
@@ -287,9 +292,9 @@ if __name__ == '__main__' :
         path, Names4Plots,CaseNames = getPathList(config)
     print('[Studied Results Folder] '+str(Names4Plots))
     #Names (attributes) wanted to be taken in the pickle files for post-processing. The time series are agrregated into HeatedArea, NonHeatedArea and OutdoorSite
-    extraVar=['AirRecovEff',"IntLoadCurveShape","wwr","EnvLeak","setTempLoL","AreaBasedFlowRate","WindowUval","WallInsuThick",'RoofInsuThick','BlocHeight','BlocNbFloor','HeatedArea','BlocFootprintArea','height','MaxShadingDist']
+    extraVar=['AirRecovEff',"IntLoadCurveShape","wwr","EnvLeak","AreaBasedFlowRate",'BlocHeight','BlocNbFloor','HeatedArea','BlocFootprintArea']
     #path can be define in hard for specific use:
-    # path = ['C:/Users/FAURE/Documents/prgm_python/KTH_Noah/ForTest']
+    # path = ['C:/Users/FAURE/Documents/prgm_python/mubes-ubem/ForTest/Sim_results']
     # CaseNames = 'Test'
 
 

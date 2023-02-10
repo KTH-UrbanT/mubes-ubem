@@ -17,10 +17,11 @@ def read_yaml(file_path):
         config = yaml.safe_load(f)
     return config
 
-def check4localConfig(path):
+def check4localConfig(path,case = 0):
     Liste = os.listdir(path)
     filefound = False
     msg = False
+    localConfig = []
     for file in Liste:
         if '.yml' in file:
             if file not in ['DefaultConfig.yml','DefaultConfigKeyUnit.yml','env.default.yml','env.yml']:
@@ -29,7 +30,7 @@ def check4localConfig(path):
                 else:
                     localConfig = read_yaml(os.path.join(path,file))
                     filefound = os.path.join(path,file)
-    if not filefound:
+    if not filefound and not case:
         localConfig = read_yaml(os.path.join(path, 'DefaultConfig.yml'))
         filefound =  os.path.join(path,'DefaultConfig.yml')
     return localConfig, filefound, msg
