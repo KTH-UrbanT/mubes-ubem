@@ -1,4 +1,4 @@
-git+https://github.com/xavfa/geomeppy.git@geomeppyForMUBES
+git+https://github.com/xavfa/geomeppy.git
 eppy==0.5.60
 numpy==1.23.5
 pandas==1.5.2
