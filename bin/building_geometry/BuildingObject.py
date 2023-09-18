@@ -407,7 +407,12 @@ class Building:
                             round(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]),1) >0:
                         MatchedPoly[idx1] = 1
                         MatchedPoly[idx2+idx1+1] = 1
-                        newpolycoor,node = GeomUtilities.CleanPoly(poly1,self.DistTol,self.roundVal)
+                        try: newpolycoor,node = GeomUtilities.CleanPoly(poly1,self.DistTol,self.roundVal)
+                        except AttributeError:
+                            msg = '[Error] : Oh, oh, it seems that geomeppy package is not directed to the correct branch, please be sure you are using the branch named: geomeppyForMUBES \n'
+                            print(msg)
+                            GrlFct.Write2LogFile(msg, LogFile)
+                            return
                         if len(newpolycoor)<3:
                             msg = '[Geom Cor] At least one polygon has been ignored because of the distance thresholds \n'
                             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
