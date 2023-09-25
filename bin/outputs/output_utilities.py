@@ -6,6 +6,7 @@ import pickle#5 as pickle
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import numpy as np
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import core.GeneralFunctions as GrlFct
 import building_geometry.BuildingObject as BuildingObject
 from sklearn.model_selection import train_test_split

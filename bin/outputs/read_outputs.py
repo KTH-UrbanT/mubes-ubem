@@ -5,9 +5,9 @@ sys.path.append(path2addgeom)
 # path2addFMU = os.path.normcase(os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'FMUsKit/EnergyPlusToFMU-v3.1.0'))
 # sys.path.append(path2addFMU)
 import numpy as np
-sys.path.append(os.path.dirname(os.getcwd()))
-import Utilities
-import CoreFiles.setConfig as setConfig
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import core.setConfig as setConfig
+import output_utilities as Utilities
 
 
 # the main idea of this file is to present some way for analyzing the data.
@@ -261,11 +261,12 @@ def getPathList(config):
 
 if __name__ == '__main__' :
 
+    mubesPath = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     ConfigFromArg,CaseNameArg = Read_Arguments()
-    config = setConfig.read_yaml(os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfig.yml'))
+    config = setConfig.read_yaml(os.path.join(mubesPath, 'default', 'config', 'DefaultConfig.yml'))
     configUnit = setConfig.read_yaml(
-        os.path.join(os.path.dirname(os.getcwd()), 'CoreFiles', 'DefaultConfigKeyUnit.yml'))
-    LocalConfigPath = os.path.join(os.path.dirname(os.getcwd()),'ModelerFolder')
+        os.path.join(mubesPath, 'default', 'config',  'DefaultConfigKeyUnit.yml'))
+    LocalConfigPath = os.path.join(mubesPath,'default', 'config')
     localConfig, filefound, msg = setConfig.check4localConfig(LocalConfigPath)
     if msg: print(msg)
     config, msg = setConfig.ChangeConfigOption(config, localConfig)
@@ -291,15 +292,15 @@ if __name__ == '__main__' :
     #because we can have several path for several studies we want to overplot.
 
     #Path can be written in hard for specific test
-    path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\Hammarby2012\\Sim_Results']
-    #path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\tutu\\Sim_Results')
-    path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\Hammarby2021\\Sim_Results')
-    path.append(
-        'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\Hammarby2012Epw2021\\Sim_Results')
-    path.append(
-        'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\Hammarby2021Epw2012\\Sim_Results')
-
-    CaseNames = ['2012','2021','2012b','2021b']
+    # path = ['C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\Hammarby2012\\Sim_Results']
+    # #path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\tutu\\Sim_Results')
+    # path.append('C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\Hammarby2021\\Sim_Results')
+    # path.append(
+    #     'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\Hammarby2012Epw2021\\Sim_Results')
+    # path.append(
+    #     'C:\\Users\\xav77\\Documents\\FAURE\\prgm_python\\UrbanT\\Eplus4Mubes\\MUBES_SimResults\\Hammarby2021Epw2012\\Sim_Results')
+    #
+    # CaseNames = ['2012','2021','2012b','2021b']
     #bldliste = [473,28]
     Names4Plots = CaseNames
 
