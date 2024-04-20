@@ -72,5 +72,6 @@ It has been developed with passion and is still in progress with passion.
 Hope you'll enjoy :) !
 
 ## Citation
-Faure, X.; Johansson, T.; Pasichnyi, O. The Impact of Detail, Shadowing and Thermal Zoning Levels on Urban Building Energy Modelling (UBEM) on a District Scale. Energies 2022, 15, 1525. https://doi.org/10.3390/en15041525
+Faure, X.; Johansson, T.; Pasichnyi, O. The Impact of Detail, Shadowing and Thermal Zoning Levels on Urban Building Energy Modelling (UBEM) on a District Scale. Energies 2022, 15, 1525. https://doi.org/10.3390/en15041525  
+Faure, X.; Lebrun, R.; Pasichnyi, O. Impact of time resolution on estimation of energy savings using a copula-based calibration in UBEM. Energy and Buildings 2024, Volume 311, 2024, 114134, ISSN 0378-7788. https://doi.org/10.1016/j.enbuild.2024.114134  
 
