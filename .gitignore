@@ -1,4 +1,4 @@
-.gitignore
+*.gitignore
 *.idea
 **/__pycache__*
- /examples/ForTest/
+ /examples/ForTest/g

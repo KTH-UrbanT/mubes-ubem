@@ -1,16 +1,8 @@
 # @Author  : Xavier Faure
 # @Email   : xavierf@kth.se
 
-import os
-import sys
-# #add the required path for geomeppy special branch
-path2addgeom = 'C:\\Users\\xf245257\\Documents\\Faure\\prgm_python\\geomeppy'
-#path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
-sys.path.append(path2addgeom)
-#add the reauired path for all the above folder
-sys.path.append('..')
-MUBES_Paths = os.path.normcase(os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'mubes-ubem'))
-sys.path.append(MUBES_Paths)
+#@Edited by: Mohammadhossein Alizadeh
+# @Email   : alizad@kth.se
 
 import core.GeneralFunctions as GrlFct
 import core.LaunchSim as LaunchSim
@@ -21,6 +13,16 @@ import shutil
 import multiprocessing as mp
 import yaml
 import copy
+import sys, os
+# #add the required path for geomeppy special branch
+path2addgeom = 'C:\\Users\\xf245257\\Documents\\Faure\\prgm_python\\geomeppy'
+#path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
+sys.path.append(path2addgeom)
+#add the reauired path for all the above folder
+sys.path.append('..')
+MUBES_Paths = os.path.normcase(os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'mubes-ubem'))
+sys.path.append(MUBES_Paths)
+
 
 def giveReturnFromPool(results):
     doNothing = 0
@@ -39,8 +41,14 @@ if __name__ == '__main__' :
     localDir = os.getcwd()
     scriptPath = os.path.realpath(__file__)
     os.chdir(os.path.dirname(scriptPath))
+    ecm_config_path =os.path.join(localDir[:localDir.find('mubes-ubem')+11], 'bin/Energy_Conservation_Measure/ECM_Config.yml')
 
     CaseChoices,config, SepThreads,Pool2Launch, MultipleFiles = setConfig.getConfig(localDir)
+    Retrofit = config['2_CASE']['1_SimChoices']['Retrofit']
+    if Retrofit:
+        ecm_config = setConfig.read_yaml(ecm_config_path)
+    #     Adjustment_GUI.GUISet()
+
     if CaseChoices['MakePolygonPlots']:
         GrlFct.MakePolygonPlots(CaseChoices, Pool2Launch)
         sys.exit()

@@ -1,0 +1,334 @@
+0_APP:
+  PATH_TO_ENERGYPLUS: /Applications/EnergyPlus-9-5-0
+  PATH_TO_ENERGYPLUSFMUKit: ../../../FMUsKit/EnergyPlusToFMU-v3.1.0
+  PATH_TO_RESULTS: ../examples
+1_DATA:
+  EPSG_REF: None
+  PATH_TO_DATA: ../examples/minneberg
+2_CASE:
+  0_GrlChoices:
+    CPUusage: 0.8
+    CaseName: Ex4-ParametricStudy
+    DebugMode: false
+    MakePlotsOnly: false
+    MakePlotsPerBld: false
+    OutputsFile: Outputs_Template.txt
+    RefreshFolder: true
+    Verbose: true
+  1_SimChoices:
+    BldID: '# See ListOfBuiling_Ids.txt for list of IDs '
+    Bounds: []
+    BoundsLim: []
+    CorePerim: false
+    DESO: []
+    FloorZoning: false
+    NbRuns: 1
+    ParamMethods: []
+    VarName2Change: []
+    ZoneOfInterest: ''
+  2_AdvancedChoices:
+    API: false
+    CalibTimeBasis: ''
+    Calibration: false
+    CreateFMU: false
+    ECMChange: 1
+    ECMParam: ''
+    ExtraTowerFile: ''
+    FromPosteriors: false
+    MakePolygonPlots: false
+    MeasurePath4Calibration: ''
+    PassBldObject: true
+    PosteriorsDataPath: ''
+    RefBuildNum: None
+    RefPerimeter: 500
+3_SIM:
+  1_WeatherData:
+    Elevation: 2.0
+    Latitude: 37.62
+    Longitude: -122.4
+    Time_Zone: -8.0
+    WeatherDataFile: WeatherData/USA_CA_San.Francisco.Intl.AP.724940_TMY3.epw
+    YearRoundGroundTemp: 15
+  2_SimuData:
+    Begin_Day_of_Month: 1
+    Begin_Month: 1
+    End_Day_of_Month: 31
+    End_Month: 12
+    SaveLogFiles: false
+  3_BasisElement:
+    ACH_freecool: 4
+    AirRecovEff: 0.65
+    AreaBasedFlowRate: 0.35
+    AreaBasedFlowRateDefault: 0.35
+    BasementAirLeak: 1
+    ComfortTempOff: '23:00'
+    ComfortTempOn: 06:00
+    DemandControlledVentilation: true
+    ElecYearlyLoad: 15
+    EnvLeak: 1
+    ExternalInsulation: false
+    HVACLimitMode: NoLimit
+    HVACPowLimit: 25
+    IntLoadCurveShape: 3
+    IntLoadMultiplier: 1
+    IntLoadType: winter
+    OccupBasedFlowRate: 7
+    OccupHeatRate: 70
+    OffOccRandom: false
+    Office_Close: '18:00'
+    Office_Open: 08:00
+    dT_freeCool: 1
+    intT_freecool: 26
+    setTempLoL:
+    - 21
+    - 21
+    setTempUpL:
+    - 50
+    - 50
+    wwr: 0.3
+  BaseMaterial:
+    Basement Floor:
+      Conductivity: 0.9
+      Density: 2300
+      Roughness: Rough
+      Specific_Heat: 1000
+      Thickness: 0.1
+    Heated1rstFloor Inertia:
+      Conductivity: 0.9
+      Density: 2300
+      Roughness: Rough
+      Specific_Heat: 1000
+      Thickness: 0.1
+    Heated1rstFloor Insulation:
+      Conductivity: 0.035
+      Density: 150
+      Roughness: Rough
+      Specific_Heat: 1000
+      Thickness: 0.15
+    Roof Insulation:
+      Conductivity: 0.03
+      Density: 150
+      Roughness: Rough
+      Specific_Heat: 1000
+      Thickness: 0.3
+    Wall Inertia:
+      Conductivity: 0.9
+      Density: 2300
+      Roughness: Rough
+      Specific_Heat: 1000
+      Thickness: 0.2
+    Wall Insulation:
+      Conductivity: 0.03
+      Density: 150
+      Roughness: Rough
+      Specific_Heat: 1000
+      Thickness: 0.2
+    Window:
+      Solar_Heat_Gain_Coefficient: 0.7
+      UFactor: 1.9
+      Visible_Transmittance: 0.8
+  DBLimits:
+    AreaBasedFlowRate_key: EgenProjVentFlode
+    AreaBasedFlowRate_lim:
+    - 0.35
+    - 10
+    height_key:
+    - height
+    - Height
+    - SHAPE.LEN
+    - st_lengthshape
+    - Shape__Length
+    - hauteur
+    - igntop202103_bat_hauteur
+    height_lim:
+    - 0
+    - 100
+    nbAppartments_key: EgenAntalBolgh
+    nbAppartments_lim:
+    - 0
+    - 100
+    nbBasefloor_key: EgenAntalKallarplan
+    nbBasefloor_lim:
+    - 0
+    - 4
+    nbStairwell_key: EgenAntalTrapphus
+    nbStairwell_lim:
+    - 0
+    - 100
+    nbfloor_key: EgenAntalPlan
+    nbfloor_lim:
+    - 0
+    - 100
+    surface_key:
+    - EgenAtemp
+    - SHAPE.AREA
+    - st_areashape
+    surface_lim:
+    - 0
+    - 50000
+    year_key: EgenNybyggAr
+    year_lim:
+    - 0
+    - 2022
+  EPCMeters:
+    Cooling:
+      DistCoolingCOP: 1
+      DistCooling_key: EgiFjarrkyla
+      ElecCoolingCOP: 1
+      ElecCooling_key: EgiKomfort
+    DHW:
+      BioFuelHeatingCOP: 0.75
+      BioFuelHeating_key: EgiOvrBiobransleVV
+      DistrictHeatingCOP: 1
+      DistrictHeating_key: EgiFjarrvarmeVV
+      ElecHeatingCOP: 1
+      ElecHeating_key: EgiElVV
+      GasHeatingCOP: 0.9
+      GasHeating_key: EgiGasVV
+      OilHeatingCOP: 0.85
+      OilHeating_key: EgiOljaVV
+      PelletHeatingCOP: 0.75
+      PelletHeating_key: EgiFlisVV
+      WoodHeatingCOP: 0.75
+      WoodHeating_key: EgiVedVV
+    ElecLoad:
+      BuildingLevCOP: 1
+      BuildingLev_key: EgiFastighet
+      HousholdLevCOP: 1
+      HousholdLev_key: EgiHushall
+      OperationLevCOP: 1
+      OperationLev_key: EgiVerksamhet
+    Heating:
+      AASHPHeatingCOP: 2.5
+      AASHPHeating_key: EgiPumpLuftLuftUPPV
+      AWSHPHeatingCOP: 3.1
+      AWSHPHeating_key: EgiPumpLuftVattenUPPV
+      BioFuelHeatingCOP: 0.75
+      BioFuelHeating_key: EgiOvrBiobransleUPPV
+      DistrictHeatingCOP: 1
+      DistrictHeating_key: EgiFjarrvarmeUPPV
+      EASHPHeatingCOP: 2
+      EASHPHeating_key: EgiPumpFranluftUPPV
+      ElecAirHeatingCOP: 1
+      ElecAirHeating_key: EgiElLuftUPPV
+      ElecHeatingCOP: 1
+      ElecHeating_key: EgiElDirektUPPV
+      ElecWHeatingCOP: 1
+      ElecWHeating_key: EgiElVattenUPPV
+      GSHPHeatingCOP: 3
+      GSHPHeating_key: EgiPumpMarkUPPV
+      GasHeatingCOP: 0.9
+      GasHeating_key: EgiGasUPPV
+      OilHeatingCOP: 0.85
+      OilHeating_key: EgiOljaUPPV
+      PelletHeatingCOP: 0.75
+      PelletHeating_key: EgiFlisUPPV
+      WoodHeatingCOP: 0.75
+      WoodHeating_key: EgiVedUPPV
+    NRJandClass:
+      EnClasseVersionCOP: 1
+      EnClasseVersion_key: EgiVersion
+      NRJ_ClassCOP: 1
+      NRJ_Class_key: EgiEnergiklass
+      WeatherCorrectedNRJCOP: 1
+      WeatherCorrectedNRJ_key: EgiEnergianvandning
+      WeatherCorrectedPNRJCOP: 1
+      WeatherCorrectedPNRJ_key: EgiPrimarenergianvandning
+  ExtraEnergy:
+    ColdWaterTempFile: default/data/cold_water_temperature_stockholm.txt
+    HotWaterSetTemp: 55
+    Name: DHW
+    Present: true
+    TargetWaterTapTemp: 37
+    WaterTapsMultiplier: 4.167e-07
+    WatertapsFile: default/data/domestic_hot_water_40_apartments.txt
+  GeomElement:
+    AltitudeTolerance: 3
+    BuildIDKey:
+    - 50A_UUID
+    - objectid
+    - OBJECTID
+    - gid
+    - igntop202103_bat_l_id
+    - bldId
+    BuildingIdKey: byggnadsid
+    DistanceTolerance: 0.2
+    FormularIdKey: FormularId
+    MaxShadingDist: 200
+    ShadingIdKey: vaggid
+    VertexKey: geometries
+    VertexPrecision: 5
+  InternalMass:
+    HeatedZoneIntMass:
+      Conductivity: 0.3
+      Density: 600
+      Roughness: Rough
+      Specific_Heat: 1400
+      Thickness: 0.1
+      WeightperZoneArea: 40
+    NonHeatedZoneIntMass:
+      Conductivity: 0.3
+      Density: 600
+      Roughness: Rough
+      Specific_Heat: 1400
+      Thickness: 0.1
+      WeightperZoneArea: 40
+  OccupType:
+    AssembPlace_Rate:
+    - 0.01
+    - 0.2
+    AssembPlace_key: EgenAtempTeater
+    FoodMarket_Rate:
+    - 0.01
+    - 0.09
+    FoodMarket_key: EgenAtempLivsmedel
+    GoodsMarket_Rate:
+    - 0.01
+    - 0.09
+    GoodsMarket_key: EgenAtempButik
+    Hospital24h_Rate:
+    - 0.01
+    - 0.09
+    Hospital24h_key: EgenAtempVard
+    Hospitalday_Rate:
+    - 0.01
+    - 0.09
+    Hospitalday_key: EgenAtempHotell
+    Hotel_Rate:
+    - 0.01
+    - 0.02
+    Hotel_key: EgenAtempHotell
+    IndoorSports_Rate:
+    - 0.01
+    - 0.1
+    IndoorSports_key: EgenAtempBad
+    Office_Rate:
+    - 0.01
+    - 0.09
+    Office_key: EgenAtempKontor
+    Other_Rate:
+    - 0.01
+    - 0.1
+    Other_key: EgenAtempOvrig
+    Residential_Rate:
+    - 0.02
+    - 0.02
+    Residential_key: EgenAtempBostad
+    Restaurant_Rate:
+    - 0.01
+    - 0.09
+    Restaurant_key: EgenAtempRestaurang
+    School_Rate:
+    - 0.01
+    - 0.1
+    School_key: EgenAtempSkolor
+    Shopping_Rate:
+    - 0.01
+    - 0.09
+    Shopping_key: EgenAtempKopcentrum
+  VentSyst:
+    Bal: VentTypFT
+    BalX: VentTypFTX
+    Exh: VentTypF
+    ExhX: VentTypFmed
+    Nat: VentTypSjalvdrag

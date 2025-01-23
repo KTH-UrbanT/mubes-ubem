@@ -31,6 +31,7 @@
         NbRuns : [int]                              #[Int] sample size for parametric simulation
         CorePerim : [bool]                       #[Bool] True : core and perimeter zone thermal modelling
         FloorZoning : [bool]                      #[Bool] True : each floor in consider as a zone or for core zone construction
+        Retrofit : [bool]
     2_AdvancedChoices :
         API : [bool]                             #[Bool] in case the simulation is launched trough an API. Option under development
         CreateFMU : [bool]                       #[Bool] True: creates FMU for each building specified in the BldID. No simulation is launched afterward. FMU will be found in the CaseName folder
