@@ -1,0 +1,126 @@
+#This files checks the units for Energy Conservation Measures settings
+ECM:
+    ECM_to_Implement: [str]
+RetCase:
+  BuildID: [ int,str ]
+
+ECM_Category:
+  Envelope:
+#  wwr: [float,int]
+    Window :
+        UFactor :  [float,int]                      #[Float]
+        Solar_Heat_Gain_Coefficient : [float,int]   #[Float]
+        Visible_Transmittance : [float,int]         #[Float]
+    Wall Inertia :
+        Thickness : [float,int]                     #[Float] #this layer will be considered also for the basement walls
+        Conductivity : [float,int]                  #[Float]
+        Roughness : [str]                 #[Str]
+        Density : [float,int]                      #[Float]
+        Specific_Heat : [float,int]                #[Float]
+    Wall Insulation :
+        Thickness : [float,int]                     #[Float]
+        Conductivity : [float,int]                 #[Float]
+        Roughness : [str]                 #[Str]
+        Density : [float,int]                       #[Float]
+        Specific_Heat : [float,int]                #[Float]
+        #'Thermal_Absorptance' : [float,int]
+    Basement Floor :
+        Thickness : [float,int]                     #[Float] #this layer will be considered also for the basement floor
+        Conductivity : [float,int]                  #[Float]
+        Roughness : [str]                 #[Str]
+        Density : [float,int]                      #[Float]
+        Specific_Heat : [float,int]                #[Float]
+#   Basement Floor Insulation :
+#       Thickness : [float,int]    #not needed as even without basement the Heated1rstFloor is taken for the first floor
+#       Conductivity : [float,int]
+#       Roughness : "Rough"
+#       Density : [float,int]
+#       Specific_Heat : [float,int]
+#   Roof Inertia :
+#        Thickness : [float,int] #not needed unless one wants to have inertia in the roof layer
+#        Conductivity : [float,int]
+#        Roughness : "Rough"
+#        Density : [float,int]
+#        Specific_Heat : [float,int]
+    Roof Insulation :
+        Thickness : [float,int]                     #[Float]
+        Conductivity : [float,int]                 #[Float]
+        Roughness : [str]                 #[Str]
+        Density : [float,int]                       #[Float]
+        Specific_Heat : [float,int]                #[Float]
+       #Thermal_Absorptance : [float,int]
+    Heated1rstFloor Inertia :
+        Thickness : [float,int]                     #[Float]
+        Conductivity : [float,int]                  #[Float]
+        Roughness : [str]                 #[Str]
+        Density : [float,int]                      #[Float]
+        Specific_Heat : [float,int]                #[Float]
+    Heated1rstFloor Insulation :
+        Thickness : [float,int]                    #[Float]
+        Conductivity : [float,int]                #[Float]
+        Roughness : [str]                 #[Str]
+        Density : [float,int]                       #[Float]
+        Specific_Heat : [float,int]                #[Float]
+       #Thermal_Absorptance : [float,int]
+#**********************************************************************************************************************************************************
+#******************************** Ventilation *************************************************************************************************************
+#**********************************************************************************************************************************************************
+#
+#InfiltrationRates:
+#OccupHeatRate:
+
+
+Occupancy_Schedule:
+  name: [str]     # Name of the schedule
+  building:
+    office_open: [str]         # Opening time of the office
+    office_close: [str]        # Closing time of the office
+  setpoint: [float, int]                   # Setpoint during office hours (e.g., occupancy level)
+
+Compact_Schedule_OccupActivity:
+  name: [ str ]              # Name of the compact schedule
+  schedule_type_limits_name: [ str ] # Schedule type limits
+  field_1: [ str ]              # Time period
+  field_2: [ str ]                # Day type
+  field_3: [ str ]                # Time until
+  field_4: [ float, int ]                            # Setpoint value
+#**********************************************************************************************************************************************************
+#******************************** Hot Water *************************************************************************************************************
+#**********************************************************************************************************************************************************
+Compact_Schedule_HotWaterTemp:
+  name: [str]               # Name of the compact schedule
+  schedule_type_limits_name: [str] # Schedule type limits
+  field_1: [str]              # Time period
+  field_2: [str]                # Day type
+  field_3: [str]                # Time until
+  field_4: [float, int]                           # Setpoint value
+  #======================================================
+Compact_Schedule_TargetWaterTemp:
+  name: [str]               # Name of the compact schedule
+  schedule_type_limits_name: [str] # Schedule type limits
+  field_1: [str]              # Time period
+  field_2: [str]                # Day type
+  field_3: [str]                # Time until
+  field_4: [float, int]                           # Setpoint value
+#======================================================
+Compact_Schedule_AlwaysON:
+  name: [str]               # Name of the compact schedule
+  schedule_type_limits_name: [str] # Schedule type limits
+  field_1: [str]              # Time period
+  field_2: [str]                # Day type
+  field_3: [str]                # Time until
+  field_4: [float, int]                           # Setpoint value
+ #======================================================
+
+
+
+#  Cooling_Setpoint_Schedule_Name :                      # Name of the cooling setpoint schedule
+#  Heating_Setpoint_Schedule_Name :                      # Name of the heating setpoint schedule
+#Constant_Heating_Setpoint : [float, int]                      # Constant heating setpoint temperature (Celsius)
+#Constant_Cooling_Setpoin : [float, int]                        # Constant cooling setpoint temperature (Celsius)
+#Heating_Setback_Schedule_Name : [str]                        # Heating setback schedule name
+#Cooling_Setback_Schedule_Name :  [str]
+#Heat:
+#Hot_Water:
+#Other_Elec_Saving_Measures:
+#Miscellaneous:
