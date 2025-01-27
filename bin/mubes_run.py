@@ -41,13 +41,8 @@ if __name__ == '__main__' :
     localDir = os.getcwd()
     scriptPath = os.path.realpath(__file__)
     os.chdir(os.path.dirname(scriptPath))
-    ecm_config_path =os.path.join(localDir[:localDir.find('mubes-ubem')+11], 'bin/Energy_Conservation_Measure/ECM_Config.yml')
 
-    CaseChoices,config, SepThreads,Pool2Launch, MultipleFiles = setConfig.getConfig(localDir)
-    Retrofit = config['2_CASE']['1_SimChoices']['Retrofit']
-    if Retrofit:
-        ecm_config = setConfig.read_yaml(ecm_config_path)
-    #     Adjustment_GUI.GUISet()
+    CaseChoices,config, SepThreads,Pool2Launch, MultipleFiles , Retrofit_config, Pool2Retrofit = setConfig.getConfig(localDir) #todo add pool2retrofit
 
     if CaseChoices['MakePolygonPlots']:
         GrlFct.MakePolygonPlots(CaseChoices, Pool2Launch)

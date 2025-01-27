@@ -6,6 +6,8 @@ import distutils.spawn
 import core.GeneralFunctions as GrlFct
 import building_geometry.GeomUtilities as GeomUtilities
 import building_geometry.BuildingObject as BldFct
+from sympy.codegen import Print
+from sympy.codegen.ast import continue_
 
 
 def is_tool(name):
@@ -17,22 +19,35 @@ def read_yaml(file_path):
         config = yaml.safe_load(f)
     return config
 
-def check4localConfig(path):
-    Liste = os.listdir(path)
+def check4localConfig(path, RetrofitConfigPath = ''):
+    ListeAll = os.listdir(path) + os.listdir(RetrofitConfigPath) if RetrofitConfigPath != None else os.listdir(path)
+    localConfig = ''
+    localRetConfig = ''
+    Retfilefound = False
     filefound = False
-    msg = False
-    for file in Liste:
+    msg1 = False
+    msg2 = False
+    ymlFiles = ['DefaultConfig.yml','DefaultConfigKeyUnit.yml','env.default.yml','env.yml', 'ECM_Config.yml', 'ECM_ConfigKeyUnit.yml']
+    for idx, file in enumerate(ListeAll):
         if '.yml' in file:
-            if file not in ['DefaultConfig.yml','DefaultConfigKeyUnit.yml','env.default.yml','env.yml']:
-                if filefound:
-                    msg = '/!\ More than one *.yml file other than the template was found'
-                else:
+            if file not in ymlFiles:
+                if not 'ecm' in file.lower():
+                    msg1 = '/!\ More than one *.yml file other than the template was found'
                     localConfig = read_yaml(os.path.join(path,file))
                     filefound = os.path.join(path,file)
-    if not filefound:
-        localConfig = read_yaml(os.path.join(path, 'DefaultConfig.yml'))
-        filefound =  os.path.join(path,'DefaultConfig.yml')
-    return localConfig, filefound, msg
+                elif RetrofitConfigPath != '' and 'ecm' in file.lower():
+                    msg2 = '/!\ More than one *.yml file found for retrofitting'
+                    localRetConfig = read_yaml(os.path.join(RetrofitConfigPath,file))
+                    Retfilefound = os.path.join(path,file)
+                else:
+                    pass
+    # if not filefound:
+    #     localConfig = read_yaml(os.path.join(path, 'DefaultConfig.yml'))
+    #     filefound = os.path.join(path,'DefaultConfig.yml')
+    # if not RetrofitConfigPath != None and Retfilefound:
+    #     localRetConfig = read_yaml(os.path.join(RetrofitConfigPath, 'ECM_Config.yml'))
+    #     Retfilefound = os.path.join(RetrofitConfigPath,'ECM_Config.yml')
+    return localConfig, filefound, msg1, localRetConfig, Retfilefound, msg2
 
 def ChangeConfigOption(config,localConfig):
     msg = False
@@ -89,7 +104,7 @@ def checkConfigUnit(config,Unit):
                                 if False in [ch in check for ch in test]  and test:
                                     msg = (Mainkey+' : '+subkey1+' : '+subkey2+' : '+subkey3+' : ' +
                                            str(config[Mainkey][subkey1][subkey2][subkey3])+
-                                           'is not conform with input type, Please check the config.yml file')
+                                           ' is not conform with input type, Please check the config.yml file')
                                     return msg
                         else:
                             test = checkUnit(config[Mainkey][subkey1][subkey2])
@@ -192,7 +207,7 @@ def grabBuildingsId(IdsFile):
         print('[Info] No ListOfBuilding_Ids.txt file was found, all building in the geojson file will be considered')
     return BldIds
 
-def getConfig(localDir,App = ''):
+def getConfig(localDir, App = ''):
     defaultConfigPath = os.path.join(os.path.dirname(os.getcwd()), 'default', 'config')
     if App == 'Shadowing':
         ConfigFromArg, Case2Launch, ShadeLim = Read_Arguments(App = App)
@@ -205,6 +220,16 @@ def getConfig(localDir,App = ''):
     except: env = read_yaml(os.path.join(defaultConfigPath, 'env.default.yml'))
     # make the change for the env variable
     config, msg = ChangeConfigOption(config, env)
+    Retrofit = config['2_CASE']['1_SimChoices']['Retrofit']
+    if Retrofit:
+        msg = f'[Prep. Info] Retrofitting mode activated...'
+        RetrofitConfigPath = os.path.join(localDir[:localDir.find('mubes-ubem') + 11], 'bin/Energy_Conservation_Measure')
+        DefaulRetConfigUnit = read_yaml(os.path.join(RetrofitConfigPath, 'ECM_ConfigKeyUnit.yml'))
+        Retrofit_config = read_yaml(os.path.join(RetrofitConfigPath, 'ECM_Config.yml'))
+    else:
+        RetrofitConfigPath = None
+        Retrofit_config = None
+
     if msg: print(msg)
     if App == 'Shadowing':
         configUnit = read_yaml(os.path.join(defaultConfigPath, 'DefaultConfigKeyUnit.yml'))
@@ -228,31 +253,50 @@ def getConfig(localDir,App = ''):
                 IdsFile = os.path.join(os.path.abspath(localConfig['0_APP']['PATH_TO_RESULTS']), Case2Launch,
                                        'ListOfBuiling_Ids.txt')
                 config['2_CASE']['1_SimChoices']['BldID'] = grabBuildingsId(IdsFile)
-    elif type(ConfigFromArg) == str:
-        if ConfigFromArg[-4:] == '.yml':
-            #this case is if a yml file is given
-            ymlfile1 = os.path.join(localDir,ConfigFromArg)
-            ymlfile2 = ConfigFromArg
-            if not os.path.isfile(ymlfile1) and not os.path.isfile(ymlfile2):
-                print('[Error] yml file not found : '+os.path.abspath(ConfigFromArg))
-                sys.exit()
-            try: localConfig = read_yaml(ymlfile1)
-            except:
-                try: localConfig = read_yaml(ymlfile2)
-                except:
-                    print('[Error] The .yml file failed to be loaded, please check if the file')
-                    sys.exit()
-            config, msg = ChangeConfigOption(config, localConfig)
-            if msg: print(msg)
-            if 'See ListOfBuiling_Ids.txt for list of IDs' in config['2_CASE']['1_SimChoices']['BldID']:
-                IdsFile = os.path.join(os.path.dirname(ConfigFromArg),'ListOfBuiling_Ids.txt')
-                config['2_CASE']['1_SimChoices']['BldID'] = grabBuildingsId(IdsFile)
-            #this case is if a geojson file is given (for the MakeShadowingWallFile purpose only
-        elif ConfigFromArg[-8:] == '.geojson':
-            geojsonfile = True
-        else:
-             print('[Unknown Argument] Please check the available options for arguments : -yml or -CONFIG')
-             sys.exit()
+    elif len(ConfigFromArg) > 0:
+        if type(ConfigFromArg[0]) == str:
+            for xidx, xArg in enumerate(ConfigFromArg):
+                if xArg[-4:] == '.yml' and not 'ecm' in xArg.lower():
+                    #this case is if a yml file is given
+                    ymlfile1 = os.path.join(localDir, xArg)
+                    ymlfile2 = xArg
+                    if not os.path.isfile(ymlfile1) and not os.path.isfile(ymlfile2):
+                        print('[Error] yml file not found : '+os.path.abspath(xArg))
+                        sys.exit()
+                    try: localConfig = read_yaml(ymlfile1)
+                    except:
+                        try: localConfig = read_yaml(ymlfile2)
+                        except:
+                            print('[Error] The .yml file failed to be loaded, please check if the file')
+                            sys.exit()
+                    config, msg = ChangeConfigOption(config, localConfig)
+                    if msg: print(msg)
+                    if 'See ListOfBuiling_Ids.txt for list of IDs' in config['2_CASE']['1_SimChoices']['BldID']:
+                        IdsFile = os.path.join(os.path.dirname(ConfigFromArg),'ListOfBuiling_Ids.txt')
+                        config['2_CASE']['1_SimChoices']['BldID'] = grabBuildingsId(IdsFile)
+                    #this case is if a geojson file is given (for the MakeShadowingWallFile purpose only
+                elif Retrofit and 'ecm' in xArg.lower() and xArg[-4:] == '.yml':
+                    ymlfile1 = os.path.join(localDir, xArg)
+                    ymlfile2 = xArg
+                    if not os.path.isfile(ymlfile1) and not os.path.isfile(ymlfile2):
+                        print('[Error] yml file not found : '+os.path.abspath(xArg))
+                        sys.exit()
+                    try:
+                        localRetConfig = read_yaml(ymlfile1)
+                    except:
+                        try:
+                            localRetConfig = read_yaml(ymlfile2)
+                        except:
+                            print('[Error] The .yml file failed to be loaded, please check if the file')
+                            sys.exit()
+                    Retrofit_config, msg = ChangeConfigOption(Retrofit_config, localRetConfig)
+                    if msg: print(msg)
+
+                elif ConfigFromArg[-8:] == '.geojson':
+                    geojsonfile = True
+                else:
+                     print('[Unknown Argument] Please check the available options for arguments : -yml or -CONFIG')
+                     sys.exit()
     elif ConfigFromArg:
         #this case is if the local config is given directly through a json file fomrat (previously converted into a dictionary in the ReadArgument() function)
         config, msg = ChangeConfigOption(config, ConfigFromArg)
@@ -260,21 +304,39 @@ def getConfig(localDir,App = ''):
         config['2_CASE']['0_GrlChoices']['OutputFile'] = 'Outputs4API.txt'
     else:
         #no specific element is given, the local yml in the defaultConfigPath will be used. some different than default could be placed in the same directory
-        localConfig, filefound, msg = check4localConfig(defaultConfigPath)
-        if msg: print(msg)
-        config, msg = ChangeConfigOption(config, localConfig)
-        if msg: print(msg)
-        print('[Config Info] Config completed by ' + filefound)
+        localConfig, filefound, msg1, localRetConfig, Retfilefound, msg2 = check4localConfig(defaultConfigPath, RetrofitConfigPath)
+        if msg1:
+            print(msg1)
+            print('[Config Info] Config completed by ' + filefound)
+            config, msg1 = ChangeConfigOption(config, localConfig)
+        if msg2:
+            print(msg2)
+            print('[Config Info] Config completed by ' + Retfilefound)
+            Retrofit_config, msg2 = ChangeConfigOption(Retrofit_config, localRetConfig)
+
     #the Unit are checked
-    config, msg = ChangeConfigOption(config, env)
+    # config, msg = ChangeConfigOption(config, env)
+
+    #### at this stage the potential given files in command window, the additional files in default/config and bin/ECM were checked and
+    ### changes applied to config files.
+    #### now check config files to ensure the variables types are correct
     config = checkConfigUnit(config,configUnit)
     if type(config) != dict:
         print('[Config Error] Something seems wrong : \n' + config)
         sys.exit()
-    config, SepThreads = checkGlobalConfig(config)
+    config, SepThreads = checkGlobalConfig(config) # todo you cand septhreads in here
     if type(config) != dict:
         print('[Config Error] Something seems wrong in : ' + config)
         sys.exit()
+
+    if Retrofit:
+        Retrofit_config = checkConfigUnit(Retrofit_config ,DefaulRetConfigUnit)
+        if type(Retrofit_config) != dict:
+            print('[Config Error] Something seems wrong in : ' + Retrofit_config)
+            sys.exit()
+    else:
+        pass
+
     Key2Aggregate = ['0_GrlChoices', '1_SimChoices', '2_AdvancedChoices']
     CaseChoices = {}
     for key in Key2Aggregate:
@@ -299,9 +361,18 @@ def getConfig(localDir,App = ''):
     CoordSys = config['1_DATA']['EPSG_REF']
     if MultipleFiles:
         CaseChoices['PassBldObject'] = False
-    Pool2Launch, CaseChoices['BldID'], CaseChoices['DataBaseInput'], CaseChoices['BldIDKey'] = CreatePool2Launch(CaseChoices['BldID'],
+    Pool2Launch, CaseChoices['BldID'], CaseChoices['DataBaseInput'], CaseChoices['BldIDKey'], AllBldIDs = CreatePool2Launch(CaseChoices['BldID'],
                     GlobKey, IDKeys,CaseChoices['PassBldObject'],CaseChoices['RefBuildNum'],CaseChoices['RefPerimeter'],CoordSys)
-    return CaseChoices,config, SepThreads,Pool2Launch,MultipleFiles
+
+    if Retrofit:
+        RetChoice = {}
+        for key in Retrofit_config['0_SIM']:
+            for subkey in Retrofit_config['0_SIM'][key]:
+                RetChoice[subkey] = Retrofit_config['0_SIM'][key][subkey]
+        Pool2Retrofit = CreatePool2Retrofit(RetChoice['ECM_to_Implement'], RetChoice['BuildID'], CaseChoices['BldID'], AllBldIDs)
+    else:
+        Pool2Retrofit = None
+    return CaseChoices,config, SepThreads,Pool2Launch,MultipleFiles, Retrofit_config, Pool2Retrofit
 
 def Read_Arguments(App = ''):
     #these are defaults values:
@@ -318,7 +389,7 @@ def Read_Arguments(App = ''):
             Config2Launch = json.loads(sys.argv[currIdx])
         if (currArg.startswith('-yml')):
             currIdx += 1
-            Config2Launch = sys.argv[currIdx]
+            Config2Launch.append(sys.argv[currIdx])
         if (currArg.startswith('-Case')):
             currIdx += 1
             Case2Launch = sys.argv[currIdx]
@@ -335,6 +406,7 @@ def Read_Arguments(App = ''):
 def CreatePool2Launch(BldIDs,GlobKey,IDKeys,PassBldObject,RefBuildNum,RefDist,CoordSys):
     Pool2Launch = []
     NewUUIDList = []
+    AllBldIDs = []
     for nbfile,keyPath in enumerate(GlobKey):
         print('[Prep. Info] Reading GeoJson file...' )
         try : DataBaseInput = GrlFct.ReadGeoJsonFile(keyPath,CoordSys,toBuildPool = True if not PassBldObject else False)
@@ -370,13 +442,16 @@ def CreatePool2Launch(BldIDs,GlobKey,IDKeys,PassBldObject,RefBuildNum,RefDist,Co
                 try: BldID = Bld.properties[IdKey]
                 except: BldID = 'NoBldID'
                 Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum,'BuildID':BldID ,'TotBld_and_Origin':'','CoordSys':CoordSys })
-                try: NewUUIDList.append(Bld.properties[IdKey])
+                try:
+                    NewUUIDList.append(Bld.properties[IdKey])
+                    AllBldIDs = NewUUIDList
                 except: pass
             else:
-                try:
+                try: #todo can we make the loop easier?
                     if Bld.properties[IdKey] in BldIDs:
                         Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum,'BuildID':Bld.properties[IdKey], 'TotBld_and_Origin':'','CoordSys':CoordSys })
                         NewUUIDList.append(Bld.properties[IdKey])
+                    AllBldIDs.append(Bld.properties[IdKey])
                 except: pass
         if not Pool2Launch:
             print('###  INPUT ERROR ### ')
@@ -385,4 +460,33 @@ def CreatePool2Launch(BldIDs,GlobKey,IDKeys,PassBldObject,RefBuildNum,RefDist,Co
             sys.exit()
         Pool2Launch[idx]['TotBld_and_Origin'] = str(len(Pool2Launch)-idx) +' buildings will be considered from '+os.path.basename(keyPath['Buildingsfile'])
         print('[Prep. Info] '+ str(len(Pool2Launch)-idx) +' buildings will be considered out of '+str(bldNum+1)+' in the input file ')
-    return Pool2Launch,NewUUIDList,DataBaseInput if PassBldObject else [],IdKey
+    return Pool2Launch,NewUUIDList,DataBaseInput if PassBldObject else [],IdKey, AllBldIDs
+
+def CreatePool2Retrofit(ECMs, BuildID2Ret, CaseChoices, AllBldIDs):
+    Pool2Retrofit = []
+    mismatch = []
+    match = []
+    BuildNum2Retrofit = []
+    notKnown = []
+    if len(BuildID2Ret) > 0:
+        for mtch in BuildID2Ret:
+            if mtch in CaseChoices:
+                match.append(mtch)
+                BuildNum2Retrofit.append(CaseChoices.index(mtch))
+            elif mtch not in (CaseChoices and AllBldIDs):
+                msg = (f"[Retrofit Info] The selected Building ID '{mtch}' for retrofitting does not match any Building ID in the database.\n"
+                       f"[Retrofit Info] 'Building with ID {mtch}' will be excluded from retrofitting")
+                print(msg)
+                notKnown.append(mtch)
+            elif mtch in AllBldIDs and mtch not in CaseChoices:
+                mismatch.append(mtch)
+        msg = f"[Retrofit Info] {len(match)} {'buildings' if len(match)>1 else 'building' } out of {len(CaseChoices)} will be retrofitted with {ECMs}."
+        print(msg)
+        Pool2Retrofit.append({'Matchedbuildings': match, 'MismatchedBuildings': mismatch, 'ECMs' : ECMs, 'BuildNums2Ret' : BuildNum2Retrofit, 'notKnown': notKnown})
+    elif not BuildID2Ret:
+        match = CaseChoices['BldID']
+        mismatch = []
+        Pool2Retrofit.append({'Matchedbuildings': match, 'MismatchedBuildings': mismatch, 'ECMs' : ECMs, 'BuildNums2Ret' : BuildNum2Retrofit, 'notKnown': notKnown})
+    # msg = f"[Retrofit Info] All buildings will be retrofitted with {ECMs}."
+    # print(msg)
+    return Pool2Retrofit
