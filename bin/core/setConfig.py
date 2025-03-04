@@ -27,7 +27,7 @@ def check4localConfig(path, RetrofitConfigPath = ''):
     filefound = False
     msg1 = False
     msg2 = False
-    ymlFiles = ['DefaultConfig.yml','DefaultConfigKeyUnit.yml','env.default.yml','env.yml', 'ECM_Config.yml', 'ECM_ConfigKeyUnit.yml']
+    ymlFiles = ['DefaultConfig.yml','DefaultConfigKeyUnit.yml','env.default.yml','env.yml', 'RetrofitConfig.yml', 'RetrofitConfigKeyUnit.yml']
     for idx, file in enumerate(ListeAll):
         if '.yml' in file:
             if file not in ymlFiles:
@@ -45,8 +45,8 @@ def check4localConfig(path, RetrofitConfigPath = ''):
     #     localConfig = read_yaml(os.path.join(path, 'DefaultConfig.yml'))
     #     filefound = os.path.join(path,'DefaultConfig.yml')
     # if not RetrofitConfigPath != None and Retfilefound:
-    #     localRetConfig = read_yaml(os.path.join(RetrofitConfigPath, 'ECM_Config.yml'))
-    #     Retfilefound = os.path.join(RetrofitConfigPath,'ECM_Config.yml')
+    #     localRetConfig = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfig.yml'))
+    #     Retfilefound = os.path.join(RetrofitConfigPath,'RetrofitConfig.yml')
     return localConfig, filefound, msg1, localRetConfig, Retfilefound, msg2
 
 def ChangeConfigOption(config,localConfig):
@@ -222,10 +222,16 @@ def getConfig(localDir, App = ''):
     config, msg = ChangeConfigOption(config, env)
     Retrofit = config['2_CASE']['1_SimChoices']['Retrofit']
     if Retrofit:
-        msg = f'[Prep. Info] Retrofitting mode activated...'
-        RetrofitConfigPath = os.path.join(localDir[:localDir.find('mubes-ubem') + 11], 'bin/Energy_Conservation_Measure')
-        DefaulRetConfigUnit = read_yaml(os.path.join(RetrofitConfigPath, 'ECM_ConfigKeyUnit.yml'))
-        Retrofit_config = read_yaml(os.path.join(RetrofitConfigPath, 'ECM_Config.yml'))
+        if not config['2_CASE']['0_GrlChoices']['MakePlotsOnly']:
+            msg = f'[Prep. Info] Retrofitting mode activated...'
+            RetrofitConfigPath = os.path.join(localDir[:localDir.find('mubes-ubem') + 11], 'bin/Energy_Conservation_Measure')
+            DefaulRetConfigUnit = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfigKeyUnit.yml'))
+            Retrofit_config = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfig.yml'))
+        else:
+            msg = f'[Retrofit. Info] Retrofitting mode not activated (PlotOnly == True)...'
+            RetrofitConfigPath = None
+            Retrofit_config = None
+            Retrofit = False
     else:
         RetrofitConfigPath = None
         Retrofit_config = None
@@ -276,10 +282,11 @@ def getConfig(localDir, App = ''):
                         config['2_CASE']['1_SimChoices']['BldID'] = grabBuildingsId(IdsFile)
                     #this case is if a geojson file is given (for the MakeShadowingWallFile purpose only
                 elif Retrofit and 'ecm' in xArg.lower() and xArg[-4:] == '.yml':
+
                     ymlfile1 = os.path.join(localDir, xArg)
                     ymlfile2 = xArg
                     if not os.path.isfile(ymlfile1) and not os.path.isfile(ymlfile2):
-                        print('[Error] yml file not found : '+os.path.abspath(xArg))
+                        print('[Retrofit Error] yml file not found : '+os.path.abspath(xArg))
                         sys.exit()
                     try:
                         localRetConfig = read_yaml(ymlfile1)
@@ -287,11 +294,12 @@ def getConfig(localDir, App = ''):
                         try:
                             localRetConfig = read_yaml(ymlfile2)
                         except:
-                            print('[Error] The .yml file failed to be loaded, please check if the file')
+                            print('[Retrofit Error] The .yml file failed to be loaded, please check if the file')
                             sys.exit()
                     Retrofit_config, msg = ChangeConfigOption(Retrofit_config, localRetConfig)
                     if msg: print(msg)
-
+                elif config['2_CASE']['0_GrlChoices']['MakePlotsOnly'] and not Retrofit:
+                    pass
                 elif ConfigFromArg[-8:] == '.geojson':
                     geojsonfile = True
                 else:
@@ -370,6 +378,7 @@ def getConfig(localDir, App = ''):
             for subkey in Retrofit_config['0_SIM'][key]:
                 RetChoice[subkey] = Retrofit_config['0_SIM'][key][subkey]
         Pool2Retrofit = CreatePool2Retrofit(RetChoice['ECM_to_Implement'], RetChoice['BuildID'], CaseChoices['BldID'], AllBldIDs)
+
     else:
         Pool2Retrofit = None
     return CaseChoices,config, SepThreads,Pool2Launch,MultipleFiles, Retrofit_config, Pool2Retrofit
@@ -447,7 +456,7 @@ def CreatePool2Launch(BldIDs,GlobKey,IDKeys,PassBldObject,RefBuildNum,RefDist,Co
                     AllBldIDs = NewUUIDList
                 except: pass
             else:
-                try: #todo can we make the loop easier?
+                try:
                     if Bld.properties[IdKey] in BldIDs:
                         Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum,'BuildID':Bld.properties[IdKey], 'TotBld_and_Origin':'','CoordSys':CoordSys })
                         NewUUIDList.append(Bld.properties[IdKey])
@@ -472,7 +481,9 @@ def CreatePool2Retrofit(ECMs, BuildID2Ret, CaseChoices, AllBldIDs):
         for mtch in BuildID2Ret:
             if mtch in CaseChoices:
                 match.append(mtch)
-                BuildNum2Retrofit.append(CaseChoices.index(mtch))
+                BuildNum2Retrofit.append(AllBldIDs.index(mtch))
+                Pool2Retrofit.append({'BuildID': mtch, 'BuildNum2Ret': AllBldIDs.index(mtch), 'Matchedbuildings': True, 'ECMs': ECMs})
+
             elif mtch not in (CaseChoices and AllBldIDs):
                 msg = (f"[Retrofit Info] The selected Building ID '{mtch}' for retrofitting does not match any Building ID in the database.\n"
                        f"[Retrofit Info] 'Building with ID {mtch}' will be excluded from retrofitting")
@@ -480,13 +491,17 @@ def CreatePool2Retrofit(ECMs, BuildID2Ret, CaseChoices, AllBldIDs):
                 notKnown.append(mtch)
             elif mtch in AllBldIDs and mtch not in CaseChoices:
                 mismatch.append(mtch)
+
         msg = f"[Retrofit Info] {len(match)} {'buildings' if len(match)>1 else 'building' } out of {len(CaseChoices)} will be retrofitted with {ECMs}."
         print(msg)
-        Pool2Retrofit.append({'Matchedbuildings': match, 'MismatchedBuildings': mismatch, 'ECMs' : ECMs, 'BuildNums2Ret' : BuildNum2Retrofit, 'notKnown': notKnown})
+        if len(match) == 0:
+            Pool2Retrofit = None
+            msg = f'[Retrofit Info] Exiting retrofit mode... (zero building to retrofit)'
+            print(msg)
     elif not BuildID2Ret:
-        match = CaseChoices['BldID']
-        mismatch = []
-        Pool2Retrofit.append({'Matchedbuildings': match, 'MismatchedBuildings': mismatch, 'ECMs' : ECMs, 'BuildNums2Ret' : BuildNum2Retrofit, 'notKnown': notKnown})
-    # msg = f"[Retrofit Info] All buildings will be retrofitted with {ECMs}."
-    # print(msg)
+        match = CaseChoices
+        # mismatch = []
+        for bld in match:
+            Pool2Retrofit.append({'BuildID': bld, 'BuildNum2Ret': AllBldIDs.index(bld), 'Matchedbuildings': True, 'ECMs': ECMs})
+
     return Pool2Retrofit
