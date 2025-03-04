@@ -14,11 +14,11 @@ class ECM_prep:
 class ECM:
     def __init__(self, ECM_Config_Path, LogFile, CurrentBldID = ''):
 
-        self.ecm_Config = setConfig.read_yaml('/Users/alizad/Desktop/MUBES/mubes-ubem-main/bin/ECM/ECM_Config.yml')
-        self.ecm_Config_Unit = setConfig.read_yaml('/Users/alizad/Desktop/MUBES/mubes-ubem-main/bin/ECM/ECM_ConfigKeyUnit.yml')
+        self.ecm_Config = setConfig.read_yaml('/Users/alizad/Desktop/MUBES/mubes-ubem-main/bin/ECM/RetrofitConfig.yml')
+        self.ecm_Config_Unit = setConfig.read_yaml('/Users/alizad/Desktop/MUBES/mubes-ubem-main/bin/ECM/RetrofitConfigKeyUnit.yml')
         self.LogFile = LogFile
         self.Retrofit = True
-        # self.ecmConfig = setConfig.read_yaml (ECM_Config_Path['ECM_Path']) #('../../bin/ECM/ECM_Config.yml')
+        # self.ecmConfig = setConfig.read_yaml (ECM_Config_Path['ECM_Path']) #('../../bin/ECM/RetrofitConfig.yml')
         self.Envelope_Case = self.ecm_Config['ECM_Category']['Envelope']
         self.HVAC_Case = self.ecm_Config['ECM_Category']['Envelope']
         self.CurrentBldID = CurrentBldID
@@ -36,8 +36,8 @@ class ECM:
             msg = '[ECM info] ******* ' + f"{ecm_options[0]} will be considered as retrofitting option" + ' ******* \n'
         return  msg#, ecm_options
 
-    def CheckConfigUnit_ECM(self):
-        flag = setConfig.checkConfigUnit(self.ecm_Config, self.ecm_Config_Unit, path='../ECM/ECM_Config.yml')
+    def CheckConfigUnit_Ret(self):
+        flag = setConfig.checkConfigUnit(self.ecm_Config, self.ecm_Config_Unit, path='../ECM/RetrofitConfig.yml')
         if type(flag) != dict:
             msg = '[Config Error] Something seems wrong : \n' + flag
             print(msg)
@@ -72,7 +72,7 @@ class ECM:
             return msg, self.isBuildID
 
         else:
-            msg = f" ** [Error] Seems like you want to make retrofitting studies, but you have not specified any building in 'ECM_Config.yml' \n"
+            msg = f" ** [Error] Seems like you want to make retrofitting studies, but you have not specified any building in 'RetrofitConfig.yml' \n"
             return msg, None
 
 

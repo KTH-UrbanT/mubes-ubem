@@ -1,0 +1,147 @@
+#This files provides the Energy Conservation Measures settings
+0_SIM:
+  ECM:
+      ECM_to_Implement: ['Envelop', 'HVAC']
+  RetCase:
+    BuildID: [1c931069-d3d1-4559-8968-e7f0564579fbex]
+
+ECM_Category:
+  Envelope:
+    Window:
+      UFactor: 3                     #[Float]v
+      Solar_Heat_Gain_Coefficient: 0.7   #[Float]
+      Visible_Transmittance: 0.8         #[Float]
+  #****************************************************************************************
+    Wall Inertia:
+      Thickness: 0.2567                     #[Float] #this layer will be considered also for the basement walls
+      Conductivity: 0.9                  #[Float]
+      Roughness: "Rough"                 #[Str]
+      Density: 2300                      #[Float]
+      Specific_Heat: 1000                #[Float]
+    Wall Insulation:
+      Thickness: 0.2                     #[Float]
+      Conductivity: 0.034554                 #[Float]
+      Roughness: "Rough"                 #[Str]
+      Density: 150                       #[Float]
+      Specific_Heat: 1000                #[Float]
+      #'Thermal_Absorptance' : 0.001
+  #****************************************************************************************
+    Basement Floor:
+      Thickness: 0.1                     #[Float] #this layer will be considered also for the basement floor
+      Conductivity: 0.9                  #[Float]
+      Roughness: "Rough"                 #[Str]
+      Density: 2300                      #[Float]
+      Specific_Heat: 1000                #[Float]
+
+    #   Basement Floor Insulation :
+    #       Thickness : 0.05    #not needed as even without basement the Heated1rstFloor is taken for the first floor
+    #       Conductivity : 0.25*0.1
+    #       Roughness : "Rough"
+    #       Density : 1000
+    #       Specific_Heat : 1000
+    #   Roof Inertia :
+    #        Thickness : 0.05 #not needed unless one wants to have inertia in the roof layer
+    #        Conductivity : 0.15*0.1
+    #        Roughness : "Rough"
+    #        Density : 1000
+    #        Specific_Heat : 1000
+  #****************************************************************************************
+    Roof Insulation:
+      Thickness: 0.34                     #[Float]
+      Conductivity: 0.03                 #[Float]
+      Roughness: "Rough"                 #[Str]
+      Density: 150                       #[Float]
+      Specific_Heat: 1000                #[Float]
+      #Thermal_Absorptance : 0.001
+  #****************************************************************************************
+    Heated1rstFloor Inertia:
+      Thickness: 0.1                     #[Float]
+      Conductivity: 0.9                  #[Float]
+      Roughness: "Rough"                 #[Str]
+      Density: 2300                      #[Float]
+      Specific_Heat: 1000                #[Float]
+    Heated1rstFloor Insulation:
+      Thickness: 0.15                    #[Float]
+      Conductivity: 0.035                #[Float]
+      Roughness: "Rough"                 #[Str]
+      Density: 150                       #[Float]
+      Specific_Heat: 1000                #[Float]
+      #Thermal_Absorptance : 0.001
+#**********************************************************************************************************************************************************
+#******************************** Ventilation *************************************************************************************************************
+#**********************************************************************************************************************************************************
+  HVACSystem:
+    SysType:  'HVAC'                # s
+
+
+#**********************************************************************************************************************************************************
+#******************************** Ventilation *************************************************************************************************************
+#**********************************************************************************************************************************************************
+
+
+
+
+Occupancy_Schedule:
+  name: "Occupancy_Schedule"     # Name of the schedule
+  building:
+    office_open: "08:00"         # Opening time of the office
+    office_close: "18:00"        # Closing time of the office
+  setpoint: 1.0                  # Setpoint during office hours (e.g., occupancy level)
+
+
+Compact_Schedule_OccupActivity:
+  name: "Compact_Schedule_OccupActivity"               # Name of the compact schedule
+  schedule_type_limits_name: "Any Number" # Schedule type limits
+  field_1: "Through: 12/31"              # Time period
+  field_2: "For: AllDays"                # Day type
+  field_3: 'Until: 24:00'                # Time until
+  field_4: 55                           # Setpoint value
+
+#**********************************************************************************************************************************************************
+#******************************** Hot Water *************************************************************************************************************
+#**********************************************************************************************************************************************************
+Compact_Schedule_HotWaterTemp:
+  name: "Compact_Schedule_HotWaterTemp"               # Name of the compact schedule
+  schedule_type_limits_name: "Any Number" # Schedule type limits
+  field_1: "Through: 12/31"              # Time period
+  field_2: "For: AllDays"                # Day type
+  field_3: "Until: 24:00"                # Time until
+  field_4: 55                           # Setpoint value
+  #======================================================
+Compact_Schedule_TargetWaterTemp:
+  name: "Compact_Schedule_TargetWaterTemp"               # Name of the compact schedule
+  schedule_type_limits_name: "Any Number" # Schedule type limits
+  field_1: "Through: 12/31"              # Time period
+  field_2: "For: AllDays"                # Day type
+  field_3: "Until: 24:00"                # Time until
+  field_4: 37                           # Setpoint value
+#======================================================
+Compact_Schedule_AlwaysON:
+  name: "Compact_Schedule_AlwaysON"               # Name of the compact schedule
+  schedule_type_limits_name: "Any Number" # Schedule type limits
+  field_1: "Through: 12/31"              # Time period
+  field_2: "For: AllDays"                # Day type
+  field_3: 'Until: 24:00'                # Time until
+  field_4: 1.0                           # Setpoint value
+ #======================================================
+
+
+
+
+
+#  Cooling_Setpoint_Schedule_Name :                      # Name of the cooling setpoint schedule
+#  Heating_Setpoint_Schedule_Name :                      # Name of the heating setpoint schedule
+#Constant_Heating_Setpoint : 99.0                       # Constant heating setpoint temperature (Celsius)
+#Constant_Cooling_Setpoin : 24.0                        # Constant cooling setpoint temperature (Celsius)
+#Heating_Setback_Schedule_Name : ''                        # Heating setback schedule name
+#Cooling_Setback_Schedule_Name :  ''                     # Cooling setback schedule name
+#  Heating_Setback : 18.0,                                # Heating setback temperature (Celsius)
+#  Cooling_Setback : 27.0,                                # Cooling setback temperature (Celsius)
+#  Setback_Setup_Delay : 1.0                              # Setback setup delay in hours
+
+#****************************************************************************************
+
+#Heat:
+#Hot_Water:
+#Other_Elec_Saving_Measures:
+#Miscellaneous:
