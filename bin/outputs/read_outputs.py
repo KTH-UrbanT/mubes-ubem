@@ -267,7 +267,7 @@ if __name__ == '__main__' :
     configUnit = setConfig.read_yaml(
         os.path.join(mubesPath, 'default', 'config',  'DefaultConfigKeyUnit.yml'))
     LocalConfigPath = os.path.join(mubesPath,'default', 'config')
-    localConfig, filefound, msg = setConfig.check4localConfig(LocalConfigPath)
+    localConfig, filefound, msg, _, _, _ = setConfig.check4localConfig(LocalConfigPath)
     if msg: print(msg)
     config, msg = setConfig.ChangeConfigOption(config, localConfig)
     if msg: print(msg)

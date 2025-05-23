@@ -54,10 +54,16 @@ def CreateAirwallsMat(idf):
             Visible_Absorptance = 0.7,
         )
 
-def create_Material(idf, Material):
-    for key in Material:
-        Name = key
-        create_MaterialObject(idf, Name, Material[key])
+def create_Material(idf, Material, MaterialUpgrade, Ret):
+
+    if Ret['ToRet']:
+        for key in MaterialUpgrade:
+            Name = key
+            create_MaterialObject(idf, Name, MaterialUpgrade[key])
+    else:
+        for key in Material:
+            Name = key
+            create_MaterialObject(idf, Name, Material[key])
 
 if __name__ == '__main__' :
     print('Envelope_Param Main')

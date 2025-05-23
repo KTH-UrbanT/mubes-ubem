@@ -4,26 +4,30 @@
   PATH_TO_RESULTS: ../examples
 1_DATA:
   EPSG_REF: None
-  PATH_TO_DATA: ../examples/minneberg
+  PATH_TO_DATA: ../examples/ExternalStudy
 2_CASE:
   0_GrlChoices:
     CPUusage: 0.8
     CaseName: Ex4-ParametricStudy
     DebugMode: false
-    MakePlotsOnly: false
+    MakePlotsOnly: true
     MakePlotsPerBld: false
     OutputsFile: Outputs_Template.txt
     RefreshFolder: true
     Verbose: true
   1_SimChoices:
-    BldID: '# See ListOfBuiling_Ids.txt for list of IDs '
+    BldID:
+    - cbf18066-8de7-44ba-8f0f-48ad4d5fbc64
+    - cbf18066-8de7-44ba-8f0f-48ad4d5fbc64
     Bounds: []
     BoundsLim: []
     CorePerim: false
     DESO: []
-    FloorZoning: false
+    ExternalStudy: true
+    FloorZoning: true
     NbRuns: 1
     ParamMethods: []
+    Retrofit: false
     VarName2Change: []
     ZoneOfInterest: ''
   2_AdvancedChoices:
@@ -47,7 +51,7 @@
     Latitude: 37.62
     Longitude: -122.4
     Time_Zone: -8.0
-    WeatherDataFile: WeatherData/USA_CA_San.Francisco.Intl.AP.724940_TMY3.epw
+    WeatherDataFile: WeatherData/SWE_ST_Stockholm.024850_TMYx.2009-2023.epw
     YearRoundGroundTemp: 15
   2_SimuData:
     Begin_Day_of_Month: 1
@@ -85,7 +89,7 @@
     setTempUpL:
     - 50
     - 50
-    wwr: 0.3
+    wwr: 0.25
   BaseMaterial:
     Basement Floor:
       Conductivity: 0.9
@@ -118,14 +122,14 @@
       Specific_Heat: 1000
       Thickness: 0.2
     Wall Insulation:
-      Conductivity: 0.03
+      Conductivity: 0.05
       Density: 150
       Roughness: Rough
       Specific_Heat: 1000
-      Thickness: 0.2
+      Thickness: 0.325
     Window:
       Solar_Heat_Gain_Coefficient: 0.7
-      UFactor: 1.9
+      UFactor: 1.2
       Visible_Transmittance: 0.8
   DBLimits:
     AreaBasedFlowRate_key: EgenProjVentFlode

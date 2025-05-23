@@ -35,7 +35,7 @@ def BuildBloc(idf,perim,bloc,bloc_coord,Height,nbstories,nbBasementstories,Basem
             below_ground_storey_height=BasementstoriesHeight if nbBasementstories > 0 else 0
         )
 
-def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False,DebugMode = False):
+def createBuilding(LogFile,idf,building, perim,FloorZoning,ForPlots =False,DebugMode = False):
     #here, the building geometry is created and extruded for each bloc composing the builing, it uses the function above as well
     Full_coord = building.footprint
     Nb_blocs = len(Full_coord)
@@ -93,9 +93,9 @@ def createBuilding(LogFile,idf,building,perim,FloorZoning,ForPlots =False,DebugM
         if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         pass
 
-def createRapidGeomElem(idf,building):
+def createRapidGeomElem(idf,building, Ret):
     #envelop can be created now and allocated to the correct surfaces
-    createEnvelope(idf, building)
+    createEnvelope(idf, building, Ret)
     createShadings(building, idf)
     #create parition walls
     #from EP9.2 there is a dedicated construction type (to be tried as well), but 'Fullexeterior' option is still required
@@ -139,11 +139,11 @@ def createShadings(building,idf):
                     idf.removeidfobject(i)
     return idf
 
-def createEnvelope(idf,building):
+def createEnvelope(idf,building, Ret):
     #settings for the materials and constructions
     idf.set_default_constructions()
     #creating the materials, see Envelope_Param for material specifications
-    Envelope_Param.create_Material(idf, building.Materials)
+    Envelope_Param.create_Material(idf, building.Materials, building.EnvelopeRet,Ret)
     # lets change the construction for some specific zones surfaces: the partition between none heated zones like
     # basement and the above floors
     # creating the construction, see Envelope_Param for material specifications for seperation with heated and non heated zones

@@ -106,8 +106,8 @@ def ZoneCtrl(idf,zone,building,PeopleDensity,ThermostatName, Multiplier,Correctd
         "HVACTEMPLATE:ZONE:IDEALLOADSAIRSYSTEM",
         Zone_Name=zone.Name,
         Template_Thermostat_Name=ThermostatName,
-        Heat_Recovery_Type='Sensible' if building.VentSyst['BalX'] or building.VentSyst['ExhX'] else 'None',
-        Sensible_Heat_Recovery_Effectiveness= Correctdeff['HReff']*building.AirRecovEff if building.VentSyst['BalX'] or building.VentSyst['ExhX'] else 0,
+        # Heat_Recovery_Type='Sensible' if building.VentSyst['BalX'] or building.VentSyst['ExhX'] else 'None',
+        # Sensible_Heat_Recovery_Effectiveness= 0.9,#Correctdeff['HReff']*building.AirRecovEff if building.VentSyst['BalX'] or building.VentSyst['ExhX'] else 0,
         Latent_Heat_Recovery_Effectiveness= 0,
         #Design_Specification_Outdoor_Air_Object_Name = AirNode,
         Outdoor_Air_Method='Sum' if PeopleDensity>0 and building.DemandControlledVentilation else 'Flow/Area',
@@ -322,6 +322,7 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
         except: bloclist.append(int(zone.Name[zone.Name.rfind('Build')+5:zone.Name.find('Storey')]))
         zoneStoreylist.append(int(zone.Name[zone.Name.find('Storey')+6:])) #the name ends with Storey # so lets get the storey number this way
     SortedZoneIdx = sorted(range(len(zoneStoreylist)), key=lambda k: zoneStoreylist[k])
+    Exw = 0
     for idx in SortedZoneIdx:
         zone = AllZone[idx]
         bloc = bloclist[idx]
@@ -333,6 +334,7 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
         for s in sur2lookat:
             if s.Outside_Boundary_Condition in 'outdoors':
                 ExtWallArea += s.area
+                Exw += s.area
             if s.Surface_Type in 'floor':
                 FloorArea = s.area
             # #lets add interior shadings inside the building for each windows

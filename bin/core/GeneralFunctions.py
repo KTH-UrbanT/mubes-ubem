@@ -18,10 +18,10 @@ import pyproj
 import numpy as np
 import json
 
-def appendBuildCase(StudiedCase,keypath,nbcase,DataBaseInput,MainPath,LogFile,PlotOnly = False, DebugMode = False):
-    StudiedCase.addBuilding('Building'+str(nbcase),DataBaseInput,nbcase,MainPath,keypath,LogFile,PlotOnly, DebugMode)
-    idf = StudiedCase.building[-1]['BuildIDF']
-    building = StudiedCase.building[-1]['BuildData']
+def appendBuildCase(StudiedCase, Ret, keypath,nbcase,DataBaseInput,MainPath,LogFile,PlotOnly = False, DebugMode = False):
+    StudiedCase.addBuilding('Building'+str(nbcase), Ret, DataBaseInput,nbcase,MainPath,keypath,LogFile,PlotOnly, DebugMode)
+    idf = StudiedCase.building[-1]['BuildIDF'] #Put the last idf file in idf
+    building = StudiedCase.building[-1]['BuildData']# Put the last building file in building
     return idf, building
 
 def setSimLevel(idf,building):
@@ -31,19 +31,19 @@ def setSimLevel(idf,building):
     Sim_param.Location_and_weather(idf,building)
     Sim_param.setSimparam(idf,building)
 
-def setBuildingLevel(idf,building,LogFile,CorePerim = False,FloorZoning = False,ForPlots = False,DebugMode = False):
+def setBuildingLevel(idf,building,LogFile,CorePerim = False,FloorZoning = False, ToRet = False ,ForPlots = False,DebugMode = False):
     ######################################################################################
     #Building Level
     ######################################################################################
     #this is the function that requires the longest time
     GeomScripts.createBuilding(LogFile,idf,building, perim = CorePerim,FloorZoning = FloorZoning,ForPlots=ForPlots,DebugMode = DebugMode)
 
-def setEnvelopeLevel(idf,building):
+def setEnvelopeLevel(idf,building, Ret):
     ######################################################################################
     #Envelope Level (within the building level)
     ######################################################################################
     #the other geometric element are thus here
-    GeomScripts.createRapidGeomElem(idf, building)
+    GeomScripts.createRapidGeomElem(idf, building, Ret)
 
 def setZoneLevel(idf,building,FloorZoning = False):
     ######################################################################################
@@ -589,6 +589,55 @@ def ManageGlobalPlots(BldObj,IdfObj,FigCenter,WindSize, PlotBldOnly,nbcase = [],
     IdfObj.view_model(test= True if PlotBldOnly+LastBld>0 else False, FigCenter=FigCentroid, WindSize=2 * WindSize,
                        RoofSpecialColor=RoofSpecialColor)
     return FigCenter,WindSize
+
+
+def MakePlot0nly(File2Launch, CaseChoices, pythonpath, CurrentPath):
+    global LastBldObj, LastIDFObj
+    MakePlotOnly = 2 if CaseChoices['MakePlotsPerBld'] else 1
+    FigCenter = []
+    WindSize = 50
+    totalsize = 0
+    offset = 0
+    cpt = '--------------------'
+    cpt1 = '                    '
+    for ListKey in File2Launch:
+        totalsize += len(File2Launch[ListKey])
+    for nbfile, ListKey in enumerate(File2Launch):
+        CaseChoices['DataBaseInput'] = ReadGeoJsonFile(File2Launch[ListKey][0]['keypath'])
+        GoodBld = 0
+        for file_idx, file in enumerate(File2Launch[ListKey]):
+            done = (file_idx + nbfile + 1 + offset) / totalsize
+            lastBld = True if done == 1 and nbfile + 1 == len(File2Launch) else False
+            BldObj, IDFObj, Check = CB_OAT.LaunchOAT(CaseChoices, file['SimDir'], file['keypath'], file['nbBuild'], [1],
+                                                     0,
+                                                     pythonpath, MakePlotOnly=MakePlotOnly)
+            if CaseChoices['Verbose']:
+                print('Figure being completed by ' + str(round(100 * done, 1)) + ' %')
+            else:
+                print('\r', end='')
+                ptcplt = '.' if file_idx % 2 else ' '
+                msg = cpt[:int(20 * done)] + ptcplt + cpt1[int(20 * done):] + str(round(100 * done, 1))
+                print('Figure being completed by ' + msg + ' %', end='', flush=True)
+            if lastBld:
+                os.chdir(CurrentPath)
+                CleanUpLogFiles(file['SimDir'])
+                if Check == 'OK': GoodBld += 1
+                print('\nFigure completed with ' + str(GoodBld) + ' out of ' + str(
+                    len(File2Launch[ListKey])) + ' buildings in total')
+            if Check == 'OK':
+                GoodBld += 1
+                LastBldObj = copy.deepcopy(BldObj)
+                LastIDFObj = copy.deepcopy(IDFObj)
+                FigCenter, WindSize = ManageGlobalPlots(BldObj, IDFObj, FigCenter, WindSize,
+                                                               CaseChoices['MakePlotsPerBld'], nbcase=[],
+                                                               LastBld=lastBld)
+            elif lastBld:
+                FigCenter, WindSize = ManageGlobalPlots(LastBldObj, LastIDFObj, FigCenter, WindSize,
+                                                               CaseChoices['MakePlotsPerBld'], nbcase=[],
+                                                               LastBld=lastBld)
+        offset += file_idx
+        os.chdir(CurrentPath)
+        CleanUpLogFiles(file['SimDir'])
 
 if __name__ == '__main__' :
     print('GeneralFunctions.py')

@@ -9,6 +9,7 @@ import core.LaunchSim as LaunchSim
 import core.CaseBuilder_OAT as CB_OAT
 import core.setConfig as setConfig
 import calibration.CalibUtilities as CalibUtil
+from default.data.Basic.Generate_CityModeller import ShapeCityPlanner
 import shutil
 import multiprocessing as mp
 import yaml
@@ -18,6 +19,7 @@ import sys, os
 path2addgeom = 'C:\\Users\\xf245257\\Documents\\Faure\\prgm_python\\geomeppy'
 #path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
 sys.path.append(path2addgeom)
+
 #add the reauired path for all the above folder
 sys.path.append('..')
 MUBES_Paths = os.path.normcase(os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'mubes-ubem'))
@@ -42,8 +44,13 @@ if __name__ == '__main__' :
     scriptPath = os.path.realpath(__file__)
     os.chdir(os.path.dirname(scriptPath))
 
-    CaseChoices,config, SepThreads,Pool2Launch, MultipleFiles , Retrofit_config, Pool2Retrofit = setConfig.getConfig(localDir) #todo add pool2retrofit
-
+    CaseChoices, config, SepThreads, Pool2Launch, MultipleFiles ,RetrofitConfig, Pool2Retrofit = setConfig.getConfig(localDir)
+# Let's check if an external building (not Minneberg) is requested
+    if config['2_CASE']['1_SimChoices']['ExternalStudy']:
+        DataProductGen_Agent = ShapeCityPlanner()
+        GeneratedCityPlanner = DataProductGen_Agent.GenCore()
+        DataProductGen_Agent.SaveitGeoJson(os.getcwd()[: os.getcwd().find('ubem')+5], GeneratedCityPlanner, config['1_DATA']['PATH_TO_DATA'])
+# If only plotting the geometry is requested then the simulation is drope
     if CaseChoices['MakePolygonPlots']:
         GrlFct.MakePolygonPlots(CaseChoices, Pool2Launch)
         sys.exit()
@@ -60,7 +67,7 @@ if __name__ == '__main__' :
         File2Launch = {0:[]}
     for idx,Case in enumerate(Pool2Launch):
         if len(Case['TotBld_and_Origin'])>0:
-            if MultipleFiles:
+            if MultipleFiles: #todo check what multiplefile is
                 MultipleFileName = MultipleFiles[MultipleFileidx]
                 MultipleFileidx += 1
             if CaseChoices['Verbose']: print('[Prep. phase] '+Case['TotBld_and_Origin'])
@@ -72,7 +79,7 @@ if __name__ == '__main__' :
         SimDir = GrlFct.CreateSimDir(CurrentPath, config['0_APP']['PATH_TO_RESULTS'],CaseChoices['CaseName'],
                     SepThreads, nbBuild, idx, MultipleFile = MultipleFileName, Refresh=CaseChoices['RefreshFolder'],Verbose = CaseChoices['Verbose'])
         #a sample of parameter is generated if needed
-        ParamSample,CaseChoices =  GrlFct.SetParamSample(SimDir, CaseChoices, SepThreads)
+        ParamSample, CaseChoices =  GrlFct.SetParamSample(SimDir, CaseChoices, SepThreads)
         #if a simulation is asked to be done from posterriors that does not exist, the process will skip this building
         if len(ParamSample) == 0 :
             shutil.rmtree(SimDir)
@@ -94,6 +101,10 @@ if __name__ == '__main__' :
                 CaseChoices['VarName2Change'] = []
             with open(os.path.join(SimDir,'ConfigFile.yml'), 'w') as file:
                 documents = yaml.dump(LocalConfigFile, file)
+        if Pool2Retrofit:
+            LocalRetConfig = copy.deepcopy(RetrofitConfig)
+            with open(os.path.join(SimDir,'RetrofitConfig.yml'), 'w') as file:
+                documents = yaml.dump(LocalRetConfig, file)
 
         #lets check if there are several simulations for one building or not
         if CaseChoices['NbRuns'] > 1 and not CaseChoices['MakePlotsOnly']:
@@ -143,7 +154,7 @@ if __name__ == '__main__' :
         # lets check if this building is already present in the folder (means Refresh = False in CreateSimDir() above)
         elif not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + 'v0.idf'))) or CaseChoices['MakePlotsOnly']:
             # if not, then the building number will be appended to a list that will be used afterward
-            File2Launch[max(MultipleFileidx-1,0)].append({'nbBuild': nbBuild, 'keypath': keypath, 'SimDir': SimDir, 'BuildID': Case['BuildID']})
+            File2Launch[max(MultipleFileidx-1,0)].append({'nbBuild': nbBuild, 'keypath': keypath, 'SimDir': SimDir, 'BuildID': Case['BuildID'], 'Ret': Case['Ret']})
     # #lets write a file for the building IDs as it can be very long.
     if writeIds:
         if CaseChoices['Verbose']: print('[Prep.Info] Writing List of Building''s ID file')
@@ -171,7 +182,7 @@ if __name__ == '__main__' :
             for file_idx,file in enumerate(File2Launch[ListKey]):
                 done = (file_idx+nbfile+1+offset)/totalsize
                 lastBld = True if done==1 and nbfile+1 == len(File2Launch) else False
-                BldObj,IDFObj,Check = CB_OAT.LaunchOAT(CaseChoices, file['SimDir'], file['keypath'], file['nbBuild'], [1], 0,
+                BldObj,IDFObj,Check = CB_OAT.LaunchOAT(CaseChoices, file['SimDir'], file['keypath'], file['nbBuild'], file['Ret'], [1], 0,
                                                       pythonpath,MakePlotOnly = MakePlotOnly)
                 if CaseChoices['Verbose']:
                     print('Figure being completed by ' + str(round(100 * done, 1)) + ' %')
@@ -212,7 +223,7 @@ if __name__ == '__main__' :
             CurrentSimDir = File2Launch[ListKey][0]['SimDir']
             pool = mp.Pool(processes=int(nbcpu))
             for nbBuild in File2Launch[ListKey]:
-                pool.apply_async(CB_OAT.LaunchOAT, args=(CaseChoices,CurrentSimDir,nbBuild['keypath'],nbBuild['nbBuild'],[1],0,pythonpath))
+                pool.apply_async(CB_OAT.LaunchOAT, args=(CaseChoices,CurrentSimDir,nbBuild['keypath'],nbBuild['nbBuild'], nbBuild['Ret'], [1],0,pythonpath))
             pool.close()
             pool.join()
             # now that all the files are created, we can aggregate all the log files into a single one.
@@ -235,6 +246,6 @@ if __name__ == '__main__' :
         #the FMU are not taking advantage of the parallel computing option yet
         for ListKey in File2Launch:
             for nbBuild in File2Launch[ListKey]:
-                CB_OAT.LaunchOAT(CaseChoices,SimDir,nbBuild['keypath'],nbBuild['nbBuild'],[1],0,pythonpath)
+                CB_OAT.LaunchOAT(CaseChoices,SimDir,nbBuild['keypath'],nbBuild['nbBuild'],nbBuild['Ret'], [1],0,pythonpath)
     if not File2Launch[0] and CaseChoices['Verbose'] and CaseChoices['NbRuns']==1:  print('[Info] All asked simulations are already done and results available...refreshfolder to remove those')
     if CaseChoices['Verbose']: print('[Process Finished] runMUBES.py ended successfully')

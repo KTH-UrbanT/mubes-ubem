@@ -1,0 +1,17 @@
+0_Bld_Opt:
+  Location:
+  BldShape: 'L'                                         # 'S': Square, 'R': Rectangle, 'L': L shape
+  Coordinates:                                          # You need to at least define three points to create a closed loop polygon
+#    - [18.060679634355637,59.342045727330856]
+#    - [18.06194044294358,59.34238544045127]
+#    - [18.062721284625496,59.341585465424686]
+#    - [18.06143182129682,59.34125305016886]
+
+  CoordSys: 'EPSG:4326'                                # You should define valid CRS based on your coordinates
+  EgenAtemp: 300
+  EgenAntalPlan: 6                                     # Number of floors above ground
+  EgenAntalKallarplan: 1                               # Number of basement floor
+  height: 18
+  EgenNybyggAr: 1999
+  43S_ARVARDE: 2000
+  43S_BYGGAR: 2000

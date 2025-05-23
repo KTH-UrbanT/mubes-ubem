@@ -20,7 +20,7 @@ def read_yaml(file_path):
     return config
 
 def check4localConfig(path, RetrofitConfigPath = ''):
-    ListeAll = os.listdir(path) + os.listdir(RetrofitConfigPath) if RetrofitConfigPath != None else os.listdir(path)
+    ListeAll = os.listdir(path) + os.listdir(RetrofitConfigPath) if RetrofitConfigPath != '' else os.listdir(path)
     localConfig = ''
     localRetConfig = ''
     Retfilefound = False
@@ -41,9 +41,9 @@ def check4localConfig(path, RetrofitConfigPath = ''):
                     Retfilefound = os.path.join(path,file)
                 else:
                     pass
-    # if not filefound:
-    #     localConfig = read_yaml(os.path.join(path, 'DefaultConfig.yml'))
-    #     filefound = os.path.join(path,'DefaultConfig.yml')
+    if not filefound:
+        localConfig = read_yaml(os.path.join(path, 'DefaultConfig.yml'))
+        filefound = os.path.join(path,'DefaultConfig.yml')
     # if not RetrofitConfigPath != None and Retfilefound:
     #     localRetConfig = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfig.yml'))
     #     Retfilefound = os.path.join(RetrofitConfigPath,'RetrofitConfig.yml')
@@ -224,7 +224,7 @@ def getConfig(localDir, App = ''):
     if Retrofit:
         if not config['2_CASE']['0_GrlChoices']['MakePlotsOnly']:
             msg = f'[Prep. Info] Retrofitting mode activated...'
-            RetrofitConfigPath = os.path.join(localDir[:localDir.find('mubes-ubem') + 11], 'bin/Energy_Conservation_Measure')
+            RetrofitConfigPath = os.path.join(localDir[:localDir.find('mubes-ubem') + 11], 'bin/Retrofit')
             DefaulRetConfigUnit = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfigKeyUnit.yml'))
             Retrofit_config = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfig.yml'))
         else:
@@ -355,9 +355,11 @@ def getConfig(localDir, App = ''):
         CaseChoices['BldID'] = []
     epluspath = config['0_APP']['PATH_TO_ENERGYPLUS']
     FMUScriptPath = config['0_APP']['PATH_TO_ENERGYPLUSFMUKit']
+    SimDir = config
+    RetrofitFiles = os.path.join(os.getcwd()[:os.getcwd().find('mubes-ubem')+11], 'bin/Retrofit')
     # a first keypath dict needs to be defined to comply with the current paradigm along the code
     Buildingsfile = os.path.abspath(config['1_DATA']['PATH_TO_DATA'])
-    keyPath = {'epluspath': epluspath, 'Buildingsfile': Buildingsfile, 'FMUScriptPath': FMUScriptPath,'pythonpath': '', 'GeojsonProperties': ''}
+    keyPath = {'epluspath': epluspath, 'Buildingsfile': Buildingsfile, 'FMUScriptPath': FMUScriptPath,'pythonpath': '', 'GeojsonProperties': '', 'RetrofitFiles': RetrofitFiles}
     if geojsonfile:
         keyPath['Buildingsfile'] = ConfigFromArg
     # this function makes the list of dictionary with single input files if several are present in the sample folder
@@ -377,7 +379,7 @@ def getConfig(localDir, App = ''):
         for key in Retrofit_config['0_SIM']:
             for subkey in Retrofit_config['0_SIM'][key]:
                 RetChoice[subkey] = Retrofit_config['0_SIM'][key][subkey]
-        Pool2Retrofit = CreatePool2Retrofit(RetChoice['ECM_to_Implement'], RetChoice['BuildID'], CaseChoices['BldID'], AllBldIDs)
+        Pool2Retrofit, MatchedBld, Pool2Launch = CreatePool2Retrofit(RetChoice['ECM_to_Implement'], RetChoice['BuildID'], CaseChoices['BldID'], AllBldIDs, Pool2Launch, GlobKey[0]['RetrofitFiles'])
 
     else:
         Pool2Retrofit = None
@@ -450,7 +452,7 @@ def CreatePool2Launch(BldIDs,GlobKey,IDKeys,PassBldObject,RefBuildNum,RefDist,Co
             if not BldIDs:
                 try: BldID = Bld.properties[IdKey]
                 except: BldID = 'NoBldID'
-                Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum,'BuildID':BldID ,'TotBld_and_Origin':'','CoordSys':CoordSys })
+                Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum,'BuildID':BldID ,'TotBld_and_Origin':'','CoordSys':CoordSys , 'Ret' : {'ToRet':'', 'RetPath':''}})
                 try:
                     NewUUIDList.append(Bld.properties[IdKey])
                     AllBldIDs = NewUUIDList
@@ -458,7 +460,7 @@ def CreatePool2Launch(BldIDs,GlobKey,IDKeys,PassBldObject,RefBuildNum,RefDist,Co
             else:
                 try:
                     if Bld.properties[IdKey] in BldIDs:
-                        Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum,'BuildID':Bld.properties[IdKey], 'TotBld_and_Origin':'','CoordSys':CoordSys })
+                        Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum,'BuildID':Bld.properties[IdKey], 'TotBld_and_Origin':'','CoordSys':CoordSys, 'Ret' : {'ToRet':'', 'RetPath':''}})
                         NewUUIDList.append(Bld.properties[IdKey])
                     AllBldIDs.append(Bld.properties[IdKey])
                 except: pass
@@ -471,7 +473,7 @@ def CreatePool2Launch(BldIDs,GlobKey,IDKeys,PassBldObject,RefBuildNum,RefDist,Co
         print('[Prep. Info] '+ str(len(Pool2Launch)-idx) +' buildings will be considered out of '+str(bldNum+1)+' in the input file ')
     return Pool2Launch,NewUUIDList,DataBaseInput if PassBldObject else [],IdKey, AllBldIDs
 
-def CreatePool2Retrofit(ECMs, BuildID2Ret, CaseChoices, AllBldIDs):
+def CreatePool2Retrofit(ECMs, BuildID2Ret, CaseChoices, AllBldIDs, Pool2Launch, RetPath):
     Pool2Retrofit = []
     mismatch = []
     match = []
@@ -482,7 +484,7 @@ def CreatePool2Retrofit(ECMs, BuildID2Ret, CaseChoices, AllBldIDs):
             if mtch in CaseChoices:
                 match.append(mtch)
                 BuildNum2Retrofit.append(AllBldIDs.index(mtch))
-                Pool2Retrofit.append({'BuildID': mtch, 'BuildNum2Ret': AllBldIDs.index(mtch), 'Matchedbuildings': True, 'ECMs': ECMs})
+                Pool2Retrofit.append({'BuildID': mtch, 'BuildNum2Ret': AllBldIDs.index(mtch), 'Matchedbuildings': True,'RetAll' : False, 'ECMs': ECMs, 'RetrofitPath' : RetPath})
 
             elif mtch not in (CaseChoices and AllBldIDs):
                 msg = (f"[Retrofit Info] The selected Building ID '{mtch}' for retrofitting does not match any Building ID in the database.\n"
@@ -499,9 +501,21 @@ def CreatePool2Retrofit(ECMs, BuildID2Ret, CaseChoices, AllBldIDs):
             msg = f'[Retrofit Info] Exiting retrofit mode... (zero building to retrofit)'
             print(msg)
     elif not BuildID2Ret:
-        match = CaseChoices
-        # mismatch = []
-        for bld in match:
-            Pool2Retrofit.append({'BuildID': bld, 'BuildNum2Ret': AllBldIDs.index(bld), 'Matchedbuildings': True, 'ECMs': ECMs})
+        match = 'RetAll'
+        Pool2Retrofit.append({'BuildID': 'All', 'BuildNum2Ret': 'All', 'Matchedbuildings': True, 'RetAll' : True, 'ECMs': ECMs, 'RetrofitPath' : RetPath})
 
-    return Pool2Retrofit
+
+    if match == 'RetAll':
+        for i in range(len(Pool2Launch)):
+            Pool2Launch[i]['ToRet'] = True
+    elif len(match) > 0:
+        for i in range(len(Pool2Launch)):
+            if Pool2Launch[i]['BuildID'] in match:
+                Pool2Launch[i]['Ret']['ToRet'] = True
+                Pool2Launch[i]['Ret']['RetPath'] = RetPath
+            else:
+                Pool2Launch[i]['Ret']['ToRet'] = False
+    else:
+        pass
+
+    return Pool2Retrofit, match, Pool2Launch
