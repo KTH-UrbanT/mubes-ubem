@@ -8,6 +8,10 @@ import building_geometry.GeomUtilities as GeomUtilities
 import building_geometry.BuildingObject as BldFct
 from sympy.codegen import Print
 from sympy.codegen.ast import continue_
+from default.data.Basic.Generate_CityModeller import ShapeCityPlanner
+import default.data.Basic.Data4ExternalStudy as ExStudy
+
+
 
 
 def is_tool(name):
@@ -220,23 +224,11 @@ def getConfig(localDir, App = ''):
     except: env = read_yaml(os.path.join(defaultConfigPath, 'env.default.yml'))
     # make the change for the env variable
     config, msg = ChangeConfigOption(config, env)
-    Retrofit = config['2_CASE']['1_SimChoices']['Retrofit']
-    if Retrofit:
-        if not config['2_CASE']['0_GrlChoices']['MakePlotsOnly']:
-            msg = f'[Prep. Info] Retrofitting mode activated...'
-            RetrofitConfigPath = os.path.join(localDir[:localDir.find('mubes-ubem') + 11], 'bin/Retrofit')
-            DefaulRetConfigUnit = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfigKeyUnit.yml'))
-            Retrofit_config = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfig.yml'))
-        else:
-            msg = f'[Retrofit. Info] Retrofitting mode not activated (PlotOnly == True)...'
-            RetrofitConfigPath = None
-            Retrofit_config = None
-            Retrofit = False
-    else:
-        RetrofitConfigPath = None
-        Retrofit_config = None
 
-    if msg: print(msg)
+    RetrofitConfigPath = os.path.join(localDir[:localDir.find('mubes-ubem') + 11], 'bin/Retrofit')
+    DefaulRetConfigUnit = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfigKeyUnit.yml'))
+    Retrofit_config = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfig.yml'))
+    # if msg: print(msg)
     if App == 'Shadowing':
         configUnit = read_yaml(os.path.join(defaultConfigPath, 'DefaultConfigKeyUnit.yml'))
     else:
@@ -259,6 +251,24 @@ def getConfig(localDir, App = ''):
                 IdsFile = os.path.join(os.path.abspath(localConfig['0_APP']['PATH_TO_RESULTS']), Case2Launch,
                                        'ListOfBuiling_Ids.txt')
                 config['2_CASE']['1_SimChoices']['BldID'] = grabBuildingsId(IdsFile)
+
+            Retrofit = config['2_CASE']['1_SimChoices']['Retrofit']
+            if Retrofit and not config['2_CASE']['0_GrlChoices']['MakePlotsOnly']:
+                # msg = f'[Prep. Info] Retrofitting mode activated...'
+                RetrofitConfigPath = os.path.join(localDir[:localDir.find('mubes-ubem') + 11], 'bin/Retrofit')
+                DefaulRetConfigUnit = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfigKeyUnit.yml'))
+                Retrofit_config = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfig.yml'))
+                # print(msg)
+
+            else:
+                # msg = f'[Retrofit. Info] Retrofitting mode not activated (PlotOnly == True)...'
+                RetrofitConfigPath = None
+                Retrofit_config = None
+                Retrofit = False
+                # print(msg)
+
+
+
     elif len(ConfigFromArg) > 0:
         if type(ConfigFromArg[0]) == str:
             for xidx, xArg in enumerate(ConfigFromArg):
@@ -281,8 +291,8 @@ def getConfig(localDir, App = ''):
                         IdsFile = os.path.join(os.path.dirname(ConfigFromArg),'ListOfBuiling_Ids.txt')
                         config['2_CASE']['1_SimChoices']['BldID'] = grabBuildingsId(IdsFile)
                     #this case is if a geojson file is given (for the MakeShadowingWallFile purpose only
-                elif Retrofit and 'ecm' in xArg.lower() and xArg[-4:] == '.yml':
 
+                elif 'ecm' in xArg.lower() and xArg[-4:] == '.yml':
                     ymlfile1 = os.path.join(localDir, xArg)
                     ymlfile2 = xArg
                     if not os.path.isfile(ymlfile1) and not os.path.isfile(ymlfile2):
@@ -296,10 +306,12 @@ def getConfig(localDir, App = ''):
                         except:
                             print('[Retrofit Error] The .yml file failed to be loaded, please check if the file')
                             sys.exit()
-                    Retrofit_config, msg = ChangeConfigOption(Retrofit_config, localRetConfig)
-                    if msg: print(msg)
-                elif config['2_CASE']['0_GrlChoices']['MakePlotsOnly'] and not Retrofit:
-                    pass
+                    Retrofit = config['2_CASE']['1_SimChoices']['Retrofit']
+                    if Retrofit:
+                        Retrofit_config, msg = ChangeConfigOption(Retrofit_config, localRetConfig)
+                        if msg: print(msg)
+                    else: Retrofit_config = None
+
                 elif ConfigFromArg[-8:] == '.geojson':
                     geojsonfile = True
                 else:
@@ -317,10 +329,13 @@ def getConfig(localDir, App = ''):
             print(msg1)
             print('[Config Info] Config completed by ' + filefound)
             config, msg1 = ChangeConfigOption(config, localConfig)
-        if msg2:
-            print(msg2)
-            print('[Config Info] Config completed by ' + Retfilefound)
-            Retrofit_config, msg2 = ChangeConfigOption(Retrofit_config, localRetConfig)
+        Retrofit = config['2_CASE']['1_SimChoices']['Retrofit']
+        if Retrofit:
+            if msg2:
+                print(msg2)
+                print('[Retrofit Config Info] Config completed by ' + Retfilefound)
+                Retrofit_config, msg2 = ChangeConfigOption(Retrofit_config, localRetConfig)
+        else: Retrofit_config = None
 
     #the Unit are checked
     # config, msg = ChangeConfigOption(config, env)
@@ -337,13 +352,43 @@ def getConfig(localDir, App = ''):
         print('[Config Error] Something seems wrong in : ' + config)
         sys.exit()
 
-    if Retrofit:
-        Retrofit_config = checkConfigUnit(Retrofit_config ,DefaulRetConfigUnit)
-        if type(Retrofit_config) != dict:
-            print('[Config Error] Something seems wrong in : ' + Retrofit_config)
-            sys.exit()
+    if not config['2_CASE']['0_GrlChoices']['MakePlotsOnly']:
+        if Retrofit_config:
+            Retrofit_config = checkConfigUnit(Retrofit_config ,DefaulRetConfigUnit)
+            if type(Retrofit_config) != dict:
+                print('[Config Error] Something seems wrong in : ' + Retrofit_config)
+                sys.exit()
     else:
+        Retrofit_config = None
         pass
+## For External study
+    if config['2_CASE']['1_SimChoices']['StockholmBuildings'] and config['2_CASE']['1_SimChoices']['ExternalStudy']:
+        msg = f'Both GenDataset and ExternalStudy activated. StockholmBuildings is preferred'
+        print(msg)
+    if config['2_CASE']['1_SimChoices']['StockholmBuildings']:
+        msg = f'[Data Info] Generating data in the format of City Modeler'
+        print(msg)
+        DataProductGen_Agent = ShapeCityPlanner()
+        GeneratedCityPlanner = DataProductGen_Agent.GenCore()
+        CaseName = config['2_CASE']['0_GrlChoices']['CaseName']
+        Path2Data = config['1_DATA']['PATH_TO_DATA']
+        DataDir = DataProductGen_Agent.SaveitGeoJson(os.getcwd()[: os.getcwd().find('ubem')+5], GeneratedCityPlanner, Path2Data, CaseName)
+        config['1_DATA']['PATH_TO_DATA'] = '../' + DataDir[DataDir.find('examples'):]
+# Lets check if External studies is enabled
+    elif config['2_CASE']['1_SimChoices']['ExternalStudy']: #todo complete coding for external study
+        msg = f'[Data Info] Generating data in the format of City Modeler from user input'
+        print(msg)
+        CaseName = config['2_CASE']['0_GrlChoices']['CaseName']
+        Path2Data = config['1_DATA']['PATH_TO_DATA']
+        DataTemplate = ExStudy.Read_json(os.path.join(localDir[:localDir.find('mubes-ubem')+11], 'default/data/Basic/CM_Template.geojson'))
+        UserInput = ExStudy.Read_yml(os.path.join(localDir[:localDir.find('mubes-ubem')+11], 'default/data/Basic/UserManualInput.yml'))
+        Agent = ExStudy.CityModellerFactory(UserInput, DataTemplate, CaseName, Path2Data)
+        DataDir = Agent.MakeChanges()
+        #We replace the data diectory to new dataset generated from user input in UserManualInput
+        config['1_DATA']['PATH_TO_DATA'] = '../' + DataDir[DataDir.find('examples'):]
+        config['2_CASE']['1_SimChoices']['BldID'] = []
+        # coords = Agent.GenCoord(50, 'L')
+        # Agent.PlotGeometry(coords['coords_floor'])
 
     Key2Aggregate = ['0_GrlChoices', '1_SimChoices', '2_AdvancedChoices']
     CaseChoices = {}
@@ -374,15 +419,20 @@ def getConfig(localDir, App = ''):
     Pool2Launch, CaseChoices['BldID'], CaseChoices['DataBaseInput'], CaseChoices['BldIDKey'], AllBldIDs = CreatePool2Launch(CaseChoices['BldID'],
                     GlobKey, IDKeys,CaseChoices['PassBldObject'],CaseChoices['RefBuildNum'],CaseChoices['RefPerimeter'],CoordSys)
 
-    if Retrofit:
-        RetChoice = {}
-        for key in Retrofit_config['0_SIM']:
-            for subkey in Retrofit_config['0_SIM'][key]:
-                RetChoice[subkey] = Retrofit_config['0_SIM'][key][subkey]
-        Pool2Retrofit, MatchedBld, Pool2Launch = CreatePool2Retrofit(RetChoice['ECM_to_Implement'], RetChoice['BuildID'], CaseChoices['BldID'], AllBldIDs, Pool2Launch, GlobKey[0]['RetrofitFiles'])
-
+    if not config['2_CASE']['0_GrlChoices']['MakePlotsOnly'] :
+        if Retrofit_config:
+            msg = f'[Prep. Info] Retrofitting mode activated...'
+            print(msg)
+            RetChoice = {}
+            for key in Retrofit_config['0_SIM']:
+                for subkey in Retrofit_config['0_SIM'][key]:
+                    RetChoice[subkey] = Retrofit_config['0_SIM'][key][subkey]
+            Pool2Retrofit, MatchedBld, Pool2Launch = CreatePool2Retrofit(RetChoice['ECM_to_Implement'], RetChoice['BuildID'], CaseChoices['BldID'], AllBldIDs, Pool2Launch, GlobKey[0]['RetrofitFiles'])
+        else: Pool2Retrofit = None
     else:
         Pool2Retrofit = None
+        msg = f'[Retrofit Info] Exiting retrofit mode. PlotOnly is activated'
+        print(msg)
     return CaseChoices,config, SepThreads,Pool2Launch,MultipleFiles, Retrofit_config, Pool2Retrofit
 
 def Read_Arguments(App = ''):

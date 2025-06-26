@@ -32,7 +32,10 @@
         CorePerim : [bool]                              #[Bool] True : core and perimeter zone thermal modelling
         FloorZoning : [bool]                            #[Bool] True : each floor in consider as a zone or for core zone construction
         Retrofit : [bool]                               #[Bool] True : energy conservation measures specified in ecm_confid will be applied
-        ExternalStudy: [bool]                             #[Bool] True : User specified building outside Minneberg from City Planner will be considered
+        StockholmBuildings: [bool]                              #[Bool] True : User specified building outside Minneberg from City Planner will be considered
+        ExternalStudy: [bool]
+        OutputVisual: [bool]
+
     2_AdvancedChoices :
         API : [bool]                                    #[Bool] in case the simulation is launched trough an API. Option under development
         CreateFMU : [bool]                              #[Bool] True: creates FMU for each building specified in the BldID. No simulation is launched afterward. FMU will be found in the CaseName folder
@@ -48,6 +51,7 @@
         RefPerimeter: [int]                             #[int] Distance threshold for which all building farer then this threshold for the RefBuildNum are ignored
         MakePolygonPlots : [bool]                       #[Bool] Distance threshold for which all building farer then this threshold for the RefBuildNum are ignored
         ExtraTowerFile : [str]                          #name of the json file that has all the upper tower and shades that are to be added
+
 3_SIM :
     #files are needed to be located in the eather folder of EnergyPlus asthe same path is used afterward to launch the simulation
     1_WeatherData :

@@ -3,7 +3,7 @@
   ECM:
       ECM_to_Implement: ['Envelop', 'HVAC']
   RetCase:
-    BuildID: ['916c8c38-37cf-4903-a77f-79430f98e92f'] #['1c931069-d3d1-4559-8968-e7f0564579fb', 'be821a86-bc5a-4056-b512-25bee164bb9f', '9ecbdf09-a51a-40f2-a332-a8a15320c0dd', '916c8c38-37cf-4903-a77f-79430f98e92f']
+    BuildID: ['1c931069-d3d1-4559-8968-e7f0564579fb'] #['1c931069-d3d1-4559-8968-e7f0564579fb', 'be821a86-bc5a-4056-b512-25bee164bb9f', '9ecbdf09-a51a-40f2-a332-a8a15320c0dd', '916c8c38-37cf-4903-a77f-79430f98e92f']
 
 ECM_Category:
   Envelope:
@@ -13,7 +13,7 @@ ECM_Category:
       Visible_Transmittance: 0.8         #[Float]x
   #****************************************************************************************
     Wall Inertia:
-      Thickness: 0.2567                     #[Float] #this layer will be considered also for the basement walls
+      Thickness: 0.10009                     #[Float] #this layer will be considered also for the basement walls
       Conductivity: 0.9                  #[Float]
       Roughness: "Rough"                 #[Str]
       Density: 2300                      #[Float]

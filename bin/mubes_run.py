@@ -9,6 +9,7 @@ import core.LaunchSim as LaunchSim
 import core.CaseBuilder_OAT as CB_OAT
 import core.setConfig as setConfig
 import calibration.CalibUtilities as CalibUtil
+import outputs.output_utilities as OutUtils
 from default.data.Basic.Generate_CityModeller import ShapeCityPlanner
 import shutil
 import multiprocessing as mp
@@ -46,10 +47,10 @@ if __name__ == '__main__' :
 
     CaseChoices, config, SepThreads, Pool2Launch, MultipleFiles ,RetrofitConfig, Pool2Retrofit = setConfig.getConfig(localDir)
 # Let's check if an external building (not Minneberg) is requested
-    if config['2_CASE']['1_SimChoices']['ExternalStudy']:
-        DataProductGen_Agent = ShapeCityPlanner()
-        GeneratedCityPlanner = DataProductGen_Agent.GenCore()
-        DataProductGen_Agent.SaveitGeoJson(os.getcwd()[: os.getcwd().find('ubem')+5], GeneratedCityPlanner, config['1_DATA']['PATH_TO_DATA'])
+#     if config['2_CASE']['1_SimChoices']['GenDataset']:
+#         DataProductGen_Agent = ShapeCityPlanner()
+#         GeneratedCityPlanner = DataProductGen_Agent.GenCore()
+#         DataProductGen_Agent.SaveitGeoJson(os.getcwd()[: os.getcwd().find('ubem')+5], GeneratedCityPlanner, config['1_DATA']['PATH_TO_DATA'])
 # If only plotting the geometry is requested then the simulation is drope
     if CaseChoices['MakePolygonPlots']:
         GrlFct.MakePolygonPlots(CaseChoices, Pool2Launch)
@@ -224,6 +225,7 @@ if __name__ == '__main__' :
             pool = mp.Pool(processes=int(nbcpu))
             for nbBuild in File2Launch[ListKey]:
                 pool.apply_async(CB_OAT.LaunchOAT, args=(CaseChoices,CurrentSimDir,nbBuild['keypath'],nbBuild['nbBuild'], nbBuild['Ret'], [1],0,pythonpath))
+                # CB_OAT.LaunchOAT(CaseChoices, CurrentSimDir, nbBuild['keypath'], nbBuild['nbBuild'], nbBuild['Ret'], [1], 0, pythonpath)
             pool.close()
             pool.join()
             # now that all the files are created, we can aggregate all the log files into a single one.
@@ -249,3 +251,6 @@ if __name__ == '__main__' :
                 CB_OAT.LaunchOAT(CaseChoices,SimDir,nbBuild['keypath'],nbBuild['nbBuild'],nbBuild['Ret'], [1],0,pythonpath)
     if not File2Launch[0] and CaseChoices['Verbose'] and CaseChoices['NbRuns']==1:  print('[Info] All asked simulations are already done and results available...refreshfolder to remove those')
     if CaseChoices['Verbose']: print('[Process Finished] runMUBES.py ended successfully')
+
+    if config['2_CASE']['1_SimChoices']['OutputVisual']:
+        Visuals = OutUtils.PlotResults()

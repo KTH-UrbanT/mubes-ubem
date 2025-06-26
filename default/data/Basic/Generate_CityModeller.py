@@ -1,5 +1,4 @@
 import os
-
 import json
 import pandas as pd
 import yaml
@@ -10,9 +9,8 @@ import math
 import re
 import geopandas as gpd
 import fiona
-
-
-
+import copy  # Only once at the top of your script
+import shutil
 def read_geojson(self, Path):
     geodata = gpd.read_file(Path)
     return geodata
@@ -98,7 +96,7 @@ class ShapeCityPlanner():
         for ID in self.UUID:
             ReplcaeTemplate = True
             if ReplcaeTemplate:
-                template = self.template.copy()
+                template = copy.deepcopy(self.template)
             BldFootPrints = [FP for FP in self.cpFootprints if FP.get('50A_UUID') == ID]
             coordinates = BldFootPrints[0].get('FootPrints')
             FormularID = BldFootPrints[0].get('FormularID')
@@ -159,15 +157,22 @@ class ShapeCityPlanner():
                     template.get('features')[0]['geometry']['geometries'].append({'type': geomtype, 'coordinates': [
                         coords_lists_sweref99_Roof[0], coords_lists_sweref99_Floor[0]]})
             if FirstRun:
-                MainFile = template
+                MainFile = template.copy()
                 FirstRun = False
             else:
                 MainFile.get('features').append(template.get('features')[0])
         return MainFile
 #The generated CityPlanner will be stored in directory specified in config['1_DATA]['PATH_TO_DATA']
-    def SaveitGeoJson(self, mainpath, MainFile, Destination):
+# Define different name for your study to save data from stockholm in it
+    def SaveitGeoJson(self, mainpath, MainFile, Path2Data, CaseName):
         # Replace this with your actual GeoJSON input dictionary
         geojson_cleaned = clean_nans(MainFile)
+        DataFolder = os.path.join(f"{mainpath}{Path2Data[3:]}"[:(f"{mainpath}{Path2Data[3:]}").find('examples')+9], 'Data_for_'+CaseName)
+        if os.path.exists(DataFolder):
+            shutil.rmtree(DataFolder)
+            os.mkdir(DataFolder)
+        else:
+            os.mkdir(DataFolder)
         # Dump to string with Unicode and indentation
         geojson_str = json.dumps(geojson_cleaned, indent=2, ensure_ascii=False)
         geojson_str = re.sub(
@@ -177,8 +182,6 @@ class ShapeCityPlanner():
             r'\[\s*([-0-9.eE]+),\s*([-0-9.eE]+)\s*\]',
             r'[\1, \2]', geojson_str)
         # Save to GeoJSON file
-        with open(f"{mainpath}{Destination[3:]}/Generated_Buildings.geojson", "w", encoding="utf-8") as f:
+        with open(DataFolder +'/Generated_Buildings.geojson', "w", encoding="utf-8") as f:
             f.write(geojson_str)
-
-
-
+        return DataFolder

@@ -51,7 +51,7 @@ def AddOutputs(idf,building,path,EMSOutputs,OutputsFile):
             setEMS4TotDHWPow(idf, building, zonelist, OutputsVar['Reportedfrequency'], EMSOutputs[2])
     # idf.newidfobject("OUTPUT:SQLITE",
     #                  Option_Type = 'SimpleAndTabular') # could be 'Simple' as well
-    return idf
+    return idf, OutputsVar
 
 def getHeatedZones(idf):
     #returns the zone names that are above ground levels, which means heated zones

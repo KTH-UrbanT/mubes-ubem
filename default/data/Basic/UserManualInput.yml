@@ -8,7 +8,7 @@
 #    - [18.06143182129682,59.34125305016886]
 
   CoordSys: 'EPSG:4326'                                # You should define valid CRS based on your coordinates
-  EgenAtemp: 300
+  EgenAtemp: 400
   EgenAntalPlan: 6                                     # Number of floors above ground
   EgenAntalKallarplan: 1                               # Number of basement floor
   height: 18

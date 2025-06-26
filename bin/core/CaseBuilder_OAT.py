@@ -245,7 +245,7 @@ def LaunchProcess(SimDir, Ret, FirstRun,TotNbRun,currentRun,keyPath,nbcase,CoreP
                 EMSOutputs.append('Total DHW Heating Power')
 
         # the outputs are set using the Output file
-        GrlFct.setOutputLevel(idf,building,MainPath,EMSOutputs,OutputsFile)
+        OutputsVar = GrlFct.setOutputLevel(idf,building,MainPath,EMSOutputs,OutputsFile) #todo OutputsVar added here
         # end = time.time()
         # print('[Time Report] : The setOutputLevel took : ', round(end - start, 2), ' sec')
         #special ending process if FMU is wanted
@@ -286,6 +286,9 @@ def LaunchProcess(SimDir, Ret, FirstRun,TotNbRun,currentRun,keyPath,nbcase,CoreP
         LogFile.close()
         # lets get back to the Main Folder we were at the very beginning
     os.chdir(MainPath)
+
+    #todo add a function here that plots outputs and saves it in a folder
+
 
 if __name__ == '__main__' :
 

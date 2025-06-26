@@ -55,6 +55,17 @@ def CreateAirwallsMat(idf):
         )
 
 def create_Material(idf, Material, MaterialUpgrade, Ret):
+    # Window_U0value =  {'0': 2.7, '1939':2.7, '1960':2.7, '1970':2.5, '1976':2, '1985':1.8, '2000':1.2} #todo delete
+    # Template_Wind = sorted([item for item in Window_U0value if float(item) <= year], reverse=True)[0]
+    # uval_window = Window_U0value[Template_Wind]
+    # newUval = 1/(1/uval_window + 1/0.7)
+    # Material['Window']['UFactor'] = uval_window
+    # Facade_U0value = {'0': 1.1, '1939':0.75, '1960':0.7, '1970':0.63, '1976':0.55, '1985':0.35, '2000':0.2}
+    # DesiredThicknessWall = {'0': 0.045, '1939':0.066, '1960':0.071, '1970':0.079, '1976':0.09, '1985':0.14, '2000':0.25}
+    # Template_W = sorted([item for item in Facade_U0value if float(item) <= year], reverse=True)[0]
+    # thickness = DesiredThicknessWall[Template_W] #+ 0.05
+
+    # Material['Wall Insulation']['Thickness'] = thickness
 
     if Ret['ToRet']:
         for key in MaterialUpgrade:

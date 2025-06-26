@@ -608,3 +608,8 @@ def getLRMetaModel(X,y):
     #print('R2:', metrics.r2_score(y_test, y_pred))
     # print('Root Mean Squared Error:', np.sqrt(metrics.mean_squared_error(y_test, y_pred)))
     return coeff_df, regressor.intercept_, metrics.r2_score(y_test, y_pred)
+
+
+class PlotResults:
+    def __init__(self):
+        pass

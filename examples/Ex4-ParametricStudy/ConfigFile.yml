@@ -4,7 +4,7 @@
   PATH_TO_RESULTS: ../examples
 1_DATA:
   EPSG_REF: None
-  PATH_TO_DATA: ../examples/ExternalStudy
+  PATH_TO_DATA: ../examples/minneberg
 2_CASE:
   0_GrlChoices:
     CPUusage: 0.8
@@ -17,17 +17,18 @@
     Verbose: true
   1_SimChoices:
     BldID:
-    - cbf18066-8de7-44ba-8f0f-48ad4d5fbc64
-    - cbf18066-8de7-44ba-8f0f-48ad4d5fbc64
+    - 1c931069-d3d1-4559-8968-e7f0564579fb
     Bounds: []
     BoundsLim: []
     CorePerim: false
     DESO: []
-    ExternalStudy: true
+    ExternalStudy: false
     FloorZoning: true
     NbRuns: 1
+    OutputVisual: false
     ParamMethods: []
-    Retrofit: false
+    Retrofit: true
+    StockholmBuildings: false
     VarName2Change: []
     ZoneOfInterest: ''
   2_AdvancedChoices:

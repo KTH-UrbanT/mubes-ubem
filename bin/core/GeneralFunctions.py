@@ -58,7 +58,8 @@ def setExtraEnergyLoad(idf,building):
 
 def setOutputLevel(idf,building,MainPath,EMSOutputs,OutputsFile):
     #ouputs definitions
-    Set_Outputs.AddOutputs(idf,building,MainPath,EMSOutputs,OutputsFile)
+    idf, OutputsVar = Set_Outputs.AddOutputs(idf,building,MainPath,EMSOutputs,OutputsFile)
+    return OutputsVar
 
 def readPathfile(Pathways):
     keyPath = {'epluspath': '', 'Buildingsfile': '', 'Shadingsfile': '','pythonpath': '','GeojsonProperties':''} #these keys are hard written as there as used aftewrad at several places, not all of them are used at the moment

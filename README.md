@@ -24,7 +24,7 @@ The portability of FMUs (used on another computer than the one used to generate 
 The MUBES_UBEM main folder contains several subfolders:  
 __bin__  : contains all the core python scripts organized in different field of concern. The main running function is mubes_run.py.  
 __default__  : contains the default *.yml configuration files. the env.default can be copied paste and renamed env.yml to change the pathways according to the current computer. It also contains the times series of cold water input temperature for the Domestic Hot Water needs as well as the water taps in l/min. The latter is an output from an other packages ([StROBe](https://github.com/open-ideas/StROBe)) that enables to create stochastics outputs for residential occupancy.    
-__examples__ : contains contains several examples that can be first ran in order to get a global insight of what the plateform can do. Just launch the following command line : python.exe ~\bin\mubes_run.py ~\examples\Ex-***. It uses the data given in the ~\examples\minneberg folder)  
+__examples__ : contains several examples that can be first ran in order to get a global insight of what the plateform can do. Just launch the following command line : python.exe ~\bin\mubes_run.py ~\examples\Ex-***. It uses the data given in the ~\examples\minneberg folder)  
 
 
 ## Run simulation case
@@ -33,7 +33,16 @@ __First__ __thing__ : Change the path to EnergyPlus and (if needed) to the Data 
 *__python__ __mubes_run.py__* will launch the simulation using the *DefaultConfig.yml* file is in __default\config__.    
 *__python__ __mubes_run.py__ __-yml__ __path_to_config.yml__* will launch the simulation using the information given in the path_to_config.yml. The latter can contain only the changes wanted from the DefaultConfig.yml.  
 *__python__ __mubes_run.py__ __-CONFIG__ __{JSON Format}__* will launch the simulation using the information given in the {JSON Format} as arguments. The latter can contain only the changes wanted from the DefaultConfig.yml.  
+___
+!!!!! The tool is under development for retrofit studies. It has been tried to separate the retrofit studies with already developed repository.
+To run a retrofitting scenario run the following:
+1. Put *__Retrofit : True__* in *__DefaultConfig.yml__* under *__2_CASE/1_SimChoices/Retrofit__*.
+2. Building UUID to be retrofitted should be defined in *__RetrofitConfig.yml__* and note that the selected building have to exist in *__DefaultConfig.yml__* or other scenario.
+3. *__python__ __mubes_run.py__ __-yml__ __path_to_config.yml__ __path_to_RetrofitConfig.yml__* The RetrofitConfig file follows the same structure as DefaultConfig, with some modifications. However, only the buildings specified by their UUIDs in this file will be retrofitted.
 
+__External study__: If you want to run simulation for some hypothetical building, there is a need for a specific input data structure. So to make that possible there is an option in Config file under *__2_CASE/1_SimChoices/ExternalStudy__* that you should put it True. The properties of your desired building should be defined in *__UserManualInput.yml__* under *__default/data/Basic__*.
+
+___
 Examples are given in the __examples__ folder, just launch each example using the wording above with the path to each yml example file.  
 
 __Note__ : *ConfigFile.yml* are systematically saved in the result folder and can thus be used afterward with the *-yml* argument
@@ -41,15 +50,15 @@ __Note__ : *ConfigFile.yml* are systematically saved in the result folder and ca
 __Outputs_Template.txt__  in __bin\outputs__ : This file proposes a list of available outputs from EP. It has been build from a .rdd file from EP. The required outputs should be indicated in this file. It also indicates at which frequency the modeler wants his outputs.  
 
 ## Creating a shadowing wall file
-*__python__ __MakeShadowingWallFile.py__* will built a .json file out of the geojson files in the same location, given in the *Config.yml*.  
-*__python__ __MakeShadowingWallFile.py__ __-yml__ __path_to_config.yml__* will built a .json file out of the geojson files in the same location, given in the *path_to_config.yml*.  
-*__python__ __MakeShadowingWallFile.py__ __-geojson__ __path_to_geojson.geojson__* will built a .json file out of the geojson files in the same location.  
+*__python__ __MakeShadowingWallFile.py__* will build a .json file out of the geojson files in the same location, given in the *Config.yml*.  
+*__python__ __MakeShadowingWallFile.py__ __-yml__ __path_to_config.yml__* will build a .json file out of the geojson files in the same location, given in the *path_to_config.yml*.  
+*__python__ __MakeShadowingWallFile.py__ __-geojson__ __path_to_geojson.geojson__* will build a .json file out of the geojson files in the same location.  
 Extra argument can be given to choose shadowing resolution with simple neighborhood, extended neighborhood (higher buildings are considered even if behind others), and all surfaces from all buildings.  
 Can be added to the above command line :  *__-ShadeLimits__ __SimpleSurf__* or *__-ShadeLimits__ __AllSurf__* .  The default option is extended with higher buildings considered.  
 The more shadowing walls are considered the more warnings can be raised by EnergyPlus afterward.  
 
 ## FMU examples
-__FMPySimPlayGroundEx1.py__ and __FMPySimPlayGroundEx2.py__: it uses FMPy package and as been successfully tested for controlling temperature's setpoints, internal loads, or watertaps at each time steps of the simulation. For one who'd like to make co-simulation, a deep understanding is still needed on the EP side as inputs and ouputs are to be defined.  
+__FMPySimPlayGroundEx1.py__ and __FMPySimPlayGroundEx2.py__: it uses FMPy package and as been successfully tested for controlling temperature's setpoints, internal loads, or watertaps at each time steps of the simulation. For one who'd like to make co-simulation, a deep understanding is still needed on the EP side as inputs and outputs are to be defined.  
 FMU construction are realized if *CreateFMU* is set to True in *LocalConfig.yml*. 
 The two examples (Ex1 and Ex2) :  
 Ex1 : proposes a simple offset on the temperature setPoints. Every two hours a new building sees its setpoint decreases from 21degC to 18degC. the frequency of changes for each building thus depends on the size of the district that is considered. The internal Loads are also modified depending on working and nonworking hours  

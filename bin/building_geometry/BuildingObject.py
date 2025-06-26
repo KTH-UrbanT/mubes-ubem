@@ -182,7 +182,8 @@ class Building:
         self.SharedBld, self.VolumeCorRatio = self.IsSameFormularIdBuilding(Buildingsfile, nbcase, LogFile, DBL,DebugMode)
         self.BlocHeight, self.BlocNbFloor, self.StoreyHeigth = self.EvenFloorCorrection(self.BlocHeight, self.nbfloor, self.BlocNbFloor, self.footprint, LogFile,DebugMode)
         self.AdjustBlocDimension()
-        self.EPHeatedArea = self.getEPHeatedArea(LogFile,DebugMode)
+        self.EPHeatedArea, prem = self.getEPHeatedArea(LogFile,DebugMode)
+        # self.perimeter = prem #Todo delete it later
         self.AdjacentWalls = [] #this will be appended in the getshade function if any present
         self.shades = self.getshade(nbcase, DataBaseInput,LogFile, PlotOnly=PlotOnly,DebugMode=DebugMode)
         self.AddExtraShade(extraShade)
@@ -192,6 +193,8 @@ class Building:
         if not PlotOnly:
             #the attributres above are needed in all case, the one below are needed only if energy simulation is asked for
             self.VentSyst = self.getVentSyst(DB, config['3_SIM']['VentSyst'], LogFile,DebugMode)
+            # self.VentSyst['BalX'] = True # ToDo delete these two lines later
+            # self.VentSyst['ExhX'] = True
             self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB, DBL, BE)
             self.OccupType = self.getOccupType(DB, config['3_SIM']['OccupType'], LogFile,DebugMode)
             self.nbStairwell = self.getnbStairwell(DB, DBL)
@@ -681,14 +684,16 @@ class Building:
         "get the heated area based on the footprint and the number of floors"
         self.BlocFootprintArea=[]
         EPHeatedArea = 0
+        prem = 0
         for i,foot in enumerate(self.footprint):
             EPHeatedArea += Polygon(foot).area*self.BlocNbFloor[i]
             self.BlocFootprintArea.append(Polygon(foot).area)
+            prem += Polygon(foot).length
         msg = '[Geom Info] Blocs footprint areas : '+ str(self.BlocFootprintArea)+'\n'
         if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         msg = '[Geom Info] The total heated area is : ' + str(EPHeatedArea)+' for a declared DB_Surf of : '+str(self.DB_Surf)+' --> discrepancy of : '+str(round((self.DB_Surf-EPHeatedArea)/self.DB_Surf*100,2))+'\n'
         if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
-        return EPHeatedArea
+        return EPHeatedArea, prem
 
     def getsurface(self,DB, DBL,LogFile = [],DebugMode = False):
         "Get the surface from the input file, DB_Surf"
