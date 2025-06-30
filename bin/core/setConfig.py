@@ -8,10 +8,9 @@ import building_geometry.GeomUtilities as GeomUtilities
 import building_geometry.BuildingObject as BldFct
 from sympy.codegen import Print
 from sympy.codegen.ast import continue_
-from default.data.Basic.Generate_CityModeller import ShapeCityPlanner
+sys.path.append(os.getcwd()[:os.getcwd().find('mubes-ubem')+11])
 import default.data.Basic.Data4ExternalStudy as ExStudy
-
-
+from default.data.Basic.Generate_CityModeller import ShapeCityPlanner
 
 
 def is_tool(name):

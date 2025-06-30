@@ -4,25 +4,25 @@
   PATH_TO_RESULTS: ../examples
 1_DATA:
   EPSG_REF: None
-  PATH_TO_DATA: ../examples/minneberg
+  PATH_TO_DATA: ../examples/Data_for_Ex4-ParametricStudy
 2_CASE:
   0_GrlChoices:
     CPUusage: 0.8
     CaseName: Ex4-ParametricStudy
     DebugMode: false
-    MakePlotsOnly: true
+    MakePlotsOnly: false
     MakePlotsPerBld: false
     OutputsFile: Outputs_Template.txt
     RefreshFolder: true
     Verbose: true
   1_SimChoices:
     BldID:
-    - 1c931069-d3d1-4559-8968-e7f0564579fb
+    - 00000000-0000-0000-0000-000000000000
     Bounds: []
     BoundsLim: []
     CorePerim: false
     DESO: []
-    ExternalStudy: false
+    ExternalStudy: true
     FloorZoning: true
     NbRuns: 1
     OutputVisual: false
