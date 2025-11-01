@@ -72,7 +72,7 @@ class CityModellerFactory:
         self.ManualConfig = ManualConfig
         self.CP_template = CP_template
         self.height = self.ManualConfig['0_Bld_Opt']['height']
-        self.MainPath = os.getcwd()[: os.getcwd().find('mubes-ubem') + 11]
+        self.MainPath = os.getcwd()[: os.getcwd().find('NewWorking-MUBES')+17]
     def MakeChanges(self):
         for keys in self.CP_template.get('features')[0]['properties'].keys():
             try:

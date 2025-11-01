@@ -196,8 +196,6 @@ def createEnvelope(idf,building, Ret):
             if len(Wall_Cstr)>1 and 'Basement' not in id_cstr.Name:
                 id_cstr.Layer_2 = Wall_Cstr[1] #cannot create a list comprehension for this because the else '' creates an error....
     #setting windows on all wall with ratio specified in the yml file
-    # WWR = {'0': 0.15, '1939': 0.15, '1960': 0.15, '1970': 0.2, '1976': 0.25, '1985': 0.25, '2000': 0.25} #Todo delete here
-    # cnst_wwr = sorted([item for item in WWR if float(item) <= building.year], reverse=True)[0]
     idf.set_wwr(0.15, construction="Project External Window")
     #used to removed unsued construction (just to limit the warning from EP of unused construction)
     check4UnusedCSTR(idf)

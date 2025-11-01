@@ -114,13 +114,13 @@ def setEMS4MeanTemp(idf,zonelist,Freq,name):
     )
 
     # This object applies the defined program on HVAC template
-    idf.newidfobject(
-        "ENERGYMANAGEMENTSYSTEM:ACTUATOR",
-        Name= "Zone1_HeatSetpoint_Override",
-        Actuated_Component_Unique_Name= 'cool_sch',
-        Actuated_Component_Type= "SCHEDULE:CONSTANT",
-        Actuated_Component_Control_Type= "Schedule Value"
-    )
+    # idf.newidfobject(
+    #     "ENERGYMANAGEMENTSYSTEM:ACTUATOR",
+    #     Name= "Zone1_HeatSetpoint_Override",
+    #     Actuated_Component_Unique_Name= 'cool_sch',
+    #     Actuated_Component_Type= "SCHEDULE:CONSTANT",
+    #     Actuated_Component_Control_Type= "Schedule Value"
+    # )
     #lets create now the ouputs of this EMS
     idf.newidfobject(
         'OUTPUT:ENERGYMANAGEMENTSYSTEM',

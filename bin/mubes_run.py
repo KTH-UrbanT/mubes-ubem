@@ -23,9 +23,6 @@ sys.path.append(path2addgeom)
 
 #add the reauired path for all the above folder
 sys.path.append('..')
-MUBES_Paths = os.path.normcase(os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'mubes-ubem'))
-sys.path.append(MUBES_Paths)
-
 
 def giveReturnFromPool(results):
     doNothing = 0
@@ -42,6 +39,9 @@ if __name__ == '__main__' :
     #python runMUBES.py -Case CaseName  it will launch the config file in the CaseName folder in the PATH_2_RESULTS main folder
     #just to fetch the doog default config and values, wwe first need to be were the original script
     localDir = os.getcwd()
+    if 'bin' in localDir:
+        localDir = localDir[:localDir.find('bin')] #This is because to make it work for both running from terminal and by this script
+
     scriptPath = os.path.realpath(__file__)
     os.chdir(os.path.dirname(scriptPath))
 

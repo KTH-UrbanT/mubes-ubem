@@ -85,6 +85,7 @@ def ZoneLoad(idf, zone, LoadSchedule, building, isfile, ZoningMultiplier):
         )
     return idf
 
+
 def CreateThermostat(idf,name,setUp, setLo):
     #adding a Thermostat setting
     Therm = idf.newidfobject("HVACTEMPLATE:THERMOSTAT", Name=name)
@@ -407,7 +408,8 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
             #we need to catch some correction on the efficiency, see the function for more details
             CorrectdEff = getEfficiencyCor(OfficeTypeZone,ZoningMultiplier,building,sum(BlocPeopleDensity[bloc])/2)
             #now the HVAC system is created for this zone
-            ZoneCtrl(idf, zone, building, max(BlocPeopleDensity[bloc]),ThermostatType, ZoningMultiplier,CorrectdEff,FloorArea)
+            ZoneCtrl(idf, zone, building, max(BlocPeopleDensity[bloc]),ThermostatType, ZoningMultiplier,CorrectdEff,FloorArea) # TODO i replaced ideal load with AHU
+
             #lets add freecooling to consider that people just open windows when there're too hot !
             ZoneFreeCooling(idf,zone,building,'AlwaysON')
 

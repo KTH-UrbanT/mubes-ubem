@@ -67,14 +67,14 @@ def clean_nans(obj):
 # This class contains everything required to creat CityModeller from datasets to functions
 # There is a template of CityModeller in dir with name CM_Template that we use to generate CityModeller
 class ShapeCityPlanner():
-    def __init__(self):
-        Currentpath = os.getcwd()[: os.getcwd().find('ubem')+5]
-        self.config = Read_yml(os.path.join(Currentpath, 'default/data/Basic/CityModellerConfig.yml'))
-        self.cpBuildings = readCSV(os.path.join(Currentpath, self.config['0_Setup']['cpBuildings']))
-        self.cpProperties = readCSV(os.path.join(Currentpath, self.config['0_Setup']['cpProperties']))
-        self.cpNow = readCSV(os.path.join(Currentpath, self.config['0_Setup']['cpNow']))
-        self.cpFootprints = readGjsonFiona(os.path.join(Currentpath,self.config['0_Setup']['cpFootprints']))
-        self.template = Read_json(os.path.join(Currentpath, self.config['0_Setup']['CityModeller_Tempalte']))
+    def __init__(self, path):
+        self.Mainpath = path #os.getcwd()[: os.getcwd().find('bin')]
+        self.config = Read_yml(os.path.join(self.Mainpath, 'default/data/Basic/CityModellerConfig.yml'))
+        self.cpBuildings = readCSV(os.path.join(self.Mainpath, self.config['0_Setup']['cpBuildings']))
+        self.cpProperties = readCSV(os.path.join(self.Mainpath, self.config['0_Setup']['cpProperties']))
+        self.cpNow = readCSV(os.path.join(self.Mainpath, self.config['0_Setup']['cpNow']))
+        self.cpFootprints = readGjsonFiona(os.path.join(self.Mainpath,self.config['0_Setup']['cpFootprints']))
+        self.template = Read_json(os.path.join(self.Mainpath, self.config['0_Setup']['CityModeller_Tempalte']))
         self.UUID = self.config['1_Sim']['UUID']
         self.BldFootPrints = [FP for FP in self.cpFootprints if FP.get('50A_UUID') == self.UUID[0]]
         self.coordinates = self.BldFootPrints[0].get('FootPrints')
@@ -164,10 +164,11 @@ class ShapeCityPlanner():
         return MainFile
 #The generated CityPlanner will be stored in directory specified in config['1_DATA]['PATH_TO_DATA']
 # Define different name for your study to save data from stockholm in it
-    def SaveitGeoJson(self, mainpath, MainFile, Path2Data, CaseName):
+    def SaveitGeoJson(self, Mainpath, BuildingData, Path2Data, CaseName):
         # Replace this with your actual GeoJSON input dictionary
-        geojson_cleaned = clean_nans(MainFile)
-        DataFolder = os.path.join(f"{mainpath}{Path2Data[3:]}"[:(f"{mainpath}{Path2Data[3:]}").find('examples')+9], 'Data_for_'+CaseName)
+        geojson_cleaned = clean_nans(BuildingData)
+        DataFolder = os.path.join(Mainpath,'examples', 'Data_for_'+CaseName)
+            # os.path.join(f"{Mainpath}{Path2Data[3:]}"[:(f"{Mainpath}{Path2Data[3:]}").find('examples')+9], 'Data_for_'+CaseName)
         if os.path.exists(DataFolder):
             shutil.rmtree(DataFolder)
             os.mkdir(DataFolder)

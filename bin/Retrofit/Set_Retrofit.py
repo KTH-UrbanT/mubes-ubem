@@ -6,7 +6,6 @@ import bin.core.GeneralFunctions as GrlFct
 from bin.ECM import HVACSystems
 
 class ECM_prep:
-
     def add_ECM(self, keypath, LogFile, CurrentBldID): #, LogFile, nbcase
         ecm = ECM(keypath,LogFile, CurrentBldID, )
         return ecm

@@ -8,7 +8,14 @@ import building_geometry.GeomUtilities as GeomUtilities
 import building_geometry.BuildingObject as BldFct
 from sympy.codegen import Print
 from sympy.codegen.ast import continue_
-sys.path.append(os.getcwd()[:os.getcwd().find('mubes-ubem')+11])
+
+if 'bin' in os.getcwd():
+    sys.path.append(os.getcwd()[:os.getcwd().find('bin')])
+else:
+    sys.path.append(os.getcwd())
+    # sys.path.append(os.path.join(os.getcwd(), 'bin'))
+
+ #TODO fix the directory here. Also when running from the terminal, the root becomes sth else and this path with be problem maker
 import default.data.Basic.Data4ExternalStudy as ExStudy
 from default.data.Basic.Generate_CityModeller import ShapeCityPlanner
 
@@ -216,6 +223,8 @@ def getConfig(localDir, App = ''):
         ConfigFromArg, Case2Launch, ShadeLim = Read_Arguments(App = App)
     else:
         ConfigFromArg, Case2Launch = Read_Arguments(App = App)
+        print('[Prep. Info] Config from command-line arguments: ',ConfigFromArg)
+        print('[Prep. Info] Given case name: ', Case2Launch)
     #first the default yml file is read to define the config dictionnary as well as the corresponding unit
     config = read_yaml(os.path.join(defaultConfigPath,'DefaultConfig.yml'))
     #lets get the environment variable and try if there is a new made one
@@ -224,9 +233,9 @@ def getConfig(localDir, App = ''):
     # make the change for the env variable
     config, msg = ChangeConfigOption(config, env)
 
-    RetrofitConfigPath = os.path.join(localDir[:localDir.find('mubes-ubem') + 11], 'bin/Retrofit')
+    RetrofitConfigPath = os.path.join(localDir, 'bin/Retrofit')
     DefaulRetConfigUnit = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfigKeyUnit.yml'))
-    Retrofit_config = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfig.yml'))
+    Retrofit_config = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfig.yml')) #TODO sth is wrong here. again its problem of terminal run or run in pycharm
     # if msg: print(msg)
     if App == 'Shadowing':
         configUnit = read_yaml(os.path.join(defaultConfigPath, 'DefaultConfigKeyUnit.yml'))
@@ -254,7 +263,7 @@ def getConfig(localDir, App = ''):
             Retrofit = config['2_CASE']['1_SimChoices']['Retrofit']
             if Retrofit and not config['2_CASE']['0_GrlChoices']['MakePlotsOnly']:
                 # msg = f'[Prep. Info] Retrofitting mode activated...'
-                RetrofitConfigPath = os.path.join(localDir[:localDir.find('mubes-ubem') + 11], 'bin/Retrofit')
+                RetrofitConfigPath = os.path.join(localDir, 'bin/Retrofit')
                 DefaulRetConfigUnit = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfigKeyUnit.yml'))
                 Retrofit_config = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfig.yml'))
                 # print(msg)
@@ -265,10 +274,8 @@ def getConfig(localDir, App = ''):
                 Retrofit_config = None
                 Retrofit = False
                 # print(msg)
-
-
-
     elif len(ConfigFromArg) > 0:
+ #TODO fix this in here. the problem was giving ecm files and config files at the same time
         if type(ConfigFromArg[0]) == str:
             for xidx, xArg in enumerate(ConfigFromArg):
                 if xArg[-4:] == '.yml' and not 'ecm' in xArg.lower():
@@ -367,11 +374,11 @@ def getConfig(localDir, App = ''):
     if config['2_CASE']['1_SimChoices']['StockholmBuildings']:
         msg = f'[Data Info] Generating data in the format of City Modeler'
         print(msg)
-        DataProductGen_Agent = ShapeCityPlanner()
+        DataProductGen_Agent = ShapeCityPlanner(localDir)
         GeneratedCityPlanner = DataProductGen_Agent.GenCore()
         CaseName = config['2_CASE']['0_GrlChoices']['CaseName']
         Path2Data = config['1_DATA']['PATH_TO_DATA']
-        DataDir = DataProductGen_Agent.SaveitGeoJson(os.getcwd()[: os.getcwd().find('ubem')+5], GeneratedCityPlanner, Path2Data, CaseName)
+        DataDir = DataProductGen_Agent.SaveitGeoJson(localDir, GeneratedCityPlanner, Path2Data, CaseName)
         config['1_DATA']['PATH_TO_DATA'] = '../' + DataDir[DataDir.find('examples'):]
 # Lets check if External studies is enabled
     elif config['2_CASE']['1_SimChoices']['ExternalStudy']: #todo complete coding for external study
@@ -379,8 +386,8 @@ def getConfig(localDir, App = ''):
         print(msg)
         CaseName = config['2_CASE']['0_GrlChoices']['CaseName']
         Path2Data = config['1_DATA']['PATH_TO_DATA']
-        DataTemplate = ExStudy.Read_json(os.path.join(localDir[:localDir.find('mubes-ubem')+11], 'default/data/Basic/CM_Template.geojson'))
-        UserInput = ExStudy.Read_yml(os.path.join(localDir[:localDir.find('mubes-ubem')+11], 'default/data/Basic/UserManualInput.yml'))
+        DataTemplate = ExStudy.Read_json(os.path.join(localDir, 'default/data/Basic/CM_Template.geojson'))
+        UserInput = ExStudy.Read_yml(os.path.join(localDir, 'default/data/Basic/UserManualInput.yml'))
         Agent = ExStudy.CityModellerFactory(UserInput, DataTemplate, CaseName, Path2Data)
         DataDir = Agent.MakeChanges()
         #We replace the data diectory to new dataset generated from user input in UserManualInput
@@ -400,7 +407,7 @@ def getConfig(localDir, App = ''):
     epluspath = config['0_APP']['PATH_TO_ENERGYPLUS']
     FMUScriptPath = config['0_APP']['PATH_TO_ENERGYPLUSFMUKit']
     SimDir = config
-    RetrofitFiles = os.path.join(os.getcwd()[:os.getcwd().find('mubes-ubem')+11], 'bin/Retrofit')
+    RetrofitFiles = os.path.join(os.getcwd(), 'Retrofit')
     # a first keypath dict needs to be defined to comply with the current paradigm along the code
     Buildingsfile = os.path.abspath(config['1_DATA']['PATH_TO_DATA'])
     keyPath = {'epluspath': epluspath, 'Buildingsfile': Buildingsfile, 'FMUScriptPath': FMUScriptPath,'pythonpath': '', 'GeojsonProperties': '', 'RetrofitFiles': RetrofitFiles}
