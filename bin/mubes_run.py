@@ -28,6 +28,7 @@ def giveReturnFromPool(results):
     doNothing = 0
     print(results)
 
+
 if __name__ == '__main__' :
 
     #Main script to launch either simulation or plot of the urban area represented in the main geojson file
