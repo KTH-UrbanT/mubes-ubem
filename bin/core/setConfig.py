@@ -13,12 +13,9 @@ if 'bin' in os.getcwd():
     sys.path.append(os.getcwd()[:os.getcwd().find('bin')])
 else:
     sys.path.append(os.getcwd())
-    # sys.path.append(os.path.join(os.getcwd(), 'bin'))
 
- #TODO fix the directory here. Also when running from the terminal, the root becomes sth else and this path with be problem maker
 import default.data.Basic.Data4ExternalStudy as ExStudy
 from default.data.Basic.Generate_CityModeller import ShapeCityPlanner
-
 
 def is_tool(name):
 #it will return the path of the executable or None if not installed
@@ -54,9 +51,11 @@ def check4localConfig(path, RetrofitConfigPath = ''):
     if not filefound:
         localConfig = read_yaml(os.path.join(path, 'DefaultConfig.yml'))
         filefound = os.path.join(path,'DefaultConfig.yml')
-    # if not RetrofitConfigPath != None and Retfilefound:
-    #     localRetConfig = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfig.yml'))
-    #     Retfilefound = os.path.join(RetrofitConfigPath,'RetrofitConfig.yml')
+
+    if not Retfilefound and RetrofitConfigPath != '':
+        localRetConfig = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfig.yml'))
+        Retfilefound = os.path.join(RetrofitConfigPath,'RetrofitConfig.yml')
+
     return localConfig, filefound, msg1, localRetConfig, Retfilefound, msg2
 
 def ChangeConfigOption(config,localConfig):
@@ -219,6 +218,7 @@ def grabBuildingsId(IdsFile):
 
 def getConfig(localDir, App = ''):
     defaultConfigPath = os.path.join(os.path.dirname(os.getcwd()), 'default', 'config')
+
     if App == 'Shadowing':
         ConfigFromArg, Case2Launch, ShadeLim = Read_Arguments(App = App)
     else:
@@ -232,10 +232,10 @@ def getConfig(localDir, App = ''):
     except: env = read_yaml(os.path.join(defaultConfigPath, 'env.default.yml'))
     # make the change for the env variable
     config, msg = ChangeConfigOption(config, env)
-
-    RetrofitConfigPath = os.path.join(localDir, 'bin/Retrofit')
-    DefaulRetConfigUnit = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfigKeyUnit.yml'))
-    Retrofit_config = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfig.yml')) #TODO sth is wrong here. again its problem of terminal run or run in pycharm
+    Retrofit = config['2_CASE']['1_SimChoices']['Retrofit']
+    # RetrofitConfigPath = os.path.join(localDir, 'bin/Retrofit')
+    # DefaulRetConfigUnit = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfigKeyUnit.yml'))
+    # Retrofit_config = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfig.yml'))
     # if msg: print(msg)
     if App == 'Shadowing':
         configUnit = read_yaml(os.path.join(defaultConfigPath, 'DefaultConfigKeyUnit.yml'))
@@ -243,6 +243,7 @@ def getConfig(localDir, App = ''):
         configUnit = read_yaml(os.path.join(defaultConfigPath, 'DefaultConfigKeyUnit.yml'))
     geojsonfile = False
     if Case2Launch:
+        print('hoo sayedeme')
         #this case is if a folder Name has been given, the local yml file will be read to make the config dictionary
         CaseFolder1 = os.path.join(localDir,Case2Launch)
         CaseFolder2 = Case2Launch
@@ -260,22 +261,14 @@ def getConfig(localDir, App = ''):
                                        'ListOfBuiling_Ids.txt')
                 config['2_CASE']['1_SimChoices']['BldID'] = grabBuildingsId(IdsFile)
 
-            Retrofit = config['2_CASE']['1_SimChoices']['Retrofit']
             if Retrofit and not config['2_CASE']['0_GrlChoices']['MakePlotsOnly']:
-                # msg = f'[Prep. Info] Retrofitting mode activated...'
                 RetrofitConfigPath = os.path.join(localDir, 'bin/Retrofit')
                 DefaulRetConfigUnit = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfigKeyUnit.yml'))
                 Retrofit_config = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfig.yml'))
-                # print(msg)
-
             else:
-                # msg = f'[Retrofit. Info] Retrofitting mode not activated (PlotOnly == True)...'
-                RetrofitConfigPath = None
                 Retrofit_config = None
-                Retrofit = False
-                # print(msg)
+# Lets check to see if any argument was passed in command line
     elif len(ConfigFromArg) > 0:
- #TODO fix this in here. the problem was giving ecm files and config files at the same time
         if type(ConfigFromArg[0]) == str:
             for xidx, xArg in enumerate(ConfigFromArg):
                 if xArg[-4:] == '.yml' and not 'ecm' in xArg.lower():
@@ -297,7 +290,6 @@ def getConfig(localDir, App = ''):
                         IdsFile = os.path.join(os.path.dirname(ConfigFromArg),'ListOfBuiling_Ids.txt')
                         config['2_CASE']['1_SimChoices']['BldID'] = grabBuildingsId(IdsFile)
                     #this case is if a geojson file is given (for the MakeShadowingWallFile purpose only
-
                 elif 'ecm' in xArg.lower() and xArg[-4:] == '.yml':
                     ymlfile1 = os.path.join(localDir, xArg)
                     ymlfile2 = xArg
@@ -312,40 +304,61 @@ def getConfig(localDir, App = ''):
                         except:
                             print('[Retrofit Error] The .yml file failed to be loaded, please check if the file')
                             sys.exit()
-                    Retrofit = config['2_CASE']['1_SimChoices']['Retrofit']
-                    if Retrofit:
-                        Retrofit_config, msg = ChangeConfigOption(Retrofit_config, localRetConfig)
-                        if msg: print(msg)
-                    else: Retrofit_config = None
-
                 elif ConfigFromArg[-8:] == '.geojson':
                     geojsonfile = True
                 else:
                      print('[Unknown Argument] Please check the available options for arguments : -yml or -CONFIG')
                      sys.exit()
+        if Retrofit:
+            try:
+                if localRetConfig:
+                    RetrofitConfigPath = os.path.join(localDir, 'bin/Retrofit')
+                    DefaulRetConfigUnit = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfigKeyUnit.yml'))
+                    Retrofit_config = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfig.yml'))
+                    Retrofit_config, msg = ChangeConfigOption(Retrofit_config, localRetConfig)
+                    if msg: print(msg)
+                else:
+                    Retrofit_config = None
+            except:
+                RetrofitConfigPath = os.path.join(localDir, 'bin/Retrofit')
+                DefaulRetConfigUnit = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfigKeyUnit.yml'))
+                Retrofit_config = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfig.yml'))
+                Retrofit_config = Retrofit_config
+        else:
+            Retrofit_config = None
+
     elif ConfigFromArg:
         #this case is if the local config is given directly through a json file fomrat (previously converted into a dictionary in the ReadArgument() function)
         config, msg = ChangeConfigOption(config, ConfigFromArg)
         if msg: print(msg)
         config['2_CASE']['0_GrlChoices']['OutputFile'] = 'Outputs4API.txt'
+        #TODO retrofitting study in this case will fail. Fix it
+        Retrofit_config = None
     else:
-        #no specific element is given, the local yml in the defaultConfigPath will be used. some different than default could be placed in the same directory
-        localConfig, filefound, msg1, localRetConfig, Retfilefound, msg2 = check4localConfig(defaultConfigPath, RetrofitConfigPath)
-        if msg1:
-            print(msg1)
-            print('[Config Info] Config completed by ' + filefound)
-            config, msg1 = ChangeConfigOption(config, localConfig)
-        Retrofit = config['2_CASE']['1_SimChoices']['Retrofit']
         if Retrofit:
+            RetrofitConfigPath = os.path.join(localDir, 'bin/Retrofit')
+            DefaulRetConfigUnit = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfigKeyUnit.yml'))
+            Retrofit_config = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfig.yml'))
+        #no specific element is given, the local yml in the defaultConfigPath will be used. some different than default could be placed in the same directory
+            localConfig, filefound, msg1, localRetConfig, Retfilefound, msg2 = check4localConfig(defaultConfigPath, RetrofitConfigPath)
+            if msg1:
+                print(msg1)
+                print('[Config Info] Config completed by ' + filefound)
+                config, msg1 = ChangeConfigOption(config, localConfig)
             if msg2:
                 print(msg2)
                 print('[Retrofit Config Info] Config completed by ' + Retfilefound)
-                Retrofit_config, msg2 = ChangeConfigOption(Retrofit_config, localRetConfig)
-        else: Retrofit_config = None
+            Retrofit_config, msg2 = ChangeConfigOption(Retrofit_config, localRetConfig)
+
+        else:
+            Retrofit_config = None
+            localConfig, filefound, msg1, localRetConfig, Retfilefound, msg2 = check4localConfig(defaultConfigPath)
+            if msg1:
+                print(msg1)
+                print('[Config Info] Config completed by ' + filefound)
+                config, msg1 = ChangeConfigOption(config, localConfig)
 
     #the Unit are checked
-    # config, msg = ChangeConfigOption(config, env)
-
     #### at this stage the potential given files in command window, the additional files in default/config and bin/ECM were checked and
     ### changes applied to config files.
     #### now check config files to ensure the variables types are correct
@@ -353,11 +366,10 @@ def getConfig(localDir, App = ''):
     if type(config) != dict:
         print('[Config Error] Something seems wrong : \n' + config)
         sys.exit()
-    config, SepThreads = checkGlobalConfig(config) # todo you cand septhreads in here
+    config, SepThreads = checkGlobalConfig(config) # todo you can d septhreads in here
     if type(config) != dict:
         print('[Config Error] Something seems wrong in : ' + config)
         sys.exit()
-
     if not config['2_CASE']['0_GrlChoices']['MakePlotsOnly']:
         if Retrofit_config:
             Retrofit_config = checkConfigUnit(Retrofit_config ,DefaulRetConfigUnit)

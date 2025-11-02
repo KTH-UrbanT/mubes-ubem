@@ -8,7 +8,7 @@
 ECM_Category:
   Envelope:
     Window:
-      UFactor: 2.989                     #[Float]
+      UFactor: 2.6644                     #[Float]
       Solar_Heat_Gain_Coefficient: 0.7   #[Float]
       Visible_Transmittance: 0.8         #[Float]x
   #****************************************************************************************
