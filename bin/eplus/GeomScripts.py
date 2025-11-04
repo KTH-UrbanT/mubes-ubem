@@ -12,7 +12,7 @@ from geomeppy import geom
 def BuildBloc(idf,perim,bloc,bloc_coord,Height,nbstories,nbBasementstories,BasementstoriesHeight,Perim_depth,altitude):
     if perim:
         idf.add_block(
-            name='Build' + str(bloc) + '_Alt'+str(altitude),
+            name='Build_' + str(bloc) + '_Alt'+str(altitude),
             coordinates=bloc_coord,
             height=Height,
             num_stories=nbstories + nbBasementstories,
@@ -25,7 +25,7 @@ def BuildBloc(idf,perim,bloc,bloc_coord,Height,nbstories,nbBasementstories,Basem
         )
     else:
         idf.add_block(
-            name='Build' + str(bloc) + '_Alt'+str(altitude),
+            name='Build_' + str(bloc) + '_Alt'+str(altitude),
             coordinates=bloc_coord,
             height=Height,
             altitude = altitude,

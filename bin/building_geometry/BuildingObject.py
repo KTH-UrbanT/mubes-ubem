@@ -197,6 +197,9 @@ class Building:
             # self.VentSyst['ExhX'] = True
             self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB, DBL, BE)
             self.OccupType = self.getOccupType(DB, config['3_SIM']['OccupType'], LogFile,DebugMode)
+            self.ResidentialOcc = config['2_CASE']['1_SimChoices']['ResidentialOcc']
+            self.SeperateBlock = config['2_CASE']['1_SimChoices']['SeperateBlock']
+            self.indoor_Air_Comfort_Analysis = config['2_CASE']['1_SimChoices']['indoor_Air_Comfort_Analysis']
             self.nbStairwell = self.getnbStairwell(DB, DBL)
             #self.WeatherDataFile = WeatherData
             self.year = self.getyear(DB, DBL)
@@ -941,6 +944,7 @@ class Building:
 
     def getAreaBasedFlowRate(self, DB, DBL, BE):
         "Get the airflow rates based on the floor area"
+
         val,key = getDBValue(DB.properties, DBL['AreaBasedFlowRate_key'])
         try: AreaBasedFlowRate = float(val)
         except : AreaBasedFlowRate = BE['AreaBasedFlowRate']
@@ -950,6 +954,7 @@ class Building:
     def getOccupType(self,DB,OccupTypeDict,LogFile,DebugMode):
         "get the occupency type of the building"
         OccupType = {}
+        msg_list = []
         self.OccupRate = {}
         for key in OccupTypeDict:
             if '_key' in key:
@@ -959,9 +964,13 @@ class Building:
                     OccupType[key[:-4]] = 0
             if '_Rate' in key:
                 self.OccupRate[key[:-5]] = OccupTypeDict[key]
-        if sum([OccupType[i] for i in OccupType.keys()]): OccupType['Residential'] = 1
-        msg = '[Usage Info] This building has ' + str(1 - OccupType['Residential']) + ' % of none residential occupancy type\n'
-        if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
+                #TODO in all cases it always become residential. Fix it
+        # if sum([OccupType[i] for i in OccupType.keys()]): OccupType['Residential'] = 1
+        nonzero_keys = [key for key, value in OccupType.items() if value != 0]
+        for idx, OccIndex in enumerate(nonzero_keys):
+            msg_list.append('[Usage Info] This building has ' + str(OccupType[OccIndex] * 100) + ' % of ' + str(OccIndex) + ' occupancy type\n')
+        # msg = '[Usage Info] This building has ' + str(1 - OccupType['Residential']) + ' % of none residential occupancy type\n'
+            if DebugMode: GrlFct.Write2LogFile(msg_list[idx], LogFile)
         return OccupType
 
     def isInputDir(self):

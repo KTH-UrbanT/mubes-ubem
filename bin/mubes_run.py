@@ -10,7 +10,7 @@ import core.CaseBuilder_OAT as CB_OAT
 import core.setConfig as setConfig
 import calibration.CalibUtilities as CalibUtil
 import outputs.output_utilities as OutUtils
-from default.data.Basic.Generate_CityModeller import ShapeCityPlanner
+# from default.data.Basic.Generate_CityModeller import ShapeCityPlanner
 import shutil
 import multiprocessing as mp
 import yaml
@@ -28,17 +28,36 @@ def giveReturnFromPool(results):
     doNothing = 0
     print(results)
 
-
 if __name__ == '__main__' :
+    # -----------------------------------------------------------------------------
+    # Main script to launch either the simulation or plotting process for an urban
+    # area defined in the main GeoJSON file.
+    #
+    # All input parameters can be specified in a YAML configuration file. If a
+    # parameter is not defined in the user-provided YAML file, the value from
+    # 'defaultConfig.yml' will be used instead.
+    #
+    # Usage:
+    #   python runMUBES.py
+    #       → Loads the default configuration file and checks for a local YAML file
+    #         in the same directory to override default values.
+    #
+    #   python runMUBES.py -yml MyConfig.yml
+    #       → Uses 'MyConfig.yml' to adapt the default configuration.
+    #
+    #   python runMUBES.py -CONFIG {json_string}
+    #       → Accepts a JSON-formatted configuration (used for API-based execution).
+    #
+    #   python runMUBES.py -Case CaseName
+    #       → Launches the simulation using the configuration file located in the
+    #         'CaseName' folder within the main 'PATH_2_RESULTS' directory.
+    #
+    # Note:
+    #   To ensure the correct default configuration and resource paths are used,
+    #   the script should be executed from the directory where the original script
+    #   is located.
+    # -----------------------------------------------------------------------------
 
-    #Main script to launch either simulation or plot of the urban area represented in the main geojson file
-    #all inputs can be given inside a yml file. If not specified in a specific yml file, value from the defaultConfig.yml file will be considered
-    #It can be launched by :
-    #python runMUBES.py     it will load the default yml file and check if a local one is present in the same folder to adapt the default one
-    #python runMUBES.py -yml MyConfig.yml   it will consider the specified yml file to adapt the default one
-    #python runMUBES.py -CONFIG {xxxxxxx} json format of the yml file to adapt the default one for API application
-    #python runMUBES.py -Case CaseName  it will launch the config file in the CaseName folder in the PATH_2_RESULTS main folder
-    #just to fetch the doog default config and values, wwe first need to be were the original script
     localDir = os.getcwd()
     if 'bin' in localDir:
         localDir = localDir[:localDir.find('bin')] #This is because to make it work for both running from terminal and by this script

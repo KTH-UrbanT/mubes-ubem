@@ -1,6 +1,9 @@
 # @Author  : Xavier Faure
 # @Email   : xavierf@kth.se
 
+#@Edited by: Mohammadhossein Alizadeh
+# @Email   : alizad@kth.se
+
 import yaml, os, sys, json
 import distutils.spawn
 import core.GeneralFunctions as GrlFct
@@ -218,7 +221,6 @@ def grabBuildingsId(IdsFile):
 
 def getConfig(localDir, App = ''):
     defaultConfigPath = os.path.join(os.path.dirname(os.getcwd()), 'default', 'config')
-
     if App == 'Shadowing':
         ConfigFromArg, Case2Launch, ShadeLim = Read_Arguments(App = App)
     else:

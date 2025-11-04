@@ -2,6 +2,7 @@
 # @Email   : xavierf@kth.se
 
 import utilities.ProbGenerator as ProbGenerator
+from eplus.Indoor_Air_Comfort import *
 import os
 
 def Schedule_Type(idf):
@@ -43,6 +44,42 @@ def ScheduleCompactOccup(idf,Name,building,SetPoint):
     )
     return idf
 
+def ScheduleCompactResidentialOccup(idf, Name, building, SetPoint):
+    idf.newidfobject(
+        "SCHEDULE:COMPACT",
+        Name=Name,
+        Schedule_Type_Limits_Name='Any Number',
+        # Covers the whole year
+        Field_1='Through: 12/31',
+
+        # --- Weekdays pattern ---
+        Field_2='For: Weekdays',
+        Field_3='Until: 07:00',  # night/early morning
+        Field_4=3,
+        Field_5='Until: 09:00',  # morning at home
+        Field_6=2,
+        Field_7='Until: 17:00',  # out at work/school
+        Field_8=0,
+        Field_9='Until: 23:00',  # evening at home
+        Field_10=3,
+        Field_11='Until: 24:00',  # late night
+        Field_12=3,
+
+        # --- Weekends pattern ---
+        Field_13='For: Weekends',
+        Field_14='Until: 24:00',
+        Field_15=3,
+
+        # --- Holidays, design days, custom days ---
+        # This line covers: Holiday, SummerDesignDay, WinterDesignDay,
+        # CustomDay1, CustomDay2
+        Field_16='For: AllOtherDays',
+        Field_17='Until: 24:00',
+        Field_18=3,
+    )
+    return idf
+
+
 
 def create_ScheduleFile(idf, Name, fileName):
     #create schedule file, used as soon as specific patterns are required
@@ -58,7 +95,20 @@ def create_ScheduleFile(idf, Name, fileName):
         )
     return idf
 
-def create_Occupant(idf, zone, OccScheduleName, ActScheduleName,NbPeople):
+# def create_Occupant(idf, zone, OccScheduleName, ActScheduleName,NbPeople):
+#     idf.newidfobject(
+#         'PEOPLE',
+#         Name = zone.Name+' Occ',
+#         Zone_or_ZoneList_Name = zone.Name,
+#         Zone_or_ZoneList_or_Space_or_SpaceList_Name=zone.Name, # this is because E+ changed the above input name by this one in new versions
+#         Number_of_People_Schedule_Name = OccScheduleName,
+#         Number_of_People = NbPeople,
+#         Activity_Level_Schedule_Name = ActScheduleName,
+#         )
+#     return idf
+
+
+def create_Occupant(idf, zone, building,  OccScheduleName, ActScheduleName,NbPeople):
     idf.newidfobject(
         'PEOPLE',
         Name = zone.Name+' Occ',
@@ -67,6 +117,11 @@ def create_Occupant(idf, zone, OccScheduleName, ActScheduleName,NbPeople):
         Number_of_People_Schedule_Name = OccScheduleName,
         Number_of_People = NbPeople,
         Activity_Level_Schedule_Name = ActScheduleName,
+        Thermal_Comfort_Model_1_Type = 'FANGER' if building.indoor_Air_Comfort_Analysis else 'None',
+        Work_Efficiency_Schedule_Name = 'WorkEfficiency' if building.indoor_Air_Comfort_Analysis else 'None',
+        Clothing_Insulation_Schedule_Name = 'ClothingInsulation' if building.indoor_Air_Comfort_Analysis else 'None',
+        Air_Velocity_Schedule_Name = 'Airvelocity' if building.indoor_Air_Comfort_Analysis else 'None',
+        Mean_Radiant_Temperature_Calculation_Type = 'ZoneAveraged' if building.indoor_Air_Comfort_Analysis else 'None'
         )
     return idf
 
@@ -92,7 +147,7 @@ def CreateThermostat(idf,name,setUp, setLo):
     if type(setUp) == str:
         Therm.Cooling_Setpoint_Schedule_Name=setUp
     else:
-        Therm.Constant_Cooling_Setpoint = max(setLo+4,setUp)
+        Therm.Constant_Cooling_Setpoint = max(setLo+4,setUp) #TODO error appears if SetLo is file and SetUp is numerical
     if type(setLo) == str:
         Therm.Heating_Setpoint_Schedule_Name = setLo
     else:
@@ -270,6 +325,16 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
     # we need to define the occupancy activity level in order to avoid a warning and maybe later, compute the heat generated !
     # the set point is defined in yml
     ScheduleCompact(idf, 'OccupActivity', building.OccupHeatRate)
+
+    if building.indoor_Air_Comfort_Analysis:
+        ScheduleCompact_WorkEfficiency(idf, 'WorkEfficiency', 0.5)
+        ScheduleCompact_cloth(idf, 'ClothingInsulation')
+        ScheduleCompact_Airvelocity(idf, 'Airvelocity',0.2)
+
+        ScheduleCompact_CO2(idf, 'Outdoor CO2 Schedule', 400)
+        ScheduleCompact_Contaminant(idf, 'Generic Contaminant Schedule', 0)
+        ZoneAirContaminantBalance(idf, 'Outdoor CO2 Schedule', 'Generic Contaminant Schedule')
+
     #for the thermostat of each zone lets first define if there is a need for external file
     if building.setTempLoL[1]-building.setTempLoL[0] == 0:
         HeatSetPoint = building.setTempLoL[0]
@@ -296,12 +361,18 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
     OfficeOcc = 1 - building.OccupType['Residential'] #all occupancy but residential are taken for the extra airflow of 7 l/s/pers
     # extra variable used below to compute the number of people to be considered in each zone
     PeopleDensity = [0, 0]
+    ResidPeopleDensity = [0, 0]
     if OfficeOcc != 0:
         for key in building.OccupType.keys():
-            if not key in ['Residential']:
+            if not key in ['Residential']: #TODO i think if we delete this and edit the schedule, then we can include residential
                 PeopleDensity[0] += building.OccupType[key] / OfficeOcc * min(
                     building.OccupRate[key])  # this is the mean number of people per m2
                 PeopleDensity[1] += building.OccupType[key] / OfficeOcc * max(building.OccupRate[key])
+            else:
+                ResidPeopleDensity[0] = building.OccupType[key] / building.OccupType['Residential'] * min(
+                    building.OccupRate[key])
+                ResidPeopleDensity[1] = building.OccupType[key] / building.OccupType['Residential'] * max(
+                    building.OccupRate[key])
     #we need to spread this in all existing blocs based on the area ratio
     BlocOfficeOcc = []
     BlocHeatedArea = []
@@ -319,8 +390,8 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
     bloclist = []
     AllZone = idf.idfobjects["ZONE"]
     for idx, zone in enumerate(AllZone):
-        try: bloclist.append(int(zone.Name[zone.Name.rfind('Build')+5:zone.Name.find('_Alt')]))
-        except: bloclist.append(int(zone.Name[zone.Name.rfind('Build')+5:zone.Name.find('Storey')]))
+        try: bloclist.append(int(zone.Name[zone.Name.rfind('Build_')+6:zone.Name.find('_Alt')]))
+        except: bloclist.append(int(zone.Name[zone.Name.rfind('Build_')+6:zone.Name.find('Storey')]))
         zoneStoreylist.append(int(zone.Name[zone.Name.find('Storey')+6:])) #the name ends with Storey # so lets get the storey number this way
     SortedZoneIdx = sorted(range(len(zoneStoreylist)), key=lambda k: zoneStoreylist[k])
     Exw = 0
@@ -374,13 +445,13 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
             BlocPeopleDensity[bloc] = [i*OfficeTypeZone for i in BlocPeopleDensity[bloc]]
             if OfficeTypeZone>0:
                 # for each zone concerned by occupancy : one occupant is defined and the number is controlled  with a schedule
-                create_Occupant(idf, zone, 'OccuSchedule'+str(idx), 'OccupActivity', 1)
+                create_Occupant(idf, zone, building, 'OfficeOccuSchedule '+str(idx), 'OccupActivity', 1)
                 if building.OffOccRandom:   #if random occupancy is wished (in yml)
                     #lets create a beta distribution random file for the number of ccupant
                     pathfile = os.path.join(os.getcwd(),'InputFiles')
                     name = idf.idfname + str(idx)+'_OfficeOccu.txt' #building.name + 'nbUsers.txt'
                     ProbGenerator.BuildOccupancyFile(name,pathfile,round(FloorArea*min(BlocPeopleDensity[bloc]),2),round(FloorArea*max(BlocPeopleDensity[bloc]),2), building)
-                    create_ScheduleFile(idf, 'OccuSchedule' + str(idx), os.path.join(pathfile, name))
+                    create_ScheduleFile(idf, 'OfficeOccuSchedule ' + str(idx), os.path.join(pathfile, name))
                     if building.setTempUpL[1] - building.setTempUpL[0] == 0:
                         CoolSetPoint = building.setTempUpL[0]
                     else:
@@ -398,7 +469,14 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
                     CreateThermostat(idf, 'OfficeZone'+ str(idx),CoolSetPoint,HeatSetPoint)
                 else:
                     ## here is the schedule that defines the number of occupant with fixed number of occupants (same all the time but still linked to shedule).
-                    ScheduleCompactOccup(idf, 'OccuSchedule'+str(idx), building, SetPoint= round(FloorArea*max(BlocPeopleDensity[bloc]),2))
+                    ScheduleCompactOccup(idf, 'OfficeOccuSchedule '+str(idx), building, SetPoint= round(FloorArea*max(BlocPeopleDensity[bloc]),2))
+            else:
+                # Earlier it was only office type zone that had occupancy. Now if ResidentialOcc is True we can also define
+                # occupancy for residential type zones
+                if building.ResidentialOcc:
+                    create_Occupant(idf, zone, building, 'ResidentialOccuSchedule ' + str(idx), 'OccupActivity', 1)
+                    ScheduleCompactResidentialOccup(idf, 'ResidentialOccuSchedule ' + str(idx), building,
+                                         SetPoint=round(FloorArea * max(BlocPeopleDensity[bloc]), 2))
             # computation of the zoning level multiplier
             ZoningMultiplier = 1 if FloorZoning else building.BlocNbFloor[bloc]
             # Internal load profile could be taken from the number of apartment. see building.IntLoad in BuildingObject

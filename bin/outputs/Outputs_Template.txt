@@ -495,4 +495,6 @@ HVAC,Average,Zone Mechanical Ventilation Current Density Volume Flow Rate [m3/s]
 HVAC,Sum,Zone Mechanical Ventilation Current Density Volume [m3]
 HVAC,Average,Zone Mechanical Ventilation Air Changes per Hour [ach]
 
+## HVAC,Sum,Environmental Impact Total CO2 Emissions Carbon Equivalent Mass [kg] #TODO
+## Zone,Average,Zone Air CO2 Concentration [ppm] #TODO
 

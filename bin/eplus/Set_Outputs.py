@@ -1,6 +1,9 @@
 # @Author  : Xavier Faure
 # @Email   : xavierf@kth.se
 
+# @Modified by : Mohammadhossein Alizadeh
+# @Email   : alizad@kth.se
+
 from eppy.results import readhtml
 import esoreader
 import os
@@ -242,7 +245,7 @@ def setEMS4TotDHWPow(idf,building,zonelist,Freq,name):
         Reporting_Frequency=Freq,
     )
 
-def Read_OutputsEso(CaseName,ExtSurfNames, ZoneOutput):
+def Read_OutputsEso(CaseName,ExtSurfNames, SeperateBlock, ZoneOutput):
     #visualization of the results
     eso = esoreader.read_from_path(CaseName)
     ZoneAgregRes = {}
@@ -251,6 +254,9 @@ def Read_OutputsEso(CaseName,ExtSurfNames, ZoneOutput):
     res ={}
     for idx in eso.dd.variables.keys():
         currentData = eso.dd.variables[idx]
+        # if idx == 1783:
+        #     print(4)
+        # print(idx)
         if 'Surface' in currentData[2]:
             if currentData[1] not in ExtSurfNames:
                 continue
@@ -261,28 +267,37 @@ def Read_OutputsEso(CaseName,ExtSurfNames, ZoneOutput):
                     currentData[2] += ' On Vertical Walls'
         if currentData[1].find('STOREY')>0:
             try:
-                nb = int(currentData[1][currentData[1].find('STOREY')+6:])
+                # The results will be aggregated at each storey which means if we have two blocks or more in one building,
+                # the results of each storey are summed if SeperateBlock is False
+                if SeperateBlock:
+                    BldBlckStry = currentData[1][:currentData[1].find('STOREY') + 9:]
+                else:
+                    nb = int(currentData[1][currentData[1].find('STOREY')+6:])
+
             except:
                 test = 1
                 finished = 0
                 while finished == 0:
                     try:
                         nb = int(currentData[1][currentData[1].find('STOREY')+6:-test])
+                        # blck_nd = int(currentData[1][currentData[1].find('BUILD') + 5])
                         finished = 1
                     except:
                         test += 1
-            Firstkey = 'STOREY '+str(nb)
+            Firstkey = BldBlckStry if SeperateBlock else 'STOREY ' + str(nb)
         else:
             Firstkey = currentData[1]
         if not res:
             res[Firstkey] = {}
-            ZoneAgregRes[Firstkey] = {} #currentData[1]
+            ZoneAgregRes[Firstkey] = {}
         if not currentData[1] in res.keys():
             findsame = 0
+
             for key in res.keys():
                 if currentData[1] in key or key in currentData[1]:
                     Firstkey = key
                     findsame = 1
+
             if not findsame:
                 res[Firstkey] = {}
                 ZoneAgregRes[Firstkey] = {}
@@ -299,7 +314,10 @@ def Read_OutputsEso(CaseName,ExtSurfNames, ZoneOutput):
     for nb, key in enumerate(res):
         KeyArea = 'Other'
         if 'STOREY' in key:
-            numstor= int(key[6:])
+            if SeperateBlock:
+                numstor = int(key[key.find('STOREY') + 6:])
+            else:
+                numstor= int(key[6:])
             KeyArea= 'NonHeatedArea' if numstor<0 else 'HeatedArea'
         for j, i in enumerate(res[key]):
             ZoneAgregRes[key][i]['GlobData'] = []
