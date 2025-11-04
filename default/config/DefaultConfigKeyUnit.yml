@@ -31,7 +31,8 @@
         NbRuns : [int]                                  #[Int] sample size for parametric simulation
         CorePerim : [bool]                              #[Bool] True : core and perimeter zone thermal modelling
         FloorZoning : [bool]                            #[Bool] True : each floor in consider as a zone or for core zone construction
-        SeperateBlock: [bool]
+        PerZoneResult: [bool]
+        PerBlockResult: [bool]
         ResidentialOcc : [bool]
         indoor_Air_Comfort_Analysis : [bool]
         Retrofit : [bool]                               #[Bool] True : energy conservation measures specified in ecm_confid will be applied

@@ -198,7 +198,8 @@ class Building:
             self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB, DBL, BE)
             self.OccupType = self.getOccupType(DB, config['3_SIM']['OccupType'], LogFile,DebugMode)
             self.ResidentialOcc = config['2_CASE']['1_SimChoices']['ResidentialOcc']
-            self.SeperateBlock = config['2_CASE']['1_SimChoices']['SeperateBlock']
+            self.PerZoneResult = config['2_CASE']['1_SimChoices']['PerZoneResult']
+            self.PerBlockResult = config['2_CASE']['1_SimChoices']['PerBlockResult']
             self.indoor_Air_Comfort_Analysis = config['2_CASE']['1_SimChoices']['indoor_Air_Comfort_Analysis']
             self.nbStairwell = self.getnbStairwell(DB, DBL)
             #self.WeatherDataFile = WeatherData

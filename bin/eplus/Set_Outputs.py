@@ -245,7 +245,7 @@ def setEMS4TotDHWPow(idf,building,zonelist,Freq,name):
         Reporting_Frequency=Freq,
     )
 
-def Read_OutputsEso(CaseName,ExtSurfNames, SeperateBlock, ZoneOutput):
+def Read_OutputsEso(CaseName,ExtSurfNames, PerBlockResult, ZoneOutput):
     #visualization of the results
     eso = esoreader.read_from_path(CaseName)
     ZoneAgregRes = {}
@@ -254,9 +254,6 @@ def Read_OutputsEso(CaseName,ExtSurfNames, SeperateBlock, ZoneOutput):
     res ={}
     for idx in eso.dd.variables.keys():
         currentData = eso.dd.variables[idx]
-        # if idx == 1783:
-        #     print(4)
-        # print(idx)
         if 'Surface' in currentData[2]:
             if currentData[1] not in ExtSurfNames:
                 continue
@@ -268,8 +265,8 @@ def Read_OutputsEso(CaseName,ExtSurfNames, SeperateBlock, ZoneOutput):
         if currentData[1].find('STOREY')>0:
             try:
                 # The results will be aggregated at each storey which means if we have two blocks or more in one building,
-                # the results of each storey are summed if SeperateBlock is False
-                if SeperateBlock:
+                # the results of each storey are summed if PerBlockResult is False
+                if PerBlockResult:
                     BldBlckStry = currentData[1][:currentData[1].find('STOREY') + 9:]
                 else:
                     nb = int(currentData[1][currentData[1].find('STOREY')+6:])
@@ -284,7 +281,7 @@ def Read_OutputsEso(CaseName,ExtSurfNames, SeperateBlock, ZoneOutput):
                         finished = 1
                     except:
                         test += 1
-            Firstkey = BldBlckStry if SeperateBlock else 'STOREY ' + str(nb)
+            Firstkey = BldBlckStry if PerBlockResult else 'STOREY ' + str(nb)
         else:
             Firstkey = currentData[1]
         if not res:
@@ -314,7 +311,7 @@ def Read_OutputsEso(CaseName,ExtSurfNames, SeperateBlock, ZoneOutput):
     for nb, key in enumerate(res):
         KeyArea = 'Other'
         if 'STOREY' in key:
-            if SeperateBlock:
+            if PerBlockResult:
                 numstor = int(key[key.find('STOREY') + 6:])
             else:
                 numstor= int(key[6:])
@@ -343,6 +340,18 @@ def Read_OutputsEso(CaseName,ExtSurfNames, SeperateBlock, ZoneOutput):
                     BuildAgregRes[KeyArea][i]['GlobData'] = [sum(x)/2 for x in zip(BuildAgregRes[KeyArea][i]['GlobData'], ZoneAgregRes[key][i]['GlobData'])]
                 else:
                     BuildAgregRes[KeyArea][i]['GlobData'] = [sum(x) for x in zip(BuildAgregRes[KeyArea][i]['GlobData'], ZoneAgregRes[key][i]['GlobData'])]
+    if PerBlockResult and not ZoneOutput:
+        msg = '[Output Info] Per-block and per-zone results were not generated because "PerZoneResult" is disabled in the configuration.'
+        print(msg)
+    elif PerBlockResult and ZoneOutput:
+        msg = '[Output Info] Results have been generated for each block and zone.'
+        print(msg)
+    elif not PerBlockResult and ZoneOutput:
+        msg = '[Output Info] Results have been aggregated and reported at the zone level.'
+        print(msg)
+    elif not PerBlockResult and not ZoneOutput:
+        msg = '[Output Info] Results have been aggregated and reported at the building level.'
+        print(msg)
 
     return ZoneAgregRes if ZoneOutput else BuildAgregRes
 

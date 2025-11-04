@@ -96,11 +96,11 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,API = False,CTime
         #the results are read with html table and energyplus eso files. The html could be avoid, but then some information will have to be computed in the building object (could be)
         if withFMU:
             Res = Set_Outputs.Read_Outputhtml(os.path.join(RunDir, CaseName + 'Table.htm'))
-            ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir, CaseName + '.eso'), Res['OutdoorSurfacesNames'], building.SeperateBlock, ZoneOutput=False)
+            ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir, CaseName + '.eso'), Res['OutdoorSurfacesNames'], building.PerBlockResult, ZoneOutput=building.PerZoneResult)
         else:
             Res = Set_Outputs.Read_Outputhtml(os.path.join(RunDir, CaseName + 'tbl.htm'))
-            ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir, CaseName + 'out.eso'), building.surfOutName, building.SeperateBlock, #Res['OutdoorSurfacesNames'],
-                                                 ZoneOutput=True)
+            ResEso = Set_Outputs.Read_OutputsEso(os.path.join(RunDir, CaseName + 'out.eso'), building.surfOutName, building.PerBlockResult, #Res['OutdoorSurfacesNames'],
+                                                 ZoneOutput=building.PerZoneResult)
         Res['BuildDB'] = building
         for key1 in ResEso:
             # if not 'Environ' in key1:
