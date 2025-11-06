@@ -18,13 +18,13 @@ def ScheduleCompact_cloth(idf, Name):
         Schedule_Type_Limits_Name="Any Number",
         Field_1="Through: 05/31",
         Field_2="For: AllDays",
-        Field_3="Until: 24:00, 4",
+        Field_3="Until: 24:00, 2",
         Field_4="Through: 09/30",
         Field_5="For: AllDays",
-        Field_6="Until: 24:00, 4",
+        Field_6="Until: 24:00, 2",
         Field_7="Through: 12/31",
         Field_8="For: AllDays",
-        Field_9="Until: 24:00, 4;"
+        Field_9="Until: 24:00, 2;"
     )
     return idf
 
