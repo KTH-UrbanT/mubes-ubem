@@ -243,9 +243,9 @@ def LaunchProcess(SimDir, Ret, FirstRun,TotNbRun,currentRun,keyPath,nbcase,CoreP
             EMSOutputs.append('Total Building Heating Power')
             if building.DHWInfos:
                 EMSOutputs.append('Total DHW Heating Power')
-
+        CurrentBld2Run = 'Building_' + str(nbcase) + 'v' + str(currentRun)
         # the outputs are set using the Output file
-        OutputsVar = GrlFct.setOutputLevel(idf,building,MainPath,EMSOutputs,OutputsFile) #todo OutputsVar added here
+        OutputsVar = GrlFct.setOutputLevel(idf,building,MainPath, SimDir, CurrentBld2Run, EMSOutputs,OutputsFile) #todo OutputsVar added here
         # end = time.time()
         # print('[Time Report] : The setOutputLevel took : ', round(end - start, 2), ' sec')
         #special ending process if FMU is wanted

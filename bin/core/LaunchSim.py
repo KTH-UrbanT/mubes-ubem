@@ -8,6 +8,7 @@ import pickle
 import shutil
 import eplus.Set_Outputs as Set_Outputs
 from subprocess import check_call
+import eplus.EnergyManagementSystem as EnergyManagementSystem
 
 
 def initiateprocess(MainPath):
@@ -53,7 +54,10 @@ def runcase(file,filepath, epluspath, API = False,Verbose = False):
     weatherpath = os.path.join(epluspath,building.WeatherDataFile)
     cmd = [eplus_exe, '--weather',os.path.normcase(weatherpath),'--output-directory',RunDir, \
            '--idd',os.path.join(epluspath,'Energy+.idd'),'--expandobjects','-r','--output-prefix',CaseName,Runfile]
+    EDD_Data = EnergyManagementSystem.GenerateEDD()
+    EnergyManagementSystem.Add_Actuator(cmd[-1], EDD_Data)
     start = time.time()
+    # cmd[4] = RunDir
     try:
         if building.SaveLogFiles:
             check_call(cmd, stdout=open(os.path.join(RunDir,'ConsolOutput.log'), "w"), stderr=open(os.devnull, "w"))
@@ -134,6 +138,9 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,API = False,CTime
         for i in os.listdir(RunDir):
            os.remove(os.path.join(RunDir,i))
         os.rmdir(RunDir)  # Now the directory is empty of files
+        for i in os.listdir(RunDir + '_Temp'):
+           os.remove(os.path.join(RunDir + '_Temp',i))
+        os.rmdir(RunDir + '_Temp')
 
 def Write2file(val,name):
     with open(name, 'w') as f:

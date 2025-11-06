@@ -56,9 +56,9 @@ def setExtraEnergyLoad(idf,building):
     if building.DHWInfos:
         DomesticHotWater.createWaterEqpt(idf,building)
 
-def setOutputLevel(idf,building,MainPath,EMSOutputs,OutputsFile):
+def setOutputLevel(idf,building,MainPath, SimDir, CurrentBld2Run, EMSOutputs,OutputsFile):
     #ouputs definitions
-    idf, OutputsVar = Set_Outputs.AddOutputs(idf,building,MainPath,EMSOutputs,OutputsFile)
+    idf, OutputsVar = Set_Outputs.AddOutputs(idf,building,MainPath, SimDir, CurrentBld2Run, EMSOutputs,OutputsFile)
     return OutputsVar
 
 def readPathfile(Pathways):

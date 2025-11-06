@@ -29,7 +29,7 @@ def getOutputList(path,idf,OutputsFile):
                 OutputsVar['Var'].append(var2add)
     return OutputsVar
 
-def AddOutputs(idf,building,path,EMSOutputs,OutputsFile):
+def AddOutputs(idf,building,path, SimDir, CurrentBld2Run, EMSOutputs,OutputsFile):
     OutputsVar = getOutputList(path,idf,OutputsFile)
     #we shall start by removing all predclared outputes from the template
     predef = idf.idfobjects["OUTPUT:VARIABLE"]
@@ -48,6 +48,7 @@ def AddOutputs(idf,building,path,EMSOutputs,OutputsFile):
         )
     zonelist = getHeatedZones(idf)
     if EMSOutputs:
+        # ActuatedComponentName = Component_Name_4_Actuator(os.path.join(SimDir, CurrentBld2Run, 'Runout.edd'))
         setEMS4MeanTemp(idf, zonelist, OutputsVar['Reportedfrequency'],EMSOutputs[0])
         setEMS4TotHeatPow(idf, building,zonelist, OutputsVar['Reportedfrequency'], EMSOutputs[1])
         if len(EMSOutputs)>2:
@@ -415,6 +416,37 @@ def Read_OutputError(CaseName):
     fname = CaseName
     Endsinfo = open(fname, 'r', encoding='latin-1').read()
     Endsinfo
+
+def Component_Name_4_Actuator(CurrentCase):
+    edd_path = CurrentCase
+
+    with open(edd_path, "r") as f:
+        lines = f.readlines()
+
+    actuators, sensors, internals = [], [], []
+    current_section = None
+
+    for line in lines:
+        if "ActuatorAvailable" in line:
+            current_section = "actuators"
+        elif "SensorAvailable" in line:
+            current_section = "sensors"
+        elif "InternalVariableAvailable" in line:
+            current_section = "internals"
+        elif line.strip().startswith("!"):
+            continue
+        elif line.strip():
+            data = [x.strip() for x in line.split(",")]
+            if current_section == "actuators":
+                actuators.append(data)
+            elif current_section == "sensors":
+                sensors.append(data)
+            elif current_section == "internals":
+                internals.append(data)
+
+    print("Actuators:", actuators[:3])
+    print("Sensors:", sensors[:3])
+
 
 if __name__ == '__main__' :
     print('Set_Outputs Main')
