@@ -241,7 +241,7 @@ def CreateSimDir(CurrentPath,DestinationPath,CaseName,SepThreads,nbBuild,idx,Mul
         shutil.rmtree(SimDir)
         os.mkdir(SimDir)
         if Verbose: print('[Prep. phase] '+CaseName + ' folder is emptied')
-    if SepThreads:
+    if SepThreads: #TODO thhepreads
         SimDir = os.path.join(SimDir, 'Build_' + str(nbBuild))
         if not os.path.exists(SimDir):
             os.mkdir(SimDir)

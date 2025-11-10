@@ -8,7 +8,7 @@ from eppy.results import readhtml
 import esoreader
 import matplotlib.pyplot as plt
 import numpy as np
-from eplus.EnergyManagementSystem import *
+from eplus.EnergyManagementSystem import * #setEMS4MeanTemp, setEMS4TotHeatPow, setEMS4TotDHWPow
 
 def getOutputList(path,idf,OutputsFile):
     OutputsVar = {}

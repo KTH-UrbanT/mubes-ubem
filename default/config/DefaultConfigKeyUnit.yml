@@ -36,6 +36,7 @@
         ResidentialOcc : [bool]
         indoor_Air_Comfort_Analysis : [bool]
         Retrofit : [bool]                               #[Bool] True : energy conservation measures specified in ecm_confid will be applied
+        EnergyManagementSystem: [bool]
         StockholmBuildings: [bool]                              #[Bool] True : User specified building outside Minneberg from City Planner will be considered
         ExternalStudy: [bool]
         OutputVisual: [bool]

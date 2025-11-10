@@ -1,7 +1,6 @@
 # @Author  : Xavier Faure
 # @Email   : xavierf@kth.se
 
-
 def setSimparam(idf,building):
     #changing the running period
     simctrl = idf.idfobjects['SIMULATIONCONTROL'][0]
@@ -9,11 +8,19 @@ def setSimparam(idf,building):
     simctrl.Run_Simulation_for_Weather_File_Run_Periods = 'Yes'
     #changing the Solar calculation because of complex surface (non convexe for inside floors)
     build_param = idf.idfobjects['BUILDING'][0]
-    build_param.Solar_Distribution = 'FullExterior' #'FullInteriorAndExterior' #'FullExteriorWithReflections' #'FullExterior' #'MinimalShadowing' # FullExterior is the most detailed option possible in our case.
-    #it computes exterior shading but not internal. all the radiation that enters the zones is allocated to the floor
+    build_param.Solar_Distribution = 'FullExterior'
+    # 'FullInteriorAndExterior' | 'FullExteriorWithReflections' | 'FullExterior' | 'MinimalShadowing'
+    #
+    # In this case, 'FullExterior' is the most detailed and suitable option.
+    # It computes exterior shading only, and all transmitted solar gains are allocated to the floor.
+    #
+    # Reference:
     # https://bigladdersoftware.com/epx/docs/9-1/engineering-reference/shading-module.html#solar-distribution
-    #the one with reflection might not be needed and takes more computational time (it's worth for specific radiation propreties of the surroundings surfaces
-    #but these are taken from default value from now
+    #
+    # The reflection options are unnecessary here and increase computational time.
+    # They are useful only when specific surface reflection properties are available,
+    # but we currently use default values.
+
     shadow_param = idf.newidfobject('SHADOWCALCULATION')
     #ShadowCalculation options for energyPlus v9.1.0
     if idf.idd_version in [(9, 1, 0),(9, 2, 0)]:

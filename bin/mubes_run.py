@@ -10,12 +10,13 @@ import core.CaseBuilder_OAT as CB_OAT
 import core.setConfig as setConfig
 import calibration.CalibUtilities as CalibUtil
 import outputs.output_utilities as OutUtils
+import eplus.EnergyManagementSystem as EnergyManagementSystem
 # from default.data.Basic.Generate_CityModeller import ShapeCityPlanner
 import shutil
 import multiprocessing as mp
 import yaml
 import copy
-import sys, os
+import sys, os, pickle
 # #add the required path for geomeppy special branch
 path2addgeom = 'C:\\Users\\xf245257\\Documents\\Faure\\prgm_python\\geomeppy'
 #path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
@@ -66,11 +67,6 @@ if __name__ == '__main__' :
     os.chdir(os.path.dirname(scriptPath))
 
     CaseChoices, config, SepThreads, Pool2Launch, MultipleFiles ,RetrofitConfig, Pool2Retrofit = setConfig.getConfig(localDir)
-# Let's check if an external building (not Minneberg) is requested
-#     if config['2_CASE']['1_SimChoices']['GenDataset']:
-#         DataProductGen_Agent = ShapeCityPlanner()
-#         GeneratedCityPlanner = DataProductGen_Agent.GenCore()
-#         DataProductGen_Agent.SaveitGeoJson(os.getcwd()[: os.getcwd().find('ubem')+5], GeneratedCityPlanner, config['1_DATA']['PATH_TO_DATA'])
 # If only plotting the geometry is requested then the simulation is drope
     if CaseChoices['MakePolygonPlots']:
         GrlFct.MakePolygonPlots(CaseChoices, Pool2Launch)
@@ -100,7 +96,7 @@ if __name__ == '__main__' :
         SimDir = GrlFct.CreateSimDir(CurrentPath, config['0_APP']['PATH_TO_RESULTS'],CaseChoices['CaseName'],
                     SepThreads, nbBuild, idx, MultipleFile = MultipleFileName, Refresh=CaseChoices['RefreshFolder'],Verbose = CaseChoices['Verbose'])
         #a sample of parameter is generated if needed
-        ParamSample, CaseChoices =  GrlFct.SetParamSample(SimDir, CaseChoices, SepThreads)
+        ParamSample, CaseChoices =  GrlFct.SetParamSample(SimDir, CaseChoices, SepThreads) #TODO check septhread
         #if a simulation is asked to be done from posterriors that does not exist, the process will skip this building
         if len(ParamSample) == 0 :
             shutil.rmtree(SimDir)
@@ -138,7 +134,9 @@ if __name__ == '__main__' :
                 # lets check if this building is already present in the folder (means Refresh = False in CreateSimDir() above)
                 if not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + '_template.idf'))):
                     #there is a need to launch the first one that will also create the template for all the others
-                    CB_OAT.LaunchOAT(CaseChoices,SimDir,keypath,nbBuild,ParamSample[0, :],0,pythonpath)
+                    CB_OAT.LaunchOAT(CaseChoices,SimDir,keypath,nbBuild, Case['Ret'],ParamSample[0, :],0,pythonpath)
+                    # args = (CaseChoices, CurrentSimDir, nbBuild['keypath'], nbBuild['nbBuild'], nbBuild['Ret'], [1], 0,
+                    #         pythonpath)
                 # lets check whether all the files are to be run or if there's only some to be ran
                 NewRuns = []
                 for i in range(NbRun):
@@ -148,7 +146,7 @@ if __name__ == '__main__' :
                 CaseChoices['FirstRun'] = False
                 pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
                 for i in NewRuns:
-                    pool.apply_async(CB_OAT.LaunchOAT, args=(CaseChoices,SimDir,keypath,nbBuild,ParamSample[i+idx_offset, :],i+idx_offset,pythonpath))
+                    pool.apply_async(CB_OAT.LaunchOAT, args=(CaseChoices,SimDir,keypath,nbBuild,Case['Ret'], ParamSample[i+idx_offset, :],i+idx_offset,pythonpath))
                 pool.close()
                 pool.join()
                 #the simulation are launched below using a pool of the earlier created idf files
@@ -158,7 +156,14 @@ if __name__ == '__main__' :
                         '[Info] All asked simulations are already done and results available...refreshfolder to remove those')
                 nbcpu = max(mp.cpu_count()*CaseChoices['CPUusage'],1)
                 pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
+                # This is added to take care of actuator implementation. Prev the building pickle file loaded in runcase function.
                 for i in range(len(file2run)):
+                    if i == 0:
+                        with open(os.path.join(SimDir, file2run[i][:-4] + '.pickle'), 'rb') as handle:
+                            loadB = pickle.load(handle)
+                        building_Temp = loadB['BuildData']
+                        EDD_Data, cmd_Temp = EnergyManagementSystem.GenerateEDD(SimDir, epluspath, building_Temp, file2run[i])
+                        EnergyManagementSystem.Add_Actuator(SimDir, cmd_Temp, EDD_Data)
                     pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath, CaseChoices['API']), callback=giveReturnFromPool)
                 pool.close()
                 pool.join()
@@ -257,18 +262,25 @@ if __name__ == '__main__' :
             file2run = LaunchSim.initiateprocess(CurrentSimDir)
             pool = mp.Pool(processes=int(nbcpu))
             for i in range(len(file2run)):
-                pool.apply_async(LaunchSim.runcase, args=(file2run[i], CurrentSimDir, epluspath,CaseChoices['API'],CaseChoices['Verbose']), callback=giveReturnFromPool)
+#the building object is loaded in order to be saved afterward with the simulation results
+                if i == 0:
+                    with open(os.path.join(CurrentSimDir, file2run[i][:-4] + '.pickle'), 'rb') as handle:
+                        loadB = pickle.load(handle)
+                    building_Temp = loadB['BuildData']
+                    EDD_Data, cmd_Temp = EnergyManagementSystem.GenerateEDD(CurrentSimDir, epluspath, building_Temp, file2run[i])
+                    EnergyManagementSystem.Add_Actuator(CurrentSimDir, cmd_Temp, EDD_Data)
+                pool.apply_async(LaunchSim.runcase, args=(file2run[i], CurrentSimDir, epluspath, CaseChoices['API']),callback=giveReturnFromPool)
             pool.close()
             pool.join()
             GrlFct.AppendLogFiles(CurrentSimDir,CaseChoices['BldIDKey'])
-    elif CaseChoices['CreateFMU']:
+    elif CaseChoices['CreateFMU']: #TODO: fix actuator implementation for FMU case
         # now that all the files are created, we can aggregate all the log files into a single one.
         os.chdir(CurrentPath)
         GrlFct.CleanUpLogFiles(SimDir)
         #the FMU are not taking advantage of the parallel computing option yet
         for ListKey in File2Launch:
             for nbBuild in File2Launch[ListKey]:
-                CB_OAT.LaunchOAT(CaseChoices,SimDir,nbBuild['keypath'],nbBuild['nbBuild'],nbBuild['Ret'], [1],0,pythonpath)
+                CB_OAT.LaunchOAT(CaseChoices,SimDir,nbBuild['keypath'],nbBuild['nbBuild'],nbBuild['Ret'], [1],0, pythonpath)
     if not File2Launch[0] and CaseChoices['Verbose'] and CaseChoices['NbRuns']==1:  print('[Info] All asked simulations are already done and results available...refreshfolder to remove those')
     if CaseChoices['Verbose']: print('[Process Finished] runMUBES.py ended successfully')
 

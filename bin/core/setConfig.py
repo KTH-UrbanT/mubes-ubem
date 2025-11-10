@@ -375,7 +375,7 @@ def getConfig(localDir, App = ''):
     if not config['2_CASE']['0_GrlChoices']['MakePlotsOnly']:
         if Retrofit_config:
             Retrofit_config = checkConfigUnit(Retrofit_config ,DefaulRetConfigUnit)
-            if type(Retrofit_config) != dict:
+            if type(Retrofit_config) != dict: #TODO check when retrofit is false
                 print('[Config Error] Something seems wrong in : ' + Retrofit_config)
                 sys.exit()
     else:
@@ -421,7 +421,7 @@ def getConfig(localDir, App = ''):
     epluspath = config['0_APP']['PATH_TO_ENERGYPLUS']
     FMUScriptPath = config['0_APP']['PATH_TO_ENERGYPLUSFMUKit']
     SimDir = config
-    RetrofitFiles = os.path.join(os.getcwd(), 'Retrofit')
+    RetrofitFiles = os.path.join(os.getcwd(), 'Retrofit') #TOdo also
     # a first keypath dict needs to be defined to comply with the current paradigm along the code
     Buildingsfile = os.path.abspath(config['1_DATA']['PATH_TO_DATA'])
     keyPath = {'epluspath': epluspath, 'Buildingsfile': Buildingsfile, 'FMUScriptPath': FMUScriptPath,'pythonpath': '', 'GeojsonProperties': '', 'RetrofitFiles': RetrofitFiles}

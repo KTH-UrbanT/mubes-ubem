@@ -1,21 +1,46 @@
 # @Author  : Mohammadhossein Alizadeh
 # @Email   : alizad@kth.se
 
+"""
+This file prepares the required inputs for the Energy Management System (EMS).
+
+The "Unique Component Name", "Component Type", and "Control Type" are automatically extracted
+from the .edd file.
+
+To generate the .edd file, an initial short simulation run is performed. After that, the identified
+actuator parameters are implemented into the final model.
+"""
+
 import os
 from subprocess import check_call
+import platform
 
-def GenerateEDD():
-    cmd_Temp = [
-        '/Applications/EnergyPlus-9-5-0/energyplus',
-        '--weather', '/Applications/EnergyPlus-9-5-0/WeatherData/SWE_ST_Stockholm.024850_TMYx.2009-2023.epw',
-        '--output-directory',
-        '/Users/alizad/PycharmProjects/NewWorking-MUBES/examples/Ex4-ParametricStudy/Building_1v0_Temp',
-        '--idd', '/Applications/EnergyPlus-9-5-0/Energy+.idd',
-        '--expandobjects',
-        '--design-day',  #
-        '--output-prefix', 'Run',
-        '/Users/alizad/PycharmProjects/NewWorking-MUBES/examples/Ex4-ParametricStudy/Building_1v0.idf'
-    ]
+def GenerateEDD(SimDir, epluspath, building, file2run):
+    Runfile = os.path.join(SimDir, file2run)
+    RunDir = os.path.join(SimDir, file2run[:-4] + '_Temp')
+    CaseName = 'Run'
+    #the process is launched on external terminal window
+    if platform.system() == "Windows":
+        eplus_exe = os.path.join(epluspath, "energyplus.exe")
+    else:
+        eplus_exe = os.path.join(epluspath, "energyplus")
+    weatherpath = os.path.join(epluspath,building.WeatherDataFile)
+    cmd_Temp = [eplus_exe, '--weather',os.path.normcase(weatherpath),'--output-directory',RunDir, \
+           '--idd',os.path.join(epluspath,'Energy+.idd'),'--expandobjects','-r','--output-prefix',CaseName,Runfile]
+    # cmd_Temp = cmd
+    # cmd_Temp[4] = cmd[4]+'_Temp'
+    # cmd_Temp[-1] = cmd[-1]+'_Temp'
+    # cmd_Temp = [
+    #     '/Applications/EnergyPlus-9-5-0/energyplus',
+    #     '--weather', '/Applications/EnergyPlus-9-5-0/WeatherData/SWE_ST_Stockholm.024850_TMYx.2009-2023.epw',
+    #     '--output-directory',
+    #     '/Users/alizad/PycharmProjects/NewWorking-MUBES/examples/Ex4-ParametricStudy/Building_1v0_Temp',
+    #     '--idd', '/Applications/EnergyPlus-9-5-0/Energy+.idd',
+    #     '--expandobjects',
+    #     '--design-day',  #
+    #     '--output-prefix', 'Run',
+    #     '/Users/alizad/PycharmProjects/NewWorking-MUBES/examples/Ex4-ParametricStudy/Building_1v0.idf'
+    # ]
 
     # IDF.setiddname(cmd[6])
     # Temp_idf = IDF(os.path.join(filepath, file))
@@ -40,7 +65,7 @@ def GenerateEDD():
     # subprocess.run(cmd, check=False)
     check_call(cmd_Temp, stdout=open(os.devnull, "w"), stderr=open(os.devnull, "w"))
     EDD_Data = Component_Name_4_Actuator(os.path.join(cmd_Temp[4], 'Runout.edd'))
-    return EDD_Data
+    return EDD_Data, cmd_Temp
 
 def Component_Name_4_Actuator(CurrentCase):
     edd_path = CurrentCase
@@ -73,8 +98,9 @@ def Component_Name_4_Actuator(CurrentCase):
 
     return edd_data
 
-def Add_Actuator(idfPath, EDD_Data):
+def Add_Actuator(SimDir, cmd_Temp, EDD_Data):
 
+    idf_files = [f for f in os.listdir(SimDir) if f.endswith('.idf')]
     Actuators = EDD_Data.get('Actuators')
     for act in Actuators:
         if 'Heating Setpoint' in act.values():
@@ -85,12 +111,14 @@ def Add_Actuator(idfPath, EDD_Data):
         # This object applies the defined program on HVAC template
             idfObject = (f"\n\n ENERGYMANAGEMENTSYSTEM:ACTUATOR,\n \t {Name}, \t\t !- Name\n \t {UniqueComponentName}, \t\t !- Actuated Component Unique Name\n"
                  f" \t {ComponentType}, \t\t !- Actuated Component Type\n \t {ControlType}, \t\t !- Actuated Component Control Type \n\n")
-
-            with open(idfPath, "a", encoding="utf-8") as f:
-                        f.write(idfObject)
+            for idf_curr in idf_files:
+                with open(os.path.join(SimDir, idf_curr), "a", encoding="utf-8") as f:
+                                f.write(idfObject)
 
 def setEMS4MeanTemp(idf,zonelist,Freq,name):
-    #lets create the temperature sensors for each zones and catch their volume
+    """
+    lets create the temperature sensors for each zones and catch their volume
+    """
     for idx,zone in enumerate(zonelist):
         idf.newidfobject(
             'ENERGYMANAGEMENTSYSTEM:SENSOR',
@@ -104,7 +132,7 @@ def setEMS4MeanTemp(idf,zonelist,Freq,name):
             Internal_Data_Index_Key_Name = zone,
             Internal_Data_Type = 'Zone Air Volume'
             )
-    #lets create the prgm callingManager
+    #lets create the prgm callingManager (Define when EMS programs run during simulation)
     idf.newidfobject(
         'ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER',
         Name='Average Building Temperature',
@@ -139,15 +167,6 @@ def setEMS4MeanTemp(idf,zonelist,Freq,name):
         Program_Line_2='SET SumDenominator  = '+SumDenominator[:-1],
         Program_Line_3='SET AverageBuildingTemp  = SumNumerator / SumDenominator',
     )
-
-    # This object applies the defined program on HVAC template
-    # idf.newidfobject(
-    #     "ENERGYMANAGEMENTSYSTEM:ACTUATOR",
-    #     Name= "Zone1_HeatSetpoint_Override",
-    #     Actuated_Component_Unique_Name= 'cool_sch',
-    #     Actuated_Component_Type= "SCHEDULE:CONSTANT",
-    #     Actuated_Component_Control_Type= "Schedule Value"
-    # )
     #lets create now the ouputs of this EMS
     idf.newidfobject(
         'OUTPUT:ENERGYMANAGEMENTSYSTEM',
@@ -161,7 +180,6 @@ def setEMS4MeanTemp(idf,zonelist,Freq,name):
         Variable_Name=name,
         Reporting_Frequency=Freq,
     )
-
 def setEMS4TotHeatPow(idf,building,zonelist,Freq,name):
     #lets create the temperature sensors for each zones and catch their volume
     for idx,zone in enumerate(zonelist):
@@ -209,14 +227,12 @@ def setEMS4TotHeatPow(idf,building,zonelist,Freq,name):
     #     EMS_Runtime_Language_Debug_Output_Level='Verbose',
     #     Internal_Variable_Availability_Dictionary_Reporting='Verbose',
     # )
-
     #lets create now the final outputs
     idf.newidfobject(
         'OUTPUT:VARIABLE',
         Variable_Name=name,
         Reporting_Frequency=Freq,
     )
-
 def setEMS4TotDHWPow(idf,building,zonelist,Freq,name):
     #lets create the temperature sensors for each zones and catch their volume
     idf.newidfobject(

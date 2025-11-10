@@ -51,8 +51,7 @@ def ScheduleCompactResidentialOccup(idf, Name, building, SetPoint):
         Schedule_Type_Limits_Name='Any Number',
         # Covers the whole year
         Field_1='Through: 12/31',
-
-        # --- Weekdays pattern ---
+        # ! --- Weekdays pattern ---
         Field_2='For: Weekdays',
         Field_3='Until: 07:00',  # night/early morning
         Field_4=3,
@@ -64,13 +63,11 @@ def ScheduleCompactResidentialOccup(idf, Name, building, SetPoint):
         Field_10=3,
         Field_11='Until: 24:00',  # late night
         Field_12=3,
-
-        # --- Weekends pattern ---
+        # ! --- Weekends pattern ---
         Field_13='For: Weekends',
         Field_14='Until: 24:00',
         Field_15=3,
-
-        # --- Holidays, design days, custom days ---
+        # ! --- Holidays, design days, custom days ---
         # This line covers: Holiday, SummerDesignDay, WinterDesignDay,
         # CustomDay1, CustomDay2
         Field_16='For: AllOtherDays',
@@ -78,8 +75,6 @@ def ScheduleCompactResidentialOccup(idf, Name, building, SetPoint):
         Field_18=3,
     )
     return idf
-
-
 
 def create_ScheduleFile(idf, Name, fileName):
     #create schedule file, used as soon as specific patterns are required
@@ -94,19 +89,6 @@ def create_ScheduleFile(idf, Name, fileName):
         #Column_Separator = 'Space',
         )
     return idf
-
-# def create_Occupant(idf, zone, OccScheduleName, ActScheduleName,NbPeople):
-#     idf.newidfobject(
-#         'PEOPLE',
-#         Name = zone.Name+' Occ',
-#         Zone_or_ZoneList_Name = zone.Name,
-#         Zone_or_ZoneList_or_Space_or_SpaceList_Name=zone.Name, # this is because E+ changed the above input name by this one in new versions
-#         Number_of_People_Schedule_Name = OccScheduleName,
-#         Number_of_People = NbPeople,
-#         Activity_Level_Schedule_Name = ActScheduleName,
-#         )
-#     return idf
-
 
 def create_Occupant(idf, zone, building,  OccScheduleName, ActScheduleName,NbPeople):
     idf.newidfobject(
@@ -326,6 +308,8 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
     # the set point is defined in yml
     ScheduleCompact(idf, 'OccupActivity', building.OccupHeatRate)
 
+
+# if the study is about indoor air quality and indoor thermal comfort then the following schedules are created
     if building.indoor_Air_Comfort_Analysis:
         ScheduleCompact_WorkEfficiency(idf, 'WorkEfficiency', 0.5)
         ScheduleCompact_cloth(idf, 'ClothingInsulation')
@@ -364,7 +348,7 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
     ResidPeopleDensity = [0, 0]
     if OfficeOcc != 0:
         for key in building.OccupType.keys():
-            if not key in ['Residential']: #TODO i think if we delete this and edit the schedule, then we can include residential
+            if not key in ['Residential']: #TODO: i think if we delete this and edit the schedule, then we can include residential
                 PeopleDensity[0] += building.OccupType[key] / OfficeOcc * min(
                     building.OccupRate[key])  # this is the mean number of people per m2
                 PeopleDensity[1] += building.OccupType[key] / OfficeOcc * max(building.OccupRate[key])

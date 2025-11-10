@@ -8,8 +8,6 @@ import pickle
 import shutil
 import eplus.Set_Outputs as Set_Outputs
 from subprocess import check_call
-import eplus.EnergyManagementSystem as EnergyManagementSystem
-
 
 def initiateprocess(MainPath):
     #return a list of file name to launch with energyplus. If some resultst are already present, the will be removed form the returned list
@@ -54,10 +52,7 @@ def runcase(file,filepath, epluspath, API = False,Verbose = False):
     weatherpath = os.path.join(epluspath,building.WeatherDataFile)
     cmd = [eplus_exe, '--weather',os.path.normcase(weatherpath),'--output-directory',RunDir, \
            '--idd',os.path.join(epluspath,'Energy+.idd'),'--expandobjects','-r','--output-prefix',CaseName,Runfile]
-    EDD_Data = EnergyManagementSystem.GenerateEDD()
-    EnergyManagementSystem.Add_Actuator(cmd[-1], EDD_Data)
     start = time.time()
-    # cmd[4] = RunDir
     try:
         if building.SaveLogFiles:
             check_call(cmd, stdout=open(os.path.join(RunDir,'ConsolOutput.log'), "w"), stderr=open(os.devnull, "w"))
@@ -69,7 +64,7 @@ def runcase(file,filepath, epluspath, API = False,Verbose = False):
         return (file[:-4] + ' is finished')
     except: return (file[:-4] + ' has failed')
 
-def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,API = False,CTime = [],withFMU = False):
+def savecase(CaseName,RunDir, building, ResSimpath,file,filepath,API = False,CTime = [],withFMU = False):
     start = time.time()
     IdKy = building.BuildID['BldIDKey']
     if API:
@@ -138,9 +133,11 @@ def savecase(CaseName,RunDir,building,ResSimpath,file,filepath,API = False,CTime
         for i in os.listdir(RunDir):
            os.remove(os.path.join(RunDir,i))
         os.rmdir(RunDir)  # Now the directory is empty of files
-        for i in os.listdir(RunDir + '_Temp'):
-           os.remove(os.path.join(RunDir + '_Temp',i))
-        os.rmdir(RunDir + '_Temp')
+        if building.EnergyManagementSystem:
+            for i in [f for f in os.listdir(filepath) if f.endswith('_Temp')]:
+                for itm in os.listdir(os.path.join(filepath,i)):
+                    os.remove(os.path.join(filepath,i,itm))
+                os.rmdir(os.path.join(filepath, i))
 
 def Write2file(val,name):
     with open(name, 'w') as f:

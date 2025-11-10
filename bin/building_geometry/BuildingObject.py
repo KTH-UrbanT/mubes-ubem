@@ -201,6 +201,7 @@ class Building:
             self.PerZoneResult = config['2_CASE']['1_SimChoices']['PerZoneResult']
             self.PerBlockResult = config['2_CASE']['1_SimChoices']['PerBlockResult']
             self.indoor_Air_Comfort_Analysis = config['2_CASE']['1_SimChoices']['indoor_Air_Comfort_Analysis']
+            self.EnergyManagementSystem = config['2_CASE']['1_SimChoices']['EnergyManagementSystem']
             self.nbStairwell = self.getnbStairwell(DB, DBL)
             #self.WeatherDataFile = WeatherData
             self.year = self.getyear(DB, DBL)
