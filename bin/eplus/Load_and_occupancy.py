@@ -99,11 +99,11 @@ def create_Occupant(idf, zone, building,  OccScheduleName, ActScheduleName,NbPeo
         Number_of_People_Schedule_Name = OccScheduleName,
         Number_of_People = NbPeople,
         Activity_Level_Schedule_Name = ActScheduleName,
-        Thermal_Comfort_Model_1_Type = 'FANGER' if building.indoor_Air_Comfort_Analysis else 'None',
-        Work_Efficiency_Schedule_Name = 'WorkEfficiency' if building.indoor_Air_Comfort_Analysis else 'None',
-        Clothing_Insulation_Schedule_Name = 'ClothingInsulation' if building.indoor_Air_Comfort_Analysis else 'None',
-        Air_Velocity_Schedule_Name = 'Airvelocity' if building.indoor_Air_Comfort_Analysis else 'None',
-        Mean_Radiant_Temperature_Calculation_Type = 'ZoneAveraged' if building.indoor_Air_Comfort_Analysis else 'None'
+        Thermal_Comfort_Model_1_Type = 'FANGER' if building.indoor_Air_Comfort_Analysis else '',
+        Work_Efficiency_Schedule_Name = 'WorkEfficiency' if building.indoor_Air_Comfort_Analysis else '',
+        Clothing_Insulation_Schedule_Name = 'ClothingInsulation' if building.indoor_Air_Comfort_Analysis else '',
+        Air_Velocity_Schedule_Name = 'Airvelocity' if building.indoor_Air_Comfort_Analysis else '',
+        Mean_Radiant_Temperature_Calculation_Type = 'ZoneAveraged' if building.indoor_Air_Comfort_Analysis else ''
         )
     return idf
 

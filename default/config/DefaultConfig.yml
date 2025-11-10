@@ -33,8 +33,8 @@
         FloorZoning : True                      #[Bool] True : each floor is considered as a zone or for core zone construction
         PerZoneResult: True                     #[Bool] False: To get aggregated numbers for each building (with X blocks and Y storeies)
         PerBlockResult: False                    #[Bool] True: The results of each building is seperated based on block and storey
-        ResidentialOcc : True                   #[Bool] True: To define occupancy for residential type zones #TODO: when False it makes problem
-        indoor_Air_Comfort_Analysis : True      #[Bool] True: Requirements for indoor air quality and thermal comfort are generated
+        ResidentialOcc : False                   #[Bool] True: To define occupancy for residential type zones #TODO: when False it makes problem
+        indoor_Air_Comfort_Analysis : False      #[Bool] True: Requirements for indoor air quality and thermal comfort are generated
         Retrofit: False                         #[Bool] True : energy conservation measures specified in ecm_confid will be applied
         EnergyManagementSystem: True
         StockholmBuildings: True               #[Bool] True : User specified building outside Minneberg from City Planner will be considered
