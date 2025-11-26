@@ -47,8 +47,12 @@ def createBuilding(LogFile,idf,building, perim,FloorZoning,ForPlots =False,Debug
         BasementstoriesHeight = 2.5 if FloorZoning else 2.5*building.nbBasefloor
         Perim_depth = 3 #the perimeter depth is fixed to 3m and is reduced if some issue are encountered.
         matched = False
-        try: altitude = building.BlocAlt[bloc] if ForPlots==1 else building.BlocAlt[bloc]-min(building.BlocAlt) #this try/except is because the altitude definition has been introduced later oin the platform developpement. thus to re-runs some cases, exception had to be introduced
-        except: altitude = 0
+        if building.BldgElevation:
+            try: altitude = building.BlocAlt[bloc] if ForPlots==1 else building.BlocAlt[bloc]#-min(building.BlocAlt) #this try/except is because the altitude definition has been introduced later oin the platform developpement. thus to re-runs some cases, exception had to be introduced
+            except: altitude = 0
+        else:
+            try: altitude = building.BlocAlt[bloc] if ForPlots==1 else building.BlocAlt[bloc] - min(building.BlocAlt) #this try/except is because the altitude definition has been introduced later oin the platform developpement. thus to re-runs some cases, exception had to be introduced
+            except: altitude = 0
         while not matched:
             try:
                 BuildBloc(idf, perim, bloc, bloc_coord, Height, nbstories, nbBasementstories, BasementstoriesHeight, Perim_depth,altitude)
@@ -158,8 +162,13 @@ def createEnvelope(idf,building, Ret):
         for s in sur2lookat:
             if s.Surface_Type in 'ceiling' and storey == -1:  # which means that we are on the basements just below ground
                 s.Construction_Name = 'Project Heated1rstFloor Rev'  #this will enable to reverse the construction for the ceiling compared to the floor of the adjacent zone
-            if s.Surface_Type in 'floor' and storey == 0 and int(alt)==0:  # which means that we are on the first floors just above basement this states that whether or not there is basement zone, the floor slab is defined by this layer
-                s.Construction_Name = 'Project Heated1rstFloor'
+                # TODO: alt change
+            if building.BldgElevation:
+                if s.Surface_Type in 'floor' and storey == 0:# and int(alt)==0:
+                    s.Construction_Name = 'Project Heated1rstFloor'
+            else:
+                if s.Surface_Type in 'floor' and storey == 0 and int(alt)==0:   #which means that we are on the first floors just above basement this states that whether or not there is basement zone, the floor slab is defined by this layer
+                    s.Construction_Name = 'Project Heated1rstFloor'
     #for all construction, see if some other material than default exists
     cstr = idf.idfobjects['CONSTRUCTION']
     mat = idf.idfobjects['MATERIAL']
@@ -310,7 +319,7 @@ def split2convex(idf,DebugMode,LogFile):
                 new_coord.append((x, y, z))
             #print(surf2treat.Name + str(nbi))
             surftri = idf.newidfobject(
-                "BUILDINGSURFACE:DETAILED",
+                "BUILDINGSURFACE:DETAILED", #TODO here
                 Name=surf2treat.Name + '_'+ str(nbi),
                 Surface_Type=surf2treat.Surface_Type,
                 Construction_Name=surf2treat.Construction_Name,

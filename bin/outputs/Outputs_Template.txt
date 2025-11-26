@@ -11,7 +11,7 @@ https://bigladdersoftware.com/epx/docs/9-1/input-output-reference/input-for-outp
 Choose one from : Timestep,Hourly,Daily,Monthly,Annual
 in the example below, it wll be hourly reported :
 
-Reporting_Frequency = Annual
+Reporting_Frequency = Hourly
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%   OUTPUT VARIABLES
@@ -497,4 +497,5 @@ HVAC,Average,Zone Mechanical Ventilation Air Changes per Hour [ach]
 
 ## HVAC,Sum,Environmental Impact Total CO2 Emissions Carbon Equivalent Mass [kg] #TODO
 ## Zone,Average,Zone Air CO2 Concentration [ppm] #TODO
-
+## HVAC,Sum,Generator Produced DC Electricity Energy [J]
+## HVAC,Sum,Electric Load Center Produced Electricity Energy [J]

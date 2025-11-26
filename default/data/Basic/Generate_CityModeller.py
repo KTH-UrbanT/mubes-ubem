@@ -75,8 +75,14 @@ class ShapeCityPlanner():
         self.cpNow = readCSV(os.path.join(self.Mainpath, self.config['0_Setup']['cpNow']))
         self.cpFootprints = readGjsonFiona(os.path.join(self.Mainpath,self.config['0_Setup']['cpFootprints']))
         self.template = Read_json(os.path.join(self.Mainpath, self.config['0_Setup']['CityModeller_Tempalte']))
-        self.UUID = self.config['1_Sim']['UUID']
-        self.BldFootPrints = [FP for FP in self.cpFootprints if FP.get('50A_UUID') == self.UUID[0]]
+        if self.config['1_Sim']['UUID'] == "":
+            self.All_UUID = []
+            for samplebld in self.cpFootprints:
+                self.All_UUID.append(samplebld.get('50A_UUID'))
+                self.UUID = self.All_UUID
+        else:
+            self.UUID = self.config['1_Sim']['UUID']
+        self.BldFootPrints = [FP for FP in self.cpFootprints if FP.get('50A_UUID') in self.UUID]
         self.coordinates = self.BldFootPrints[0].get('FootPrints')
         self.FormularID = self.BldFootPrints[0].get('FormularID')
         self.FNR = self.BldFootPrints[0].get('FNR')
@@ -100,10 +106,12 @@ class ShapeCityPlanner():
             BldFootPrints = [FP for FP in self.cpFootprints if FP.get('50A_UUID') == ID]
             coordinates = BldFootPrints[0].get('FootPrints')
             FormularID = BldFootPrints[0].get('FormularID')
+            if FormularID == None: continue
             FNR = BldFootPrints[0].get('FNR')
             BldcpNow = self.cpNow[self.cpNow['FormularId'] == FormularID]
             BldcpBuilding = self.cpBuildings[self.cpBuildings['50A_UUID'] == ID]
             Height = BldcpBuilding['STS_BYGG_H'].values[0].item()
+            if math.isnan(Height): continue
             BldcpProperties = self.cpProperties[self.cpProperties['FNR'] == float(FNR)]
             template.get('features')[0]['type'] = 'Feature'
             template.get('features')[0]['geometry']['type'] = 'GeometryCollection'

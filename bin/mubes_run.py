@@ -17,6 +17,10 @@ import multiprocessing as mp
 import yaml
 import copy
 import sys, os, pickle
+import logging
+logging.disable(logging.CRITICAL)
+
+
 # #add the required path for geomeppy special branch
 path2addgeom = 'C:\\Users\\xf245257\\Documents\\Faure\\prgm_python\\geomeppy'
 #path2addgeom = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'geomeppy')
@@ -158,12 +162,13 @@ if __name__ == '__main__' :
                 pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
                 # This is added to take care of actuator implementation. Prev the building pickle file loaded in runcase function.
                 for i in range(len(file2run)):
-                    if i == 0:
-                        with open(os.path.join(SimDir, file2run[i][:-4] + '.pickle'), 'rb') as handle:
-                            loadB = pickle.load(handle)
-                        building_Temp = loadB['BuildData']
-                        EDD_Data, cmd_Temp = EnergyManagementSystem.GenerateEDD(SimDir, epluspath, building_Temp, file2run[i])
-                        EnergyManagementSystem.Add_Actuator(SimDir, cmd_Temp, EDD_Data)
+                    if config['2_CASE']['1_SimChoices']['EnergyManagementSystem']:
+                        if i == 0:
+                            with open(os.path.join(SimDir, file2run[i][:-4] + '.pickle'), 'rb') as handle:
+                                loadB = pickle.load(handle)
+                            building_Temp = loadB['BuildData']
+                            EDD_Data, cmd_Temp = EnergyManagementSystem.GenerateEDD(SimDir, epluspath, building_Temp.WeatherDataFile, file2run[i])
+                            EnergyManagementSystem.Add_Actuator(CaseChoices['NbRuns'], SimDir, file2run[i], EDD_Data)
                     pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath, CaseChoices['API']), callback=giveReturnFromPool)
                 pool.close()
                 pool.join()
@@ -263,12 +268,14 @@ if __name__ == '__main__' :
             pool = mp.Pool(processes=int(nbcpu))
             for i in range(len(file2run)):
 #the building object is loaded in order to be saved afterward with the simulation results
-                if i == 0:
-                    with open(os.path.join(CurrentSimDir, file2run[i][:-4] + '.pickle'), 'rb') as handle:
-                        loadB = pickle.load(handle)
-                    building_Temp = loadB['BuildData']
-                    EDD_Data, cmd_Temp = EnergyManagementSystem.GenerateEDD(CurrentSimDir, epluspath, building_Temp, file2run[i])
-                    EnergyManagementSystem.Add_Actuator(CurrentSimDir, cmd_Temp, EDD_Data)
+                if config['2_CASE']['1_SimChoices']['EnergyManagementSystem']:
+                    # with open(os.path.join(CurrentSimDir, file2run[i][:-4] + '.pickle'), 'rb') as handle:
+                    #     loadB = pickle.load(handle)
+                    # building_Temp = loadB['BuildData']
+                    WeatherFile = config['3_SIM']['1_WeatherData']['WeatherDataFile']
+                    EDD_Data, cmd_Temp = EnergyManagementSystem.GenerateEDD(CurrentSimDir, epluspath, WeatherFile, file2run[i])
+                    EnergyManagementSystem.Add_Actuator(CurrentSimDir, file2run[i], EDD_Data)
+            for i in range(len(file2run)):
                 pool.apply_async(LaunchSim.runcase, args=(file2run[i], CurrentSimDir, epluspath, CaseChoices['API']),callback=giveReturnFromPool)
             pool.close()
             pool.join()

@@ -9,6 +9,7 @@ import eplus.Load_and_occupancy as Load_and_occupancy
 import eplus.DomesticHotWater as DomesticHotWater
 import building_geometry.MUBES_pygeoj as MUBES_pygeoj
 import eplus.build_fmus as BuildFMUs
+import eplus.Renewables as Renewables
 import outputs.output_utilities as Utilities
 from openpyxl import load_workbook
 import openturns as ot
@@ -55,6 +56,8 @@ def setZoneLevel(idf,building,FloorZoning = False):
 def setExtraEnergyLoad(idf,building):
     if building.DHWInfos:
         DomesticHotWater.createWaterEqpt(idf,building)
+    if building.Renewables:
+        Renewables.Photovoltaic(idf,building)
 
 def setOutputLevel(idf,building,MainPath, SimDir, CurrentBld2Run, EMSOutputs,OutputsFile):
     #ouputs definitions

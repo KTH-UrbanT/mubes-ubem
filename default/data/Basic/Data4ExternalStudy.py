@@ -177,7 +177,7 @@ class CityModellerFactory:
             return AdjCoord_floor, AdjCoord_roof
         elif CoordSys == 'EPSG:4326' and CRS_Type == 'geographic':
             # Set up transformer
-            transformer = Transformer.from_crs(CRS.from_user_input(CoordSys), CRS.from_epsg(3006), always_xy=True)
+            transformer = Transformer.from_crs(CRS.from_user_input(CoordSys), CRS.from_epsg(3414), always_xy=True)
             # Transform each coordinate
             transformed_floor = [transformer.transform(x, y, 0) for x, y in Coords]
             transformed_roof = [transformer.transform(x, y, self.height) for x, y in Coords]

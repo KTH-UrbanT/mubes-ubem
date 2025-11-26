@@ -14,6 +14,8 @@ import shutil
 import building_geometry.GeomUtilities as GeomUtilities
 import re, itertools
 import utilities.ProbGenerator as ProbGenerator
+import numpy as np
+import math
 
 import matplotlib.pyplot as plt
 #this class defines the building characteristics regarding available data in the geojson file
@@ -175,12 +177,15 @@ class Building:
         self.AltTolerance = self.GE['AltitudeTolerance']
         self.MaxShadingDist = self.GE['MaxShadingDist']
         DB, extraShade = self.check4UpperTowerAddition(DB, ExtraTowerFile)
+        self.measured_Atemp = int(DB.properties['EgenAtemp'])
+        self.BldgElevation = config['3_SIM']['GeomElement']['BuildingElevation']
+        self.Renewables = config['2_CASE']['1_SimChoices']['Renewables']
         self.footprint,  self.BlocHeight, self.BlocNbFloor, self.BlocAlt, self.BlocMaxAlt,self.BlocAltMatches = self.getfootprint(DB,LogFile,self.nbfloor,DebugMode)
         self.AggregFootprint = self.getAggregatedFootprint()
         self.RefCoord = self.getRefCoord()
         self.DB_Surf = self.getsurface(DB, DBL,LogFile,DebugMode)
         self.SharedBld, self.VolumeCorRatio = self.IsSameFormularIdBuilding(Buildingsfile, nbcase, LogFile, DBL,DebugMode)
-        self.BlocHeight, self.BlocNbFloor, self.StoreyHeigth = self.EvenFloorCorrection(self.BlocHeight, self.nbfloor, self.BlocNbFloor, self.footprint, LogFile,DebugMode)
+        self.BlocHeight, self.BlocNbFloor, self.StoreyHeigth = self.EvenFloorCorrection(self.BlocHeight, self.nbfloor, self.BlocNbFloor, self.footprint, self.measured_Atemp, LogFile,DebugMode)
         self.AdjustBlocDimension()
         self.EPHeatedArea, prem = self.getEPHeatedArea(LogFile,DebugMode)
         # self.perimeter = prem #Todo delete it later
@@ -443,7 +448,7 @@ class Building:
                             coord.append(newpolycoor)
                             #BlocHeight.append(round(abs(DB.geometry.poly3rdcoord[idx1]-DB.geometry.poly3rdcoord[idx2+idx1+1]),1))
                             #thisis a workaround for upper building part being extruded form the lower level
-                            BlocHeight.append(max(DB.geometry.poly3rdcoord[idx1],DB.geometry.poly3rdcoord[idx2 + idx1 + 1])-min(DB.geometry.poly3rdcoord))
+                            BlocHeight.append(max(DB.geometry.poly3rdcoord[idx1],DB.geometry.poly3rdcoord[idx2 + idx1 + 1])- min(DB.geometry.poly3rdcoord))#min(DB.geometry.poly3rdcoord[idx1],DB.geometry.poly3rdcoord[idx2 + idx1 + 1])) #min(DB.geometry.poly3rdcoord))
                             BlocAlt.append(min(DB.geometry.poly3rdcoord[idx1],DB.geometry.poly3rdcoord[idx2+idx1+1]))
                             BlocMaxAlt.append(max(DB.geometry.poly3rdcoord[idx1],DB.geometry.poly3rdcoord[idx2+idx1+1]))
         else:
@@ -590,7 +595,7 @@ class Building:
         nomoremerge = False
         pol2avoid = []
         while not nomoremerge:
-            poly2merge,area2merge,UpperBloc = GeomUtilities.checkForMerge(coord,DebugMode,LogFile,BlocHeight,BlocAlt,UpperBloc)
+            poly2merge,area2merge,UpperBloc = GeomUtilities.checkForMerge(coord,DebugMode,LogFile,BlocHeight,BlocAlt,UpperBloc, self.BldgElevation)
             if not poly2merge: nomoremerge = True
             else: coord = GeomUtilities.MakeMerge(coord,[poly2merge[0]],DebugMode,LogFile,BlocHeight,BlocAlt,BlocMaxAlt)
 
@@ -608,7 +613,7 @@ class Building:
             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         for idx,poly in enumerate(coord):
             coord[idx],node = GeomUtilities.CleanPoly(poly,self.DistTol,self.roundVal)
-        coord, validFootprint = GeomUtilities.CheckMultiBlocFootprint(coord,BlocAlt,tol = self.DistTol)
+        coord, validFootprint = GeomUtilities.CheckMultiBlocFootprint(coord,BlocAlt, self.BldgElevation, tol = self.DistTol)
         if UpperBloc:
             validFootprint = True
         #validFootprint = True
@@ -648,10 +653,12 @@ class Building:
         self.BlocAlt = newAlt
         self.BlocMaxAlt = newMaxAlt
 
-    def EvenFloorCorrection(self,BlocHeight,nbfloor,BlocNbFloor,coord,LogFile,DebugMode=False):
+    def EvenFloorCorrection(self,BlocHeight,nbfloor,BlocNbFloor,coord, measured_Atemp,LogFile,DebugMode=False):
         # we compute a storey height as well to choosen the one that correspond to the highest part of the building afterward
         BlocNbFloor=[] #the number of blocks is reset to comply with the old 2D geojson files is anyway empty for multipolygons files
-        StoreyHeigth = 3
+        BlocHeight_New = []
+        EPHeatedArea = 0
+        StoreyHeigth = self.best_storey_height(BlocHeight,nbfloor,BlocNbFloor)
         if nbfloor !=0:
             storeyRatio = StoreyHeigth / (max(BlocHeight) / nbfloor) if (max(BlocHeight) / nbfloor) > 0.5 else 1
             msg = '[Geom Info] The max bloc height is : ' + str(round(max(BlocHeight), 2)) + ' for ' + str(
@@ -667,14 +674,14 @@ class Building:
         if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         msg = '[Geom Cor] A ratio of ' + str(storeyRatio) + ' will be applied on each bloc height\n'
         if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
-
-        for height in range(len(BlocHeight)):
-            BlocHeight[height] *= storeyRatio
+        #
+        # for height in range(len(BlocHeight)):
+        #     BlocHeight[height] *= storeyRatio
         for idx, Height in enumerate(BlocHeight):
             val = int(round(Height, 1) / StoreyHeigth)
             BlocNbFloor.append(max(1, val))  # the height is ed to the closest 10cm
-            BlocHeight[idx] = BlocNbFloor[-1] * StoreyHeigth
-            msg = '[Geom Info] Bloc height : ' + str(BlocHeight[idx]) + ' with ' + str(BlocNbFloor[-1]) + ' nb of floors\n'
+            BlocHeight_New.append(BlocNbFloor[-1] * StoreyHeigth)
+            msg = '[Geom Info] Bloc height : ' + str(BlocHeight_New[idx]) + ' with ' + str(BlocNbFloor[-1]) + ' nb of floors\n'
             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
             msg = '[Geom Info] This bloc has a footprint with : ' + str(len(coord[idx])) + ' vertexes\n'
             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
@@ -683,7 +690,60 @@ class Building:
                     LogFile.write(
                         '[WARNING] /!\ This bloc as a height below 3m, it has been raized to 3m to enable construction /!\ \n')
                 except: pass
-        return BlocHeight, BlocNbFloor, StoreyHeigth
+
+        # for i,foot in enumerate(self.footprint):
+        #     EPHeatedArea += Polygon(foot).area*BlocNbFloor[i]
+        # AtempDiff = measured_Atemp - EPHeatedArea
+        # HeightDiff = [h - BlocHeight_New[idx] for idx, h in enumerate(BlocHeight)]
+        # deltaH_max = max(HeightDiff)
+        # deltaH_index_max = HeightDiff.index(deltaH_max)
+        # deltaH_min = min(HeightDiff)
+        # deltaH_index_min = HeightDiff.index(deltaH_min)
+        # if AtempDiff >= 500:
+        #     if deltaH_max >= 1.4:
+        #         BlocHeight_New[deltaH_index_max] += StoreyHeigth
+        # elif AtempDiff <= -500:
+        #     BlocHeight_New[deltaH_index_min] -= StoreyHeigth
+        #     BlocNbFloor[deltaH_index_min]-=1
+
+        return BlocHeight_New, BlocNbFloor, StoreyHeigth
+
+    def best_storey_height(self, BlocHeight, nbfloor, BlocNbFloor, h_min=2.6, h_max=3.0):
+        best_nbFloor = None
+        best_height = None
+        best_error = float("inf")
+
+        # Try reasonable number of storeys (1 to 50)
+        MaxBlockHeight = max(BlocHeight)
+        max_index = BlocHeight.index(MaxBlockHeight)
+        if len(BlocHeight) > 1:
+            for storeyHeight in np.arange(h_min, h_max + 0.1, 0.05):
+                h_talest = storeyHeight * nbfloor  # resulting floor height
+                error =  abs(MaxBlockHeight -  h_talest)
+                for blck in range(len(BlocHeight)):
+                    if blck == max_index:
+                        continue
+                    h_other = int(BlocHeight[blck] /storeyHeight) * storeyHeight
+                    error += abs(BlocHeight[blck] - h_other)# should be 0, but we keep it general
+                    if error < best_error:
+                        best_error = error
+                        best_height = storeyHeight
+
+        else:
+            for storeyHeight in np.arange(h_min, h_max + 0.1, 0.05):
+                error = abs(BlocHeight[0] - nbfloor * storeyHeight)
+                if error < best_error:
+                    best_error = error
+                    best_height = storeyHeight
+            base = math.floor(best_height)
+            decimal = best_height - base
+            if decimal < 0.25:
+                best_height = base
+            elif decimal < 0.86:
+                best_height = base + 0.5
+            else:
+                best_height = base + 1
+        return round(best_height)
 
     def getEPHeatedArea(self,LogFile,DebugMode):
         "get the heated area based on the footprint and the number of floors"
@@ -823,6 +883,7 @@ class Building:
     def getshade(self, nbcase, DataBaseInput,LogFile, PlotOnly=True, DebugMode=False):
         "Get all the shading surfaces to be build for surrounding building effect"
         shades = {}
+
         if PlotOnly ==1: #if its 1 it means that a general plot with all buildings is asked, so ne need to even consider the shadings
             return shades
         JSONFile = []
@@ -841,14 +902,15 @@ class Building:
             return shades
 
         if JSONFile:
+
             msg = '[Shadowing Info] Shadowing walls are taken from a json file\n'
             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
             return self.getShadesFromJson(DataBaseInput['Shades'])
         if GeJsonFile:
             msg = '[Shadowing Info] Shadowing walls are taken from a GeoJson file\n'
             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
-            self.BlocAlt = [0] * len(self.BlocAlt)
-            self.BlocMaxAlt = [val for val in self.BlocHeight]
+            self.BlocAlt = [0] * len(self.BlocAlt) if not self.BldgElevation  else self.BlocAlt
+            self.BlocMaxAlt = [val for val in self.BlocHeight] #TODO: fix shading walls altitude
             msg = '[Geom Info] Altitudes are fixed to 0 (ground level) as shadowing wall heights were computed without altitude\n'
             if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
             Shadingsfile = DataBaseInput['Shades']

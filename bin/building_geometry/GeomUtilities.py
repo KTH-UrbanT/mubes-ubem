@@ -330,21 +330,25 @@ def MakeMerge(coord,poly2merge,DebugMode,LogFile,BlocHeight,BlocAlt,BlocMaxAlt):
         # plt.close(fig)
     return coord
 
-def check4UpperTower(BlocHeight,BlocAlt,idx):
-    return BlocHeight[idx[1]] - BlocHeight[idx[0]] > 0 and BlocAlt[idx[1]] - BlocAlt[idx[0]] > 0
+def check4UpperTower(BlocHeight,BlocAlt, BldgElevation, idx):
 
-def checkForMerge(coord,DebugMode,LogFile,BlocHeight,BlocAlt,UpperBloc):
+    if BldgElevation:
+        return BlocHeight[idx[1]] - BlocHeight[idx[0]] > 0 and BlocAlt[idx[1]] - BlocAlt[idx[0]] > 0
+    else:
+        return BlocHeight[idx[1]] + BlocAlt[idx[1]] - BlocHeight[idx[0]] + BlocAlt[idx[0]] > 0
+
+def checkForMerge(coord,DebugMode,LogFile,BlocHeight,BlocAlt,UpperBloc, BldgElevation):
     poly2merge =  []
     area2merge = []
     for idx, coor in enumerate(coord):
         for i in range(len(coord) - idx - 1):
-            if Polygon(coor).contains(Polygon(coord[idx + i + 1])) and not check4UpperTower(BlocHeight,BlocAlt,[idx, idx + i + 1]):
+            if Polygon(coor).contains(Polygon(coord[idx + i + 1])) and not check4UpperTower(BlocHeight,BlocAlt,BldgElevation, [idx, idx + i + 1]):
                 poly2merge.append([idx, idx + i + 1])
                 area2merge.append([Polygon(coor).area, Polygon(coord[idx + i + 1]).area])
-            if Polygon(coord[idx + i + 1]).contains(Polygon(coor)) and not check4UpperTower(BlocHeight,BlocAlt,[idx + i + 1, idx]):
+            if Polygon(coord[idx + i + 1]).contains(Polygon(coor)) and not check4UpperTower(BlocHeight,BlocAlt,BldgElevation, [idx + i + 1, idx]):
                 poly2merge.append([idx + i + 1, idx])
                 area2merge.append([Polygon(coord[idx + i + 1]).area, Polygon(coor).area])
-            if check4UpperTower(BlocHeight, BlocAlt, [idx, idx + i + 1]) or check4UpperTower(BlocHeight,BlocAlt,[idx + i + 1, idx]):
+            if check4UpperTower(BlocHeight, BlocAlt, BldgElevation, [idx, idx + i + 1]) or check4UpperTower(BlocHeight,BlocAlt,BldgElevation, [idx + i + 1, idx]):
                 UpperBloc = True
     for i, c in enumerate(poly2merge):
         for j, c1 in enumerate(poly2merge):
@@ -382,13 +386,14 @@ def getSection(poly,mainNode):
                 break
     return section
 
-def CheckMultiBlocFootprint(blocs,blocAlt,tol =1):
+def CheckMultiBlocFootprint(blocs, blocAlt, BldgElevation ,tol =1):
     validMultibloc = True
     if len(blocs)>1:
         validMultibloc = False
         for idxbloc1,idxbloc2 in itertools.product(enumerate(blocs),repeat = 2):
             done = False
-            if idxbloc1[1] != idxbloc2[1] and blocAlt[idxbloc1[0]]==blocAlt[idxbloc2[0]]:
+            chek = idxbloc1[1] != idxbloc2[1] if BldgElevation else idxbloc1[1] != idxbloc2[1] and blocAlt[idxbloc1[0]]==blocAlt[idxbloc2[0]]
+            if chek: #idxbloc1[1] != idxbloc2[1]:# and blocAlt[idxbloc1[0]]==blocAlt[idxbloc2[0]]:
                 bloc1 = idxbloc1[1]
                 bloc2 = idxbloc2[1]
                 for ptidx,pt in enumerate(bloc1):

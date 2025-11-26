@@ -36,6 +36,7 @@
         ResidentialOcc : [bool]
         indoor_Air_Comfort_Analysis : [bool]
         Retrofit : [bool]                               #[Bool] True : energy conservation measures specified in ecm_confid will be applied
+        Renewables: [bool]
         EnergyManagementSystem: [bool]
         StockholmBuildings: [bool]                              #[Bool] True : User specified building outside Minneberg from City Planner will be considered
         ExternalStudy: [bool]
@@ -207,6 +208,7 @@
         DistanceTolerance : [float,int]                 #[Float] Geometric threshold from which below every edge are removed and vertexes merged
         VertexPrecision : [int]                   #[int] precision of the round function for vertex coordinates
         AltitudeTolerance : [float,int]                    #[float] Threshold below wich altitude will be merged
+        BuildingElevation : [bool]
 
     
     # definition of person/m2...complytely abritrary, but we still need some vaalues

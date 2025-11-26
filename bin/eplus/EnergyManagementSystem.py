@@ -15,7 +15,10 @@ import os
 from subprocess import check_call
 import platform
 
-def GenerateEDD(SimDir, epluspath, building, file2run):
+from sympy.codegen import Print
+
+
+def GenerateEDD(SimDir, epluspath, WeatherFile, file2run):
     Runfile = os.path.join(SimDir, file2run)
     RunDir = os.path.join(SimDir, file2run[:-4] + '_Temp')
     CaseName = 'Run'
@@ -24,7 +27,7 @@ def GenerateEDD(SimDir, epluspath, building, file2run):
         eplus_exe = os.path.join(epluspath, "energyplus.exe")
     else:
         eplus_exe = os.path.join(epluspath, "energyplus")
-    weatherpath = os.path.join(epluspath,building.WeatherDataFile)
+    weatherpath = os.path.join(epluspath, WeatherFile)
     cmd_Temp = [eplus_exe, '--weather',os.path.normcase(weatherpath),'--output-directory',RunDir, \
            '--idd',os.path.join(epluspath,'Energy+.idd'),'--expandobjects','-r','--output-prefix',CaseName,Runfile]
     # cmd_Temp = cmd
@@ -98,22 +101,29 @@ def Component_Name_4_Actuator(CurrentCase):
 
     return edd_data
 
-def Add_Actuator(SimDir, cmd_Temp, EDD_Data):
-
-    idf_files = [f for f in os.listdir(SimDir) if f.endswith('.idf')]
+def Add_Actuator(nbRun, SimDir, file2run, EDD_Data):
     Actuators = EDD_Data.get('Actuators')
     for act in Actuators:
-        if 'Heating Setpoint' in act.values():
-            UniqueComponentName = act.get('Unique Component Name')
-            ComponentType = act.get('Component Type')
-            ControlType = act.get('Control Type')
-            Name = 'Zone_' + UniqueComponentName + '_Override'
-        # This object applies the defined program on HVAC template
-            idfObject = (f"\n\n ENERGYMANAGEMENTSYSTEM:ACTUATOR,\n \t {Name}, \t\t !- Name\n \t {UniqueComponentName}, \t\t !- Actuated Component Unique Name\n"
-                 f" \t {ComponentType}, \t\t !- Actuated Component Type\n \t {ControlType}, \t\t !- Actuated Component Control Type \n\n")
-            for idf_curr in idf_files:
-                with open(os.path.join(SimDir, idf_curr), "a", encoding="utf-8") as f:
-                                f.write(idfObject)
+        try:
+            if 'Heating Setpoint' in act.values():
+                UniqueComponentName = act.get('Unique Component Name')
+                ComponentType = act.get('Component Type')
+                ControlType = act.get('Control Type')
+                Name = 'Zone_' + UniqueComponentName + '_Override'
+            # This object applies the defined program on HVAC template
+                idfObject = (f"\n\n ENERGYMANAGEMENTSYSTEM:ACTUATOR,\n \t {Name}, \t\t !- Name\n \t {UniqueComponentName}, \t\t !- Actuated Component Unique Name\n"
+                     f" \t {ComponentType}, \t\t !- Actuated Component Type\n \t {ControlType}, \t\t !- Actuated Component Control Type \n\n")
+                if nbRun > 1:
+                    idf_files = [f for f in os.listdir(SimDir) if f.endswith('.idf')]
+                    for idf_curr in idf_files:
+                        with open(os.path.join(SimDir, idf_curr), "a", encoding="utf-8") as f:
+                                        f.write(idfObject)
+                else:
+                    with open(os.path.join(SimDir, file2run), "a", encoding="utf-8") as f:
+                        f.write(idfObject)
+        except:
+            msg = 'No component found to be controlled by actuator'
+            Print(msg)
 
 def setEMS4MeanTemp(idf,zonelist,Freq,name):
     """

@@ -330,7 +330,7 @@ class Geometry:
             self._data['poly3rdcoord'] = []
             self._data['centroid'] = []
             self._data['type'] = self._data['geometries'][0]['type']
-            for nbMultipolygon in self._data['geometries']:
+            for nbMultipolygon in self._data['geometries']: # TODO: the 3rd coordinate is here
                 for polygon in nbMultipolygon['coordinates']: #self._data['geometries'][0]['coordinates']:
                     alt = [point[-1] for point in polygon[0]]
                     if max([abs(alt[i + 1] - val) for i, val in enumerate(alt[:-1])])==0:

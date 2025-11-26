@@ -23,7 +23,7 @@ def getOutputList(path,idf,OutputsFile):
             var = line[3:][::-1]
             var2add = var[var.index('[')+2:var.index(',')][::-1]
             keep = True
-            if 'People' in var2add and len(idf.idfobjects["PEOPLE"])==0:
+            if 'People' in var2add and len(idf.idfobjects["PEOPLE"])==0: # TODO: What is it for?
                 keep = False
             if keep:
                 OutputsVar['Var'].append(var2add)
@@ -46,6 +46,24 @@ def AddOutputs(idf,building,path, SimDir, CurrentBld2Run, EMSOutputs,OutputsFile
             Variable_Name=var,
             Reporting_Frequency=OutputsVar['Reportedfrequency'],
         )
+    idf.newidfobject(
+        "OUTPUT:METER",
+        Key_Name="Electricity:Facility",
+        Reporting_Frequency="Hourly",
+    )
+    #
+    idf.newidfobject(
+        "OUTPUT:METER",
+        Key_Name="ElectricityPurchased:Facility",
+        Reporting_Frequency="Hourly",
+    )
+    #
+    idf.newidfobject(
+        "OUTPUT:METER",
+        Key_Name="ElectricitySurplusSold:Facility",
+        Reporting_Frequency="Hourly",
+    )
+
     zonelist = getHeatedZones(idf)
     if EMSOutputs:
         # ActuatedComponentName = Component_Name_4_Actuator(os.path.join(SimDir, CurrentBld2Run, 'Runout.edd'))
@@ -265,7 +283,7 @@ def Read_OutputsEso(CaseName,ExtSurfNames, PerBlockResult, ZoneOutput):
                     currentData[2] += ' On Roofs'
                 else:
                     currentData[2] += ' On Vertical Walls'
-        if currentData[1].find('STOREY')>0:
+        if currentData[1] is not None and currentData[1].find('STOREY')>0:
             try:
                 # The results will be aggregated at each storey which means if we have two blocks or more in one building,
                 # the results of each storey are summed if PerBlockResult is False
@@ -285,8 +303,11 @@ def Read_OutputsEso(CaseName,ExtSurfNames, PerBlockResult, ZoneOutput):
                     except:
                         test += 1
             Firstkey = BldBlckStry if PerBlockResult else 'STOREY ' + str(nb)
-        else:
+        elif currentData[1] is not None:
             Firstkey = currentData[1]
+        else:
+            Firstkey = 'Meter'
+            currentData[1] = 'Metering'
         if not res:
             res[Firstkey] = {}
             ZoneAgregRes[Firstkey] = {}
