@@ -4,3 +4,4 @@
  /examples/ForTest/g
 **/example*
 **/.yml*bin/Generated_Buildings.geojson
+bin/Generated_Buildings.geojson
