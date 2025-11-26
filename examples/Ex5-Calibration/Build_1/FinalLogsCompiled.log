@@ -1,0 +1,26 @@
+Building 1 is starting
+[Bld ID] BldIDKey : 50A_UUID
+[Bld ID] 50A_UUID : 1c931069-d3d1-4559-8968-e7f0564579fb
+[Geom Info] The max bloc height is : 15.65 for 5 floors declared in the EPC 
+[Geom Cor] A ratio of 0.9584664536741214 will be applied on each bloc height
+[Geom Info] Bloc height : 12 with 4 nb of floors
+[Geom Info] This bloc has a footprint with : 4 vertexes
+[Geom Info] Bloc height : 15 with 5 nb of floors
+[Geom Info] This bloc has a footprint with : 16 vertexes
+[Geom Info] Blocs footprint areas : [85.92768903169998, 616.8433281134371]
+[Geom Info] The total heated area is : 3427.9273966939854 for a declared DB_Surf of : 3925 --> discrepancy of : 12.66
+[Shadowing Info] Shadowing walls are taken from a GeoJson file
+[Geom Info] Altitudes are fixed to 0 (ground level) as shadowing wall heights were computed without altitude
+[Usage Info] This building has 50.0 % of Office occupancy type
+[Usage Info] This building has 50.0 % of Residential occupancy type
+[Time report] Building Initialisation phase : 4.68 sec
+[Time report] Building level (geometry) phase : 0.57 sec
+[Time report] Building level (Envelope) phase : 0.51 sec
+[Time report] Zone level phase : 0.17 sec
+[Time report] Output level phase : 0.02 sec
+[Time report] Writing file and data phase : 0.02 sec
+Building_1 IDF file 1/20 is done
+[Reported Time] Input File : 6.06 seconds
+[Reported Time] Full Computation : 13.92 seconds
+[Reported Time] Read and Save Results : 5.05 seconds
+##############################################################
