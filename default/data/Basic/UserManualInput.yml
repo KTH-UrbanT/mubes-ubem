@@ -1,17 +1,41 @@
 0_Bld_Opt:
   Location:
   BldShape: 'L'                                         # 'S': Square, 'R': Rectangle, 'L': L shape
-  Coordinates:                                          # You need to at least define three points to create a closed loop polygon
-    - [18.060679634355637,59.342045727330856]
-    - [18.06194044294358,59.34238544045127]
-    - [18.062721284625496,59.341585465424686]
-    - [18.06143182129682,59.34125305016886]
+
+  Coordinates:  # You need to at least define three points to create a closed loop polygon
+    - - [ 103.7710229, 1.2991924 ]
+      - [ 103.7709876, 1.2991757 ]
+      - [ 103.7708716, 1.2991207 ]
+      - [ 103.7706495, 1.2995947 ]
+      - [ 103.7707988, 1.2996654 ]
+      - [ 103.7708351, 1.2995889 ]
+      - [ 103.7708564, 1.299544 ]
+      - [ 103.7710229, 1.2991924 ]
+
+
+    - - [ 103.7706139, 1.2995026 ]
+      - [ 103.7705576, 1.2994759 ]
+      - [ 103.7705906, 1.2994062 ]
+      - [ 103.7707138, 1.2991462 ]
+      - [ 103.770772,  1.2991737 ]
+      - [ 103.7706139, 1.2995026 ]
+
+    - - [ 103.7708633, 1.2991382 ]
+      - [ 103.7708025, 1.2991094 ]
+      - [ 103.7705936, 1.2995453 ]
+      - [ 103.7706137, 1.2995548 ]
+      - [ 103.7706584, 1.299576 ]
+      - [ 103.7708633, 1.2991382 ]
+
+
+
 
   CoordSys: 'EPSG:4326'                                # You should define valid CRS based on your coordinates
+  ProjectedCoordSys: '3414'
   EgenAtemp: 400
   EgenAntalPlan: 6                                     # Number of floors above ground
   EgenAntalKallarplan: 1                               # Number of basement floor
-  height: 18
+  height: [83, 30, 20]
   EgenNybyggAr: 1999
   43S_ARVARDE: 2000
   43S_BYGGAR: 2000
