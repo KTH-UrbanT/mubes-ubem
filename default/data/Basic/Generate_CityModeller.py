@@ -1,3 +1,6 @@
+# @Author  :Mohammadhossein Alizadeh
+# @Email   : alizad@kth.st@kth.se
+
 import os
 import json
 import pandas as pd
@@ -11,6 +14,7 @@ import geopandas as gpd
 import fiona
 import copy  # Only once at the top of your script
 import shutil
+
 def read_geojson(self, Path):
     geodata = gpd.read_file(Path)
     return geodata

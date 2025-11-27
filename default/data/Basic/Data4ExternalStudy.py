@@ -1,3 +1,7 @@
+# @Author  :Mohammadhossein Alizadeh
+# @Email   : alizad@kth.st@kth.se
+
+
 import json, os
 import pandas as pd
 import yaml
@@ -10,6 +14,7 @@ import geopandas as gpd
 import math
 import shutil
 from collections import Counter
+import copy
 
 
 def read_geojson(Path):
@@ -90,12 +95,12 @@ class CityModellerFactory:
             BldShape = self.ManualConfig['0_Bld_Opt']['BldShape']
             self.SyntheticCoord = self.GenCoord(total_area, BldShape)
             self.CP_final = self.AddCoordinates()
-
-        geojson_cleaned = clean_nans(self.CP_final)
-        geojson_str = json.dumps(
-            geojson_cleaned,
-            indent=2,
-            ensure_ascii=False
+        for smple in self.CP_final:
+            geojson_cleaned = clean_nans(smple)
+            geojson_str = json.dumps(
+                geojson_cleaned,
+                indent=2,
+                ensure_ascii=False
         )
         geojson_str = re.sub(
             r'\[\s*([-0-9.eE]+),\s*([-0-9.eE]+),\s*([-0-9.eE]+)\s*\]',
@@ -121,20 +126,24 @@ class CityModellerFactory:
         # return self.CP_final
 # Here we add generated coord from Atemp or coords defined in yml file
     def AddCoordinates(self):
+        AllBuildings = []
         if self.Coords:
             CRS_Type = self.guess_crs_from_coords(self.Coords)
             if CRS_Type != 'unknown':
-                TransformedCoords = self.convert_to_epsg3006(self.Coords, self.CoordSys, CRS_Type, self.ProjectedRefSys)
+                TransformedCoords = self.convert_to_epsg(self.Coords, self.CoordSys, CRS_Type, self.ProjectedRefSys)
                 # self.PlotGeometry(TransformedCoords_floor)
-                for index, BlockCoord in enumerate(TransformedCoords):
-                    # if index == 0:
-                    #     self.CP_template.get('features')[0]['geometry']['geometries'][0]['coordinates'] = [[BlockCoord['roof']]]
-                    #     self.CP_template.get('features')[0]['geometry']['geometries'][0]['coordinates'].append([BlockCoord['floor']])
-                    # else:
-                    self.CP_template.get('features')[0]['geometry']['geometries'].append({'coordinates': [[BlockCoord['roof']]], 'type': 'MultiPolygon'})
-                    self.CP_template.get('features')[0]['geometry']['geometries'][index]['coordinates'].append([BlockCoord['floor']])
+                for BuildingIDX, BuildingCoord in enumerate(TransformedCoords):
+                    NewBuild = copy.deepcopy(self.CP_template)
+                    for BlockIDX, BlockCoord in enumerate(BuildingCoord):
+                        if BlockIDX == 0:
+                            NewBuild.get('features')[0]['geometry']['geometries'][0]['coordinates'] = [[BlockCoord['roof']]]
+                            NewBuild.get('features')[0]['geometry']['geometries'][0]['coordinates'].append([BlockCoord['floor']])
+                        else:
+                            NewBuild.get('features')[0]['geometry']['geometries'].append({'coordinates': [[BlockCoord['roof']]], 'type': 'MultiPolygon'})
+                            NewBuild.get('features')[0]['geometry']['geometries'][BlockIDX]['coordinates'].append([BlockCoord['floor']])
+                    AllBuildings.append(NewBuild)
 
-                return self.CP_template
+                return AllBuildings
             else:
                 msg = '[Error] Unable to convert coordinates. Check if coordinates are in a geographic or projected CRS.'
                 print(msg)
@@ -153,31 +162,41 @@ class CityModellerFactory:
         Returns:
         - 'geographic', 'projected', or 'unknown'
         """
+        AllBuildCoorCheck = []
+        CoordType = []
         CoordSysCheck = {}
-        for idx, blcks in enumerate(coords):
-            try:
-                xs = [x for x, y in blcks]
-                ys = [y for x, y in blcks]
+        for BuildIdx, BuildingCoord in enumerate(coords):
 
-                # Check if values fit typical lat/lon ranges
-                if all(-180 <= x <= 180 for x in xs) and all(-90 <= y <= 90 for y in ys):
-                    CoordSysCheck[str(idx)] = 'geographic'
-                    # return "geographic"
-                # Check if values are large enough to be projected (e.g., meters)
-                elif all(abs(x) > 1000 and abs(y) > 1000 for x, y in blcks):
-                    CoordSysCheck[str(idx)] = 'projected'
-                    # return "projected"
-                else:
-                    # return "unknown"
-                    CoordSysCheck[str(idx)] = 'unknown'
-            except Exception as e:
-                print(f"Error during detection: {e}")
-                return "unknown"
+            for idx, blcksCoord in enumerate(BuildingCoord):
+                try:
+                    xs = [x for x, y in blcksCoord]
+                    ys = [y for x, y in blcksCoord]
 
-        if len(Counter(CoordSysCheck.values())) == 1:
-            return Counter(CoordSysCheck.values()).most_common(1)[0][0]
+                    # Check if values fit typical lat/lon ranges
+                    if all(-180 <= x <= 180 for x in xs) and all(-90 <= y <= 90 for y in ys):
+                        CoordSysCheck[str(idx)] = 'geographic'
+                        # return "geographic"
+                    # Check if values are large enough to be projected (e.g., meters)
+                    elif all(abs(x) > 1000 and abs(y) > 1000 for x, y in blcksCoord):
+                        CoordSysCheck[str(idx)] = 'projected'
+                        # return "projected"
+                    else:
+                        # return "unknown"
+                        CoordSysCheck[str(idx)] = 'unknown'
+                except Exception as e:
+                    print(f"Error during detection: {e}")
+                    return "unknown"
+            AllBuildCoorCheck.append(CoordSysCheck)
+        for check in AllBuildCoorCheck:
+            if len(Counter(check.values())) == 1:
+                CoordType.append(Counter(CoordSysCheck.values()).most_common(1)[0][0])
+            else:
+                msg = f"[Error] Unable to convert coordinates. Check if coordinates are in a geographic or projected CRS."
+                print(msg)
+                SystemExit
+        return CoordType[0]
 
-    def convert_to_epsg3006(self, Coords, CoordSys, CRS_Type, ProjectedRefSys):
+    def convert_to_epsg(self, Coords, CoordSys, CRS_Type, ProjectedRefSys):
         """
         Convert a list of coordinates from unknown CRS to EPSG:3006.
         Parameters:
@@ -185,29 +204,25 @@ class CityModellerFactory:
         Returns:
         - List of transformed (x, y) in EPSG:3006
         """
-        transformed = []
-        AdjCoord = []
-        # transformed_roof = []
-        for idx, blckcoord in enumerate(Coords):
-            if blckcoord[0] != blckcoord[-1]: list(blckcoord).append(blckcoord[0])
-            # blckcoord.append(blckcoord[0])
-            if CoordSys == 'EPSG:3006' and CRS_Type == 'projected':
-                transformed.append({'floor':[(x, y, 0) for x, y in blckcoord], 'roof': [(x, y, self.height[idx]) for x, y in blckcoord]})
-                # AdjCoord_roof = [(x, y, self.height) for x, y in blckcoord]
-                return AdjCoord #AdjCoord_floor, AdjCoord_roof
-            elif CoordSys == 'EPSG:4326' and CRS_Type == 'geographic':
-                # Set up transformer
-                transformer = Transformer.from_crs(CRS.from_user_input(CoordSys), CRS.from_epsg(ProjectedRefSys), always_xy=True)
-                # Transform each coordinate
-                transformed.append({'floor':[transformer.transform(x, y, 0) for x, y in blckcoord], 'roof': [transformer.transform(x, y, self.height[idx]) for x, y in blckcoord]})
-                # transformed_roof = [transformer.transform(x, y, self.height) for x, y in blckcoord]
-
-                # return transformed #transformed_floor, transformed_roof
-            else:
-                msg = f"[Error] Unable to convert coordinates from {CoordSys} to EPSG:3006. CRS type doesnt match with coordinates."
-                print(msg)
-                SystemExit
-        return transformed
+        AllBuildingTransCoord = []
+        for BuildingIdx, BuildingCoord in enumerate(Coords):
+            transformed = []
+            for idx, blckcoord in enumerate(BuildingCoord):
+                if blckcoord[0] != blckcoord[-1]: list(blckcoord).append(blckcoord[0])
+                if CoordSys == 'EPSG:3006' and CRS_Type == 'projected':
+                    transformed.append({'floor':[(x, y, 0) for x, y in blckcoord], 'roof': [(x, y, self.height[idx]) for x, y in blckcoord]})
+                elif CoordSys == 'EPSG:4326' and CRS_Type == 'geographic':
+                    # Set up transformer
+                    transformer = Transformer.from_crs(CRS.from_user_input(CoordSys), CRS.from_epsg(ProjectedRefSys), always_xy=True)
+                    # Transform each coordinate
+                    transformed.append({'floor':[transformer.transform(x, y, 0) for x, y in blckcoord], 'roof': [transformer.transform(x, y, self.height[idx]) for x, y in blckcoord]})
+                    # return transformed #transformed_floor, transformed_roof
+                else:
+                    msg = f"[Error] Unable to convert coordinates from {CoordSys} to EPSG:3006. CRS type doesnt match with coordinates."
+                    print(msg)
+                    SystemExit
+            AllBuildingTransCoord.append(transformed)
+        return AllBuildingTransCoord
 
     def GenCoord(self, total_area, BldShape):
         """
