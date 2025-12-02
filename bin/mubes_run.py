@@ -163,12 +163,7 @@ if __name__ == '__main__' :
                 # This is added to take care of actuator implementation. Prev the building pickle file loaded in runcase function.
                 for i in range(len(file2run)):
                     if config['2_CASE']['1_SimChoices']['EnergyManagementSystem']:
-                        if i == 0:
-                            with open(os.path.join(SimDir, file2run[i][:-4] + '.pickle'), 'rb') as handle:
-                                loadB = pickle.load(handle)
-                            building_Temp = loadB['BuildData']
-                            EDD_Data, cmd_Temp = EnergyManagementSystem.GenerateEDD(SimDir, epluspath, building_Temp.WeatherDataFile, file2run[i])
-                            EnergyManagementSystem.Add_Actuator(CaseChoices['NbRuns'], SimDir, file2run[i], EDD_Data)
+                        EnergyManagementSystem.EMS_Actuator_Handling_Module(CaseChoices['NbRuns'], config, epluspath, SimDir, file2run)
                     pool.apply_async(LaunchSim.runcase, args=(file2run[i], SimDir, epluspath, CaseChoices['API']), callback=giveReturnFromPool)
                 pool.close()
                 pool.join()
@@ -266,15 +261,8 @@ if __name__ == '__main__' :
                         'Simulations under process for ' + os.path.basename(CurrentSimDir))
             file2run = LaunchSim.initiateprocess(CurrentSimDir)
             pool = mp.Pool(processes=int(nbcpu))
-            for i in range(len(file2run)):
-#the building object is loaded in order to be saved afterward with the simulation results
-                if config['2_CASE']['1_SimChoices']['EnergyManagementSystem']:
-                    # with open(os.path.join(CurrentSimDir, file2run[i][:-4] + '.pickle'), 'rb') as handle:
-                    #     loadB = pickle.load(handle)
-                    # building_Temp = loadB['BuildData']
-                    WeatherFile = config['3_SIM']['1_WeatherData']['WeatherDataFile']
-                    EDD_Data, cmd_Temp = EnergyManagementSystem.GenerateEDD(CurrentSimDir, epluspath, WeatherFile, file2run[i])
-                    EnergyManagementSystem.Add_Actuator(CurrentSimDir, file2run[i], EDD_Data)
+            if config['2_CASE']['1_SimChoices']['EnergyManagementSystem']:
+                EnergyManagementSystem.EMS_Actuator_Handling_Module(CaseChoices['NbRuns'], config, epluspath, CurrentSimDir, file2run, CaseChoices)
             for i in range(len(file2run)):
                 pool.apply_async(LaunchSim.runcase, args=(file2run[i], CurrentSimDir, epluspath, CaseChoices['API']),callback=giveReturnFromPool)
             pool.close()

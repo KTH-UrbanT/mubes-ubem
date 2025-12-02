@@ -9,6 +9,10 @@ import core.GeneralFunctions as GrlFct
 import itertools
 from geomeppy import geom
 
+
+def Zone_cleanSpaceinName(name: str) -> str:
+    return name.replace(" ", "_")
+
 def BuildBloc(idf,perim,bloc,bloc_coord,Height,nbstories,nbBasementstories,BasementstoriesHeight,Perim_depth,altitude):
     if perim:
         idf.add_block(
@@ -56,6 +60,9 @@ def createBuilding(LogFile,idf,building, perim,FloorZoning,ForPlots =False,Debug
         while not matched:
             try:
                 BuildBloc(idf, perim, bloc, bloc_coord, Height, nbstories, nbBasementstories, BasementstoriesHeight, Perim_depth,altitude)
+                # We change the name the zone name because in actuator object EP does not accept spaces in actuator name. TODO: eppy modified
+                # for Zoname in idf.idfobjects["ZONE"]:
+                #     Zoname.Name = Zone_cleanSpaceinName(Zoname.Name)
                 matched = True
             except:
                 Perim_depth = Perim_depth/2
@@ -155,8 +162,8 @@ def createEnvelope(idf,building, Ret):
     Envelope_Param.createNewConstruction(idf, 'Project Heated1rstFloor Rev', 'Heated1rstFloor')
     # special loop to assign the construction that separates the basement to the other storeis.
     for idx, zone in enumerate(idf.idfobjects["ZONE"]):
-        storey = int(zone.Name[zone.Name.find('Storey') + 6:])  # the name ends with 'Storey' so lets get the storey number this way
-        try: alt = float(zone.Name[zone.Name.find('_Alt') + 4:zone.Name.find('Storey')])
+        storey = int(zone.Name[zone.Name.find('Storey_') + 7:])  # the name ends with 'Storey' so lets get the storey number this way
+        try: alt = float(zone.Name[zone.Name.find('_Alt') + 4:zone.Name.find('_Storey')])
         except: alt = 0
         sur2lookat = (s for s in zone.zonesurfaces if s.key not in ['INTERNALMASS'])
         for s in sur2lookat:

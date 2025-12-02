@@ -16,8 +16,11 @@ def getYearlyError(Res,NewMeas):
     # EPCHeatArea = Res['EPC_Heat']
     # EPCHeat = [val*Res['ATemp'][0] for val in Res['EPC_Heat']]
     EPHeat = []
-    for idx in range(len(Res['EP_Heat'])):
+    # This for loop is based on nbRun
+    for idx in range(len(Res['EP_Heat'])): # !why EP_Heat has one value?
         Heat2treat = Res['HeatedArea'][idx]['Data_Zone Ideal Loads Supply Air Total Heating Rate']
+        # If we have simulation for more than one year, then we create a window with size of number of the years: int(len(Heat2treat) / 8760)
+        #Then we average based on length of the window
         HeatPower = Utilities.Average(Heat2treat, int(len(Heat2treat) / 8760))
         try:
             if 'Data_Total DHW Heating Power' in Res['Other'][idx].keys():

@@ -375,8 +375,8 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
     AllZone = idf.idfobjects["ZONE"]
     for idx, zone in enumerate(AllZone):
         try: bloclist.append(int(zone.Name[zone.Name.rfind('Build_')+6:zone.Name.find('_Alt')]))
-        except: bloclist.append(int(zone.Name[zone.Name.rfind('Build_')+6:zone.Name.find('Storey')]))
-        zoneStoreylist.append(int(zone.Name[zone.Name.find('Storey')+6:])) #the name ends with Storey # so lets get the storey number this way
+        except: bloclist.append(int(zone.Name[zone.Name.rfind('Build_')+6:zone.Name.find('Storey_')]))
+        zoneStoreylist.append(int(zone.Name[zone.Name.find('Storey_')+7:])) #the name ends with Storey # so lets get the storey number this way
     SortedZoneIdx = sorted(range(len(zoneStoreylist)), key=lambda k: zoneStoreylist[k])
     Exw = 0
     for idx in SortedZoneIdx:

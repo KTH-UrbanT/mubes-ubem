@@ -18,6 +18,22 @@ import platform
 from sympy.codegen import Print
 
 
+def EMS_Actuator_Handling_Module(nbRun, config, epluspath, CurrentSimDir, file2run):
+    for i in range(len(file2run)):
+    # If we have calibration or parametric study, we have more than one simulation for each building. Therefore, the .edd file would be the same for the building in different run.
+    # So we run a short dynamic simulation for one idf and use the .edd file for the other idfs.
+        if nbRun > 1:
+            if not int(file2run[0][:file2run[0].find('.idf')][-1]) >= nbRun:
+                if i == 0:
+                    WeatherFile = config['3_SIM']['1_WeatherData']['WeatherDataFile']
+                    EDD_Data = GenerateEDD(CurrentSimDir, epluspath, WeatherFile, file2run[i])
+                    Add_Actuator(nbRun, CurrentSimDir, file2run[i], EDD_Data)
+    # If nbRun is less than 2, then it means that in every run it is a new building. Therefore, we need short run for every one of them.
+        else:
+            WeatherFile = config['3_SIM']['1_WeatherData']['WeatherDataFile']
+            EDD_Data = GenerateEDD(CurrentSimDir, epluspath, WeatherFile, file2run[i])
+            Add_Actuator(nbRun, CurrentSimDir, file2run[i], EDD_Data)
+
 def GenerateEDD(SimDir, epluspath, WeatherFile, file2run):
     Runfile = os.path.join(SimDir, file2run)
     RunDir = os.path.join(SimDir, file2run[:-4] + '_Temp')
@@ -30,45 +46,10 @@ def GenerateEDD(SimDir, epluspath, WeatherFile, file2run):
     weatherpath = os.path.join(epluspath, WeatherFile)
     cmd_Temp = [eplus_exe, '--weather',os.path.normcase(weatherpath),'--output-directory',RunDir, \
            '--idd',os.path.join(epluspath,'Energy+.idd'),'--expandobjects','-r','--output-prefix',CaseName,Runfile]
-    # cmd_Temp = cmd
-    # cmd_Temp[4] = cmd[4]+'_Temp'
-    # cmd_Temp[-1] = cmd[-1]+'_Temp'
-    # cmd_Temp = [
-    #     '/Applications/EnergyPlus-9-5-0/energyplus',
-    #     '--weather', '/Applications/EnergyPlus-9-5-0/WeatherData/SWE_ST_Stockholm.024850_TMYx.2009-2023.epw',
-    #     '--output-directory',
-    #     '/Users/alizad/PycharmProjects/NewWorking-MUBES/examples/Ex4-ParametricStudy/Building_1v0_Temp',
-    #     '--idd', '/Applications/EnergyPlus-9-5-0/Energy+.idd',
-    #     '--expandobjects',
-    #     '--design-day',  #
-    #     '--output-prefix', 'Run',
-    #     '/Users/alizad/PycharmProjects/NewWorking-MUBES/examples/Ex4-ParametricStudy/Building_1v0.idf'
-    # ]
 
-    # IDF.setiddname(cmd[6])
-    # Temp_idf = IDF(os.path.join(filepath, file))
-    # RunPeriodObject = Temp_idf.idfobjects['RUNPERIOD'][0]
-    # End_Month_main = RunPeriodObject.End_Month
-    # End_Day_of_Month_main = RunPeriodObject.End_Day_of_Month
-    # Temp_idf.idfobjects['RUNPERIOD'][0] = 1
-    # Temp_idf.idfobjects['RUNPERIOD'][0] = 1
-
-    # Temp_idf.idfobjects['RUNPERIOD'][0].End_Month = 1
-    # Temp_idf.idfobjects['RUNPERIOD'][0].End_Day_of_Month = 1
-    # #
-    # Temp_idf.idfobjects['SimulationControl'][0].Do_Zone_Sizing_Calculation = 'Yes'
-    # Temp_idf.idfobjects['SimulationControl'][0].Do_System_Sizing_Calculation = 'Yes'
-    # Temp_idf.idfobjects['SimulationControl'][0].Run_Simulation_for_Sizing_Periods = 'Yes'
-    # Temp_idf.idfobjects['SimulationControl'][0].Run_Simulation_for_Weather_File_Run_Periods = 'No'
-    # Temp_idf.idfobjects['building'][0].Maximum_Number_of_Warmup_Days = 2
-    # Temp_idf.idfobjects['building'][0].Minimum_Number_of_Warmup_Days = 1
-    # Temp_idf.idfobjects['building'][0].Loads_Convergence_Tolerance_Value = 100
-    # Temp_idf.idfobjects['building'][0].Temperature_Convergence_Tolerance_Value = 100
-
-    # subprocess.run(cmd, check=False)
     check_call(cmd_Temp, stdout=open(os.devnull, "w"), stderr=open(os.devnull, "w"))
     EDD_Data = Component_Name_4_Actuator(os.path.join(cmd_Temp[4], 'Runout.edd'))
-    return EDD_Data, cmd_Temp
+    return EDD_Data
 
 def Component_Name_4_Actuator(CurrentCase):
     edd_path = CurrentCase
@@ -111,8 +92,8 @@ def Add_Actuator(nbRun, SimDir, file2run, EDD_Data):
                 ControlType = act.get('Control Type')
                 Name = 'Zone_' + UniqueComponentName + '_Override'
             # This object applies the defined program on HVAC template
-                idfObject = (f"\n\n ENERGYMANAGEMENTSYSTEM:ACTUATOR,\n \t {Name}, \t\t !- Name\n \t {UniqueComponentName}, \t\t !- Actuated Component Unique Name\n"
-                     f" \t {ComponentType}, \t\t !- Actuated Component Type\n \t {ControlType}, \t\t !- Actuated Component Control Type \n\n")
+                idfObject = (f"\n\nENERGYMANAGEMENTSYSTEM:ACTUATOR,\n \t {Name}, \t\t !- Name\n \t {UniqueComponentName}, \t\t !- Actuated Component Unique Name\n"
+                     f" \t {ComponentType}, \t\t !- Actuated Component Type\n \t {ControlType}; \t\t !- Actuated Component Control Type \n\n")
                 if nbRun > 1:
                     idf_files = [f for f in os.listdir(SimDir) if f.endswith('.idf')]
                     for idf_curr in idf_files:

@@ -80,7 +80,7 @@ def getHeatedZones(idf):
     zoneName = []
     AllZone = idf.idfobjects["ZONE"]
     for idx, zone in enumerate(AllZone):
-        if int(zone.Name[zone.Name.find('Storey')+6:]) >= 0: #the name ends with Storey # so lets get the storey number this way
+        if int(zone.Name[zone.Name.find('Storey_')+7:]) >= 0: #the name ends with Storey # so lets get the storey number this way
             zoneName.append(zone.Name)
     return zoneName
 
@@ -288,16 +288,16 @@ def Read_OutputsEso(CaseName,ExtSurfNames, PerBlockResult, ZoneOutput):
                 # The results will be aggregated at each storey which means if we have two blocks or more in one building,
                 # the results of each storey are summed if PerBlockResult is False
                 if PerBlockResult:
-                    BldBlckStry = currentData[1][:currentData[1].find('STOREY') + 9:]
+                    BldBlckStry = currentData[1][:currentData[1].find('STOREY_') + 12:]
                 else:
-                    nb = int(currentData[1][currentData[1].find('STOREY')+6:])
+                    nb = int(currentData[1][currentData[1].find('STOREY_')+7:])
 
             except:
                 test = 1
                 finished = 0
                 while finished == 0:
                     try:
-                        nb = int(currentData[1][currentData[1].find('STOREY')+6:-test])
+                        nb = int(currentData[1][currentData[1].find('STOREY_')+7:-test])
                         # blck_nd = int(currentData[1][currentData[1].find('BUILD') + 5])
                         finished = 1
                     except:
@@ -336,7 +336,7 @@ def Read_OutputsEso(CaseName,ExtSurfNames, PerBlockResult, ZoneOutput):
         KeyArea = 'Other'
         if 'STOREY' in key:
             if PerBlockResult:
-                numstor = int(key[key.find('STOREY') + 6:])
+                numstor = int(key[key.find('STOREY_') + 7:])
             else:
                 numstor= int(key[6:])
             KeyArea= 'NonHeatedArea' if numstor<0 else 'HeatedArea'

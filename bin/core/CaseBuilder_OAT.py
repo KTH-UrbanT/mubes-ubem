@@ -286,7 +286,6 @@ def LaunchProcess(SimDir, Ret, FirstRun,TotNbRun,currentRun,keyPath,nbcase,CoreP
         LogFile.close()
         # lets get back to the Main Folder we were at the very beginning
     os.chdir(MainPath)
-
     #todo add a function here that plots outputs and saves it in a folder
 
 

@@ -39,12 +39,12 @@
         EnergyManagementSystem: False
         Renewables: True
         StockholmBuildings: False               #[Bool] True : User specified building outside Minneberg from City Planner will be considered
-        ExternalStudy: True
+        ExternalStudy: False
         OutputVisual: False
     2_AdvancedChoices :
         API : False                             #[Bool] in case the simulation is launched through an API. Option under development but concerns mainely the output format
         CreateFMU : False                       #[Bool] True: creates FMU for each building specified in the BldID. No simulation is launched afterward. FMU will be found in the CaseName folder
-        Calibration : False                     #[Bool] if calibration process is desired to be launched (several other inputs are required) Calibration is currently handled with space heating AND DHW needs embedded, can be split further on demand
+        Calibration : True                     #[Bool] if calibration process is desired to be launched (several other inputs are required) Calibration is currently handled with space heating AND DHW needs embedded, can be split further on demand
         CalibTimeBasis : 'YearlyBasis'                     #[Str] can currently be either 'MonthlyBasis','WeeklyBasis','YearlyBasis'.
         MeasurePath4Calibration : '../examples/minneberg/DataForCalibration'          #[Str] path to the measured data. File names needs to be as the building's Id, in .txt format with single column file with 8760 values --> hourly measures (can be extended further for higher resolution)
         FromPosteriors : False                  #[Bool] True : Outputs form already made calibration phase will be created. Under development for full deployment
