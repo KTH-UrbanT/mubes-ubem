@@ -39,7 +39,7 @@
         EnergyManagementSystem: False
         Renewables: True
         StockholmBuildings: False               #[Bool] True : User specified building outside Minneberg from City Planner will be considered
-        ExternalStudy: False
+        ExternalStudy: True
         OutputVisual: False
     2_AdvancedChoices :
         API : False                             #[Bool] in case the simulation is launched through an API. Option under development but concerns mainely the output format

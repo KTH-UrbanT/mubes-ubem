@@ -389,11 +389,12 @@ def getConfig(localDir, App = ''):
         msg = f'[Data Info] Generating data in the format of City Modeler'
         print(msg)
         DataProductGen_Agent = ShapeCityPlanner(localDir)
-        GeneratedCityPlanner = DataProductGen_Agent.GenCore()
+        GeneratedCityPlanner, UUIDFromAddress = DataProductGen_Agent.GenCore()
         CaseName = config['2_CASE']['0_GrlChoices']['CaseName']
         Path2Data = config['1_DATA']['PATH_TO_DATA']
         DataDir = DataProductGen_Agent.SaveitGeoJson(localDir, GeneratedCityPlanner, Path2Data, CaseName)
         config['1_DATA']['PATH_TO_DATA'] = '../' + DataDir[DataDir.find('examples'):]
+        config['2_CASE']['1_SimChoices']['BldID'] = UUIDFromAddress
 # Lets check if External studies is enabled
     elif config['2_CASE']['1_SimChoices']['ExternalStudy']: #todo complete coding for external study
         msg = f'[Data Info] Generating data in the format of City Modeler from user input'

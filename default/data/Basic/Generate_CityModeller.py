@@ -3,6 +3,8 @@
 
 import os
 import json
+import sys
+
 import pandas as pd
 import yaml
 import numpy as np
@@ -48,6 +50,7 @@ def readGjsonFiona(Path):
             selected_data.append(selected_entry)
     return selected_data
 
+# def Find_UUIDfromAddress():
 
 def clean_nans(obj):
     """Recursively clean NaNs, Series, and NumPy types for JSON serialization."""
@@ -79,13 +82,26 @@ class ShapeCityPlanner():
         self.cpNow = readCSV(os.path.join(self.Mainpath, self.config['0_Setup']['cpNow']))
         self.cpFootprints = readGjsonFiona(os.path.join(self.Mainpath,self.config['0_Setup']['cpFootprints']))
         self.template = Read_json(os.path.join(self.Mainpath, self.config['0_Setup']['CityModeller_Tempalte']))
-        if self.config['1_Sim']['UUID'] == "":
-            self.All_UUID = []
-            for samplebld in self.cpFootprints:
-                self.All_UUID.append(samplebld.get('50A_UUID'))
-                self.UUID = self.All_UUID
-        else:
-            self.UUID = self.config['1_Sim']['UUID']
+        if self.config['1_Sim']['InputType'] == "Address":
+            try:
+                self.AddressUUID_data = pd.read_excel(os.path.join(os.getcwd()[:os.getcwd().find('bin')], self.config['1_Sim']['address2UUID_DataPath']))
+                self.User_Address = self.config['1_Sim']['Address']
+                mask = self.AddressUUID_data['Building'].str.contains(self.User_Address, case=False, na=False)
+                self.UUID = self.AddressUUID_data.loc[mask, '55A_UUIDREGBYG'].tolist()
+            except:
+                msg = f'No building UUID found with address {self.User_Address}'
+                print(msg)
+                sys.exit()
+        elif self.config['1_Sim']['InputType'] == "UUID":
+            if self.config['1_Sim']['UUID'] == "":
+                self.All_UUID = []
+                for samplebld in self.cpFootprints:
+                    self.All_UUID.append(samplebld.get('50A_UUID'))
+                    self.UUID = self.All_UUID
+            else:
+                self.UUID = self.config['1_Sim']['UUID']
+
+
         self.BldFootPrints = [FP for FP in self.cpFootprints if FP.get('50A_UUID') in self.UUID]
         self.coordinates = self.BldFootPrints[0].get('FootPrints')
         self.FormularID = self.BldFootPrints[0].get('FormularID')
@@ -115,7 +131,10 @@ class ShapeCityPlanner():
             BldcpNow = self.cpNow[self.cpNow['FormularId'] == FormularID]
             BldcpBuilding = self.cpBuildings[self.cpBuildings['50A_UUID'] == ID]
             Height = BldcpBuilding['STS_BYGG_H'].values[0].item()
-            if math.isnan(Height): continue
+            if math.isnan(Height):
+                msg = f'[CityModeller Creation] Building {ID} is disregarded because has nan in height column STS_BYGG_H'
+                print(msg)
+                continue
             BldcpProperties = self.cpProperties[self.cpProperties['FNR'] == float(FNR)]
             template.get('features')[0]['type'] = 'Feature'
             template.get('features')[0]['geometry']['type'] = 'GeometryCollection'
@@ -173,7 +192,7 @@ class ShapeCityPlanner():
                 FirstRun = False
             else:
                 MainFile.get('features').append(template.get('features')[0])
-        return MainFile
+        return MainFile, self.UUID
 #The generated CityPlanner will be stored in directory specified in config['1_DATA]['PATH_TO_DATA']
 # Define different name for your study to save data from stockholm in it
     def SaveitGeoJson(self, Mainpath, BuildingData, Path2Data, CaseName):
