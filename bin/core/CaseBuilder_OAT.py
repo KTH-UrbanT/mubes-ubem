@@ -18,13 +18,13 @@ from building_geometry.Filter4BldProcess import checkBldFilter
 import re
 import time
 
-def LaunchOAT(MainInputs,SimDir,keypath,nbBuild, Ret, ParamVal,currentRun,pythonpath=[], BldObj=[],
+def LaunchOAT(MainInputs,SimDir,keypath,nbBuild, Retrofit_Info, ParamVal,currentRun,pythonpath=[], BldObj=[],
               MakePlotOnly = False):
     #this function was made to enable either to launch a process in a seperate terminal or not, given a python path to a virtualenv
     #but if kept in seperate terminal, the inputfile needs to be read for each simulation...not really efficient,
     #thus, the first option, being fully in the same environment is used with the optionnal argument 'DataBaseInput'
     if not pythonpath:
-        return LaunchProcess(SimDir, Ret, MainInputs['FirstRun'], MainInputs['NbRuns'], currentRun,keypath, nbBuild,
+        return LaunchProcess(SimDir, Retrofit_Info, MainInputs['FirstRun'], MainInputs['NbRuns'], currentRun,keypath, nbBuild,
                       MainInputs['CorePerim'], MainInputs['FloorZoning'], ParamVal,MainInputs['VarName2Change'],
                       MainInputs['CreateFMU'],MainInputs['OutputsFile'], DataBaseInput = MainInputs['DataBaseInput'],
                     DebugMode = MainInputs['DebugMode'],MakePlotOnly = MakePlotOnly,Verbose = MainInputs['Verbose'])
@@ -60,7 +60,7 @@ def LaunchOAT(MainInputs,SimDir,keypath,nbBuild, Ret, ParamVal,currentRun,python
         cmdline.append(str(currentRun))
         check_call(cmdline,stdout=open(os.devnull, "w"))
 
-def LaunchProcess(SimDir, Ret, FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,FloorZoning,ParamVal,VarName2Change,
+def LaunchProcess(SimDir, Retrofit_Info, FirstRun,TotNbRun,currentRun,keyPath,nbcase,CorePerim,FloorZoning,ParamVal,VarName2Change,
                   CreateFMU,OutputsFile,DataBaseInput = [], DebugMode = False,MakePlotOnly = False,Verbose = False):
     #This function builds the idf file, a log file is generated if the buildiung is run for the first time,
     #the idf file will be saved as well as the building object as a pickle. the latter could be commented as not required
@@ -88,7 +88,7 @@ def LaunchProcess(SimDir, Ret, FirstRun,TotNbRun,currentRun,keyPath,nbcase,CoreP
         #lets build the two main object we'll be playing with in the following : the idf and the building
         try:
             if DebugMode: startIniti = time.time()
-            idf, building = GrlFct.appendBuildCase(StudiedCase, Ret, keyPath, nbcase, DataBaseInput, MainPath,LogFile,
+            idf, building = GrlFct.appendBuildCase(StudiedCase, Retrofit_Info, keyPath, nbcase, DataBaseInput, MainPath,LogFile,
                                                DebugMode = DebugMode,PlotOnly=MakePlotOnly)
         except:
             msg = '[Error] The Building Object Initialisation has failed...\n'
@@ -126,7 +126,7 @@ def LaunchProcess(SimDir, Ret, FirstRun,TotNbRun,currentRun,keyPath,nbcase,CoreP
         # The geometry is assigned here
         try:
             if DebugMode: startIniti = time.time()
-            GrlFct.setBuildingLevel(idf, building,LogFile,CorePerim,FloorZoning, Ret, DebugMode = DebugMode,ForPlots=MakePlotOnly)
+            GrlFct.setBuildingLevel(idf, building,LogFile,CorePerim,FloorZoning, Retrofit_Info['RetrofitCase'], DebugMode = DebugMode,ForPlots=MakePlotOnly)
             # end = time.time()
             # print('[Time Report] : The setBuildingLevel took : ',round(end-start,2),' sec')
         except:
@@ -171,7 +171,7 @@ def LaunchProcess(SimDir, Ret, FirstRun,TotNbRun,currentRun,keyPath,nbcase,CoreP
     # lets assign the material and finalize the envelope definition
     try:
         # start = time.time()
-        GrlFct.setEnvelopeLevel(idf, building, Ret)
+        GrlFct.setEnvelopeLevel(idf, building, Retrofit_Info)
         #it's time to catch all the surface name facing outside
         allSurf = idf.getsurfaces()+idf.getsubsurfaces()
         for surf in allSurf:

@@ -19,8 +19,8 @@ import pyproj
 import numpy as np
 import json
 
-def appendBuildCase(StudiedCase, Ret, keypath,nbcase,DataBaseInput,MainPath,LogFile,PlotOnly = False, DebugMode = False):
-    StudiedCase.addBuilding('Building'+str(nbcase), Ret, DataBaseInput,nbcase,MainPath,keypath,LogFile,PlotOnly, DebugMode)
+def appendBuildCase(StudiedCase, Retrofit_Info, keypath,nbcase,DataBaseInput,MainPath,LogFile,PlotOnly = False, DebugMode = False):
+    StudiedCase.addBuilding('Building'+str(nbcase), Retrofit_Info, DataBaseInput,nbcase,MainPath,keypath,LogFile,PlotOnly, DebugMode)
     idf = StudiedCase.building[-1]['BuildIDF'] #Put the last idf file in idf
     building = StudiedCase.building[-1]['BuildData']# Put the last building file in building
     return idf, building
@@ -32,19 +32,19 @@ def setSimLevel(idf,building):
     Sim_param.Location_and_weather(idf,building)
     Sim_param.setSimparam(idf,building)
 
-def setBuildingLevel(idf,building,LogFile,CorePerim = False,FloorZoning = False, ToRet = False ,ForPlots = False,DebugMode = False):
+def setBuildingLevel(idf,building,LogFile,CorePerim = False,FloorZoning = False, RetrofitCAse = False ,ForPlots = False,DebugMode = False):
     ######################################################################################
     #Building Level
     ######################################################################################
     #this is the function that requires the longest time
     GeomScripts.createBuilding(LogFile,idf,building, perim = CorePerim,FloorZoning = FloorZoning,ForPlots=ForPlots,DebugMode = DebugMode)
 
-def setEnvelopeLevel(idf,building, Ret):
+def setEnvelopeLevel(idf,building, Retrofit_Info):
     ######################################################################################
     #Envelope Level (within the building level)
     ######################################################################################
     #the other geometric element are thus here
-    GeomScripts.createRapidGeomElem(idf, building, Ret)
+    GeomScripts.createRapidGeomElem(idf, building, Retrofit_Info)
 
 def setZoneLevel(idf,building,FloorZoning = False):
     ######################################################################################

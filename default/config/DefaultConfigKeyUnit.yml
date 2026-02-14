@@ -35,6 +35,8 @@
         PerBlockResult: [bool]
         ResidentialOcc : [bool]
         indoor_Air_Comfort_Analysis : [bool]
+        SolarCalculation: [bool]
+
         Retrofit : [bool]                               #[Bool] True : energy conservation measures specified in ecm_confid will be applied
         Renewables: [bool]
         EnergyManagementSystem: [bool]

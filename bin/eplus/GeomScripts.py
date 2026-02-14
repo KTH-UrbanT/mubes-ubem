@@ -29,7 +29,7 @@ def BuildBloc(idf,perim,bloc,bloc_coord,Height,nbstories,nbBasementstories,Basem
         )
     else:
         idf.add_block(
-            name='Build_' + str(bloc) + '_Alt'+str(altitude),
+            name='Build_' + str(bloc) + '_Alt'+str(int(altitude)),
             coordinates=bloc_coord,
             height=Height,
             altitude = altitude,

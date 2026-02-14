@@ -1,7 +1,6 @@
 # @Author  :Mohammadhossein Alizadeh
 # @Email   : alizad@kth.st@kth.se
 
-
 import json, os
 import pandas as pd
 import yaml
@@ -209,7 +208,7 @@ class CityModellerFactory:
             transformed = []
             for idx, blckcoord in enumerate(BuildingCoord):
                 if blckcoord[0] != blckcoord[-1]: list(blckcoord).append(blckcoord[0])
-                if CoordSys == 'EPSG:3006' and CRS_Type == 'projected':
+                if CoordSys != 'EPSG:4326' and CRS_Type == 'projected':
                     transformed.append({'floor':[(x, y, 0) for x, y in blckcoord], 'roof': [(x, y, self.height[idx]) for x, y in blckcoord]})
                 elif CoordSys == 'EPSG:4326' and CRS_Type == 'geographic':
                     # Set up transformer
@@ -218,7 +217,7 @@ class CityModellerFactory:
                     transformed.append({'floor':[transformer.transform(x, y, 0) for x, y in blckcoord], 'roof': [transformer.transform(x, y, self.height[idx]) for x, y in blckcoord]})
                     # return transformed #transformed_floor, transformed_roof
                 else:
-                    msg = f"[Error] Unable to convert coordinates from {CoordSys} to EPSG:3006. CRS type doesnt match with coordinates."
+                    msg = f"[Error] Unable to convert coordinates from {CoordSys} to projected coordsys. CRS type doesnt match with coordinates."
                     print(msg)
                     SystemExit
             AllBuildingTransCoord.append(transformed)

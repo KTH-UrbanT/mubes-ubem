@@ -610,6 +610,3 @@ def getLRMetaModel(X,y):
     return coeff_df, regressor.intercept_, metrics.r2_score(y_test, y_pred)
 
 
-class PlotResults:
-    def __init__(self):
-        pass

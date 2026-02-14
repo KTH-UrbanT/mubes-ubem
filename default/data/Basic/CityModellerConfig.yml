@@ -1,11 +1,17 @@
+# Author: Mohammadhossein Alizadeh
+# Contact: alizad@kth.se
+
 0_Setup:
-  cpBuildings: 'default/data/Basic/CityPlanner/cpBuildings.csv'
-  cpFootprints: 'default/data/Basic/CityPlanner/cpFootprints.geojson'
-  cpNow: 'default/data/Basic/CityPlanner/cpNow.csv'
-  cpProperties: 'default/data/Basic/CityPlanner/cpProperties.csv'
-  CityModeller_Tempalte: 'default/data/Basic/CM_Template.geojson'
+  cpBuildings: 'default/data/Basic/CityPlanner/cpBuildings.csv' # Path to Buildings data in city planner
+  cpFootprints: 'default/data/Basic/CityPlanner/cpFootprints.geojson'  # Path to Footprints data in city planner
+  cpNow: 'default/data/Basic/CityPlanner/cpNow.csv' # Path to new EPC data in city planner
+  cpProperties: 'default/data/Basic/CityPlanner/cpProperties.csv' # Path to properties data in city planner
+  CityModeller_Tempalte: 'default/data/Basic/CM_Template.geojson' # Path to input template required for MUBES to run simulation
 1_Sim:
-  UUID: ['ed4557f7-ca4c-4da0-902b-765fa5b6aa03', "cad2c489-218a-4c96-9ce0-6928cb7d61e3"]#["c7b61426-bdba-498e-93dd-be1c4ca1166d", 'cbf18066-8de7-44ba-8f0f-48ad4d5fbc64', "19c48ab9-cf87-4762-8808-46a5d2d7efda"]#,'16687c1c-f84b-4d7e-9d19-c1372445bfd5', '4cf49b59-d752-4786-a923-f90355d899a2']#['4cf49b59-d752-4786-a923-f90355d899a2']
-  InputType: ''                    #Could be 'Address' or 'Coordinates or EgenAtemp
-  Address: 'Jämtlandsgatan 120-122'
-  address2UUID_DataPath: 'default/data/Basic/Kallvatten_byggnad_with_addresses_and_ids_and_BldgUUD.xlsx'
+  InputType: 'UUID'                                     # There are two ways to select the building you want to simulate, could be 'Address' or 'UUID'
+  UUID: ['1c931069-d3d1-4559-8968-e7f0564579fb', '916c8c38-37cf-4903-a77f-79430f98e92f']#['ed4557f7-ca4c-4da0-902b-765fa5b6aa03',    # If you have the UUID of the building, InputType should be 'UUID'. If no UUID inserted, then all UUIDs from cpfootprint will be comsidered.
+         #"cad2c489-218a-4c96-9ce0-6928cb7d61e3"]
+  Address: 'Jämtlandsgatan 120-122'                 # If you have the address of the building, InputType should be 'Address'
+  address2UUID_DataPath: 'default/data/Basic/Kallvatten_byggnad_with_addresses_and_ids_and_BldgUUD.xlsx' # Here we need path to dataset that maps the buildings address to their UUID
+  ODEN_API: False
+  API_BaseURL: 'https://oden.abe.kth.se/api/v1/'

@@ -49,8 +49,7 @@ def getPeriodError(Res,NewMeas,idx,NbSample):
         SimPower = [(val + DHWPower[i]) for i, val in enumerate(HeatPower)]
     except:
         SimPower = [(val) for i, val in enumerate(HeatPower)]
-    MeasPower = [val * 1000 for val in
-                 NewMeas]
+    MeasPower = [val * 1000 for val in NewMeas]
     MeasPower = MeasPower[1:-23]
     #compute month csum
     nbHrperSample = int(8760/NbSample)

@@ -9,8 +9,11 @@ import core.LaunchSim as LaunchSim
 import core.CaseBuilder_OAT as CB_OAT
 import core.setConfig as setConfig
 import calibration.CalibUtilities as CalibUtil
-import outputs.output_utilities as OutUtils
+# import outputs.output_utilities as OutUtils
 import eplus.EnergyManagementSystem as EnergyManagementSystem
+import eplus.Solar_Calculation as SolarCalc
+import outputs.Visualization as Visualization
+import eplus.HeatingSourceUtils as HPutils
 # from default.data.Basic.Generate_CityModeller import ShapeCityPlanner
 import shutil
 import multiprocessing as mp
@@ -138,7 +141,7 @@ if __name__ == '__main__' :
                 # lets check if this building is already present in the folder (means Refresh = False in CreateSimDir() above)
                 if not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + '_template.idf'))):
                     #there is a need to launch the first one that will also create the template for all the others
-                    CB_OAT.LaunchOAT(CaseChoices,SimDir,keypath,nbBuild, Case['Ret'],ParamSample[0, :],0,pythonpath)
+                    CB_OAT.LaunchOAT(CaseChoices,SimDir,keypath,nbBuild, Case['Retrofit_Info'],ParamSample[0, :],0,pythonpath)
                     # args = (CaseChoices, CurrentSimDir, nbBuild['keypath'], nbBuild['nbBuild'], nbBuild['Ret'], [1], 0,
                     #         pythonpath)
                 # lets check whether all the files are to be run or if there's only some to be ran
@@ -150,7 +153,7 @@ if __name__ == '__main__' :
                 CaseChoices['FirstRun'] = False
                 pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
                 for i in NewRuns:
-                    pool.apply_async(CB_OAT.LaunchOAT, args=(CaseChoices,SimDir,keypath,nbBuild,Case['Ret'], ParamSample[i+idx_offset, :],i+idx_offset,pythonpath))
+                    pool.apply_async(CB_OAT.LaunchOAT, args=(CaseChoices,SimDir,keypath,nbBuild,Case['Retrofit_Info'], ParamSample[i+idx_offset, :],i+idx_offset,pythonpath))
                 pool.close()
                 pool.join()
                 #the simulation are launched below using a pool of the earlier created idf files
@@ -168,6 +171,8 @@ if __name__ == '__main__' :
                 pool.close()
                 pool.join()
                 GrlFct.AppendLogFiles(SimDir,CaseChoices['BldIDKey'])
+                # In parametric study we generate some idf file depending on nb of run then we see how results are
+                # In calibration we dod the same but the idf files keep generating until results are close to measurements
                 if not CaseChoices['Calibration']:
                     Finished = True
                 else:
@@ -180,7 +185,7 @@ if __name__ == '__main__' :
         # lets check if this building is already present in the folder (means Refresh = False in CreateSimDir() above)
         elif not os.path.isfile(os.path.join(SimDir, ('Building_' + str(nbBuild) + 'v0.idf'))) or CaseChoices['MakePlotsOnly']:
             # if not, then the building number will be appended to a list that will be used afterward
-            File2Launch[max(MultipleFileidx-1,0)].append({'nbBuild': nbBuild, 'keypath': keypath, 'SimDir': SimDir, 'BuildID': Case['BuildID'], 'Ret': Case['Ret']})
+            File2Launch[max(MultipleFileidx-1,0)].append({'nbBuild': nbBuild, 'keypath': keypath, 'SimDir': SimDir, 'BuildID': Case['BuildID'], 'Retrofit_Info': Case['Retrofit_Info']})
     # #lets write a file for the building IDs as it can be very long.
     if writeIds:
         if CaseChoices['Verbose']: print('[Prep.Info] Writing List of Building''s ID file')
@@ -208,8 +213,10 @@ if __name__ == '__main__' :
             for file_idx,file in enumerate(File2Launch[ListKey]):
                 done = (file_idx+nbfile+1+offset)/totalsize
                 lastBld = True if done==1 and nbfile+1 == len(File2Launch) else False
-                BldObj,IDFObj,Check = CB_OAT.LaunchOAT(CaseChoices, file['SimDir'], file['keypath'], file['nbBuild'], file['Ret'], [1], 0,
+                BldObj,IDFObj,Check = CB_OAT.LaunchOAT(CaseChoices, file['SimDir'], file['keypath'], file['nbBuild'], file['Retrofit_Info'], [1], 0,
                                                       pythonpath,MakePlotOnly = MakePlotOnly)
+                # if config['2_CASE']['1_SimChoices']['SolarCalculation']:
+                #     poa = SolarCalc.Solar_Irradiance(BldObj, file['keypath'], config['3_SIM']['1_WeatherData']['WeatherDataFile'])
                 if CaseChoices['Verbose']:
                     print('Figure being completed by ' + str(round(100 * done, 1)) + ' %')
                 else:
@@ -249,7 +256,7 @@ if __name__ == '__main__' :
             CurrentSimDir = File2Launch[ListKey][0]['SimDir']
             pool = mp.Pool(processes=int(nbcpu))
             for nbBuild in File2Launch[ListKey]:
-                pool.apply_async(CB_OAT.LaunchOAT, args=(CaseChoices,CurrentSimDir,nbBuild['keypath'],nbBuild['nbBuild'], nbBuild['Ret'], [1],0,pythonpath))
+                pool.apply_async(CB_OAT.LaunchOAT, args=(CaseChoices,CurrentSimDir,nbBuild['keypath'],nbBuild['nbBuild'], nbBuild['Retrofit_Info'], [1],0,pythonpath))
                 # CB_OAT.LaunchOAT(CaseChoices, CurrentSimDir, nbBuild['keypath'], nbBuild['nbBuild'], nbBuild['Ret'], [1], 0, pythonpath)
             pool.close()
             pool.join()
@@ -262,7 +269,7 @@ if __name__ == '__main__' :
             file2run = LaunchSim.initiateprocess(CurrentSimDir)
             pool = mp.Pool(processes=int(nbcpu))
             if config['2_CASE']['1_SimChoices']['EnergyManagementSystem']:
-                EnergyManagementSystem.EMS_Actuator_Handling_Module(CaseChoices['NbRuns'], config, epluspath, CurrentSimDir, file2run, CaseChoices)
+                EnergyManagementSystem.EMS_Actuator_Handling_Module(CaseChoices['NbRuns'], config, epluspath, CurrentSimDir, file2run)
             for i in range(len(file2run)):
                 pool.apply_async(LaunchSim.runcase, args=(file2run[i], CurrentSimDir, epluspath, CaseChoices['API']),callback=giveReturnFromPool)
             pool.close()
@@ -275,9 +282,10 @@ if __name__ == '__main__' :
         #the FMU are not taking advantage of the parallel computing option yet
         for ListKey in File2Launch:
             for nbBuild in File2Launch[ListKey]:
-                CB_OAT.LaunchOAT(CaseChoices,SimDir,nbBuild['keypath'],nbBuild['nbBuild'],nbBuild['Ret'], [1],0, pythonpath)
+                CB_OAT.LaunchOAT(CaseChoices,SimDir,nbBuild['keypath'],nbBuild['nbBuild'],nbBuild['Retrofit_Info'], [1],0, pythonpath)
     if not File2Launch[0] and CaseChoices['Verbose'] and CaseChoices['NbRuns']==1:  print('[Info] All asked simulations are already done and results available...refreshfolder to remove those')
     if CaseChoices['Verbose']: print('[Process Finished] runMUBES.py ended successfully')
-
-    if config['2_CASE']['1_SimChoices']['OutputVisual']:
-        Visuals = OutUtils.PlotResults()
+    HPutils.HeatPumpHeat2Elec(SimDir)
+    # if config['2_CASE']['1_SimChoices']['OutputVisual']:
+    #     app = Visualization.Visualization(CurrentSimDir)
+    #     app.run(debug=False, use_reloader=False)

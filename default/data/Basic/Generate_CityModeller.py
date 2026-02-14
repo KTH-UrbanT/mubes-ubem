@@ -16,6 +16,8 @@ import geopandas as gpd
 import fiona
 import copy  # Only once at the top of your script
 import shutil
+import default.data.Basic.ODEN_API as ODEN_API
+
 
 def read_geojson(self, Path):
     geodata = gpd.read_file(Path)
@@ -77,29 +79,37 @@ class ShapeCityPlanner():
     def __init__(self, path):
         self.Mainpath = path #os.getcwd()[: os.getcwd().find('bin')]
         self.config = Read_yml(os.path.join(self.Mainpath, 'default/data/Basic/CityModellerConfig.yml'))
-        self.cpBuildings = readCSV(os.path.join(self.Mainpath, self.config['0_Setup']['cpBuildings']))
-        self.cpProperties = readCSV(os.path.join(self.Mainpath, self.config['0_Setup']['cpProperties']))
-        self.cpNow = readCSV(os.path.join(self.Mainpath, self.config['0_Setup']['cpNow']))
-        self.cpFootprints = readGjsonFiona(os.path.join(self.Mainpath,self.config['0_Setup']['cpFootprints']))
-        self.template = Read_json(os.path.join(self.Mainpath, self.config['0_Setup']['CityModeller_Tempalte']))
-        if self.config['1_Sim']['InputType'] == "Address":
-            try:
-                self.AddressUUID_data = pd.read_excel(os.path.join(os.getcwd()[:os.getcwd().find('bin')], self.config['1_Sim']['address2UUID_DataPath']))
-                self.User_Address = self.config['1_Sim']['Address']
-                mask = self.AddressUUID_data['Building'].str.contains(self.User_Address, case=False, na=False)
-                self.UUID = self.AddressUUID_data.loc[mask, '55A_UUIDREGBYG'].tolist()
-            except:
-                msg = f'No building UUID found with address {self.User_Address}'
-                print(msg)
-                sys.exit()
-        elif self.config['1_Sim']['InputType'] == "UUID":
-            if self.config['1_Sim']['UUID'] == "":
-                self.All_UUID = []
-                for samplebld in self.cpFootprints:
-                    self.All_UUID.append(samplebld.get('50A_UUID'))
-                    self.UUID = self.All_UUID
-            else:
-                self.UUID = self.config['1_Sim']['UUID']
+        if self.config['1_Sim']['ODEN_API']:
+            ODENAPI = ODEN_API.API(self.config['1_Sim']['API_BaseURL'], self.config['1_Sim']['UUID'])
+            ODENAPI.Get_Building_by_ID()
+            print(3)
+
+        else:
+            # Lets read the datasets
+            self.cpBuildings = readCSV(os.path.join(self.Mainpath, self.config['0_Setup']['cpBuildings']))
+            self.cpProperties = readCSV(os.path.join(self.Mainpath, self.config['0_Setup']['cpProperties']))
+            self.cpNow = readCSV(os.path.join(self.Mainpath, self.config['0_Setup']['cpNow']))
+            self.cpFootprints = readGjsonFiona(os.path.join(self.Mainpath,self.config['0_Setup']['cpFootprints']))
+            self.template = Read_json(os.path.join(self.Mainpath, self.config['0_Setup']['CityModeller_Tempalte']))
+            if self.config['1_Sim']['InputType'] == "Address":
+                try:
+                    self.AddressUUID_data = pd.read_excel(os.path.join(os.getcwd()[:os.getcwd().find('bin')], self.config['1_Sim']['address2UUID_DataPath']))
+                    self.User_Address = self.config['1_Sim']['Address']
+                    mask = self.AddressUUID_data['Building'].str.contains(self.User_Address, case=False, na=False)
+                    self.UUID = self.AddressUUID_data.loc[mask, '55A_UUIDREGBYG'].tolist()
+                except:
+                    msg = f'No building UUID found with address {self.User_Address}'
+                    print(msg)
+                    sys.exit()
+            elif self.config['1_Sim']['InputType'] == "UUID":
+                # Lets considere all building because no UUID specified in CityModellertConfig file
+                if self.config['1_Sim']['UUID'] == [] or self.config['1_Sim']['UUID'] == '' or self.config['1_Sim']['UUID'] == None:
+                    self.All_UUID = []
+                    for samplebld in self.cpFootprints:
+                        self.All_UUID.append(samplebld.get('50A_UUID'))
+                        self.UUID = self.All_UUID
+                else:
+                    self.UUID = self.config['1_Sim']['UUID']
 
 
         self.BldFootPrints = [FP for FP in self.cpFootprints if FP.get('50A_UUID') in self.UUID]

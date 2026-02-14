@@ -325,7 +325,7 @@ def getConfig(localDir, App = ''):
                 RetrofitConfigPath = os.path.join(localDir, 'bin/Retrofit')
                 DefaulRetConfigUnit = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfigKeyUnit.yml'))
                 Retrofit_config = read_yaml(os.path.join(RetrofitConfigPath, 'RetrofitConfig.yml'))
-                Retrofit_config = Retrofit_config
+                # Retrofit_config = Retrofit_config
         else:
             Retrofit_config = None
 
@@ -444,11 +444,11 @@ def getConfig(localDir, App = ''):
         if Retrofit_config:
             msg = f'[Prep. Info] Retrofitting mode activated...'
             print(msg)
-            RetChoice = {}
+            Retrofit_Choice = {}
             for key in Retrofit_config['0_SIM']:
                 for subkey in Retrofit_config['0_SIM'][key]:
-                    RetChoice[subkey] = Retrofit_config['0_SIM'][key][subkey]
-            Pool2Retrofit, MatchedBld, Pool2Launch = CreatePool2Retrofit(RetChoice['ECM_to_Implement'], RetChoice['BuildID'], CaseChoices['BldID'], AllBldIDs, Pool2Launch, GlobKey[0]['RetrofitFiles'])
+                    Retrofit_Choice[subkey] = Retrofit_config['0_SIM'][key][subkey]
+            Pool2Retrofit, MatchedBld, Pool2Launch = CreatePool2Retrofit(Retrofit_Choice['ECM_to_Implement'], Retrofit_Choice['BuildID'], CaseChoices['BldID'], AllBldIDs, Pool2Launch, GlobKey[0]['RetrofitFiles'])
         else: Pool2Retrofit = None
     else:
         Pool2Retrofit = None
@@ -523,7 +523,7 @@ def CreatePool2Launch(BldIDs,GlobKey,IDKeys,PassBldObject,RefBuildNum,RefDist,Co
             if not BldIDs:
                 try: BldID = Bld.properties[IdKey]
                 except: BldID = 'NoBldID'
-                Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum,'BuildID':BldID ,'TotBld_and_Origin':'','CoordSys':CoordSys , 'Ret' : {'ToRet':'', 'RetPath':''}})
+                Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum,'BuildID':BldID ,'TotBld_and_Origin':'','CoordSys':CoordSys , 'Retrofit_Info' : {'RetrofitCase':'', 'RetPath':''}})
                 try:
                     NewUUIDList.append(Bld.properties[IdKey])
                     AllBldIDs = NewUUIDList
@@ -531,7 +531,7 @@ def CreatePool2Launch(BldIDs,GlobKey,IDKeys,PassBldObject,RefBuildNum,RefDist,Co
             else:
                 try:
                     if Bld.properties[IdKey] in BldIDs:
-                        Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum,'BuildID':Bld.properties[IdKey], 'TotBld_and_Origin':'','CoordSys':CoordSys, 'Ret' : {'ToRet':'', 'RetPath':''}})
+                        Pool2Launch.append({'keypath': keyPath, 'BuildNum2Launch': bldNum,'BuildID':Bld.properties[IdKey], 'TotBld_and_Origin':'','CoordSys':CoordSys, 'Retrofit_Info' : {'RetrofitCase':'', 'RetPath':''}})
                         NewUUIDList.append(Bld.properties[IdKey])
                     AllBldIDs.append(Bld.properties[IdKey])
                 except: pass
@@ -567,25 +567,28 @@ def CreatePool2Retrofit(ECMs, BuildID2Ret, CaseChoices, AllBldIDs, Pool2Launch, 
 
         msg = f"[Retrofit Info] {len(match)} {'buildings' if len(match)>1 else 'building' } out of {len(CaseChoices)} will be retrofitted with {ECMs}."
         print(msg)
+        # If Retrofitting confing has id in UUID and the building id is not in DefaultConfing.ym then we exit the retrofitting mode
+        # but if atleast we have one UUID in retrofitting config matches UUID in default config then only that building will be retrofitted.
         if len(match) == 0:
             Pool2Retrofit = None
             msg = f'[Retrofit Info] Exiting retrofit mode... (zero building to retrofit)'
             print(msg)
+
+# If the UUID in RetrofitConfig is [] then we consider all buildings for retrofitting as defined in defaultConfig.yml
     elif not BuildID2Ret:
         match = 'RetAll'
         Pool2Retrofit.append({'BuildID': 'All', 'BuildNum2Ret': 'All', 'Matchedbuildings': True, 'RetAll' : True, 'ECMs': ECMs, 'RetrofitPath' : RetPath})
 
-
     if match == 'RetAll':
         for i in range(len(Pool2Launch)):
-            Pool2Launch[i]['ToRet'] = True
+            Pool2Launch[i]['Retrofit_Info']['RetrofitCase'] = True
     elif len(match) > 0:
         for i in range(len(Pool2Launch)):
             if Pool2Launch[i]['BuildID'] in match:
-                Pool2Launch[i]['Ret']['ToRet'] = True
-                Pool2Launch[i]['Ret']['RetPath'] = RetPath
+                Pool2Launch[i]['Retrofit_Info']['RetrofitCase'] = True
+                Pool2Launch[i]['Retrofit_Info']['RetPath'] = RetPath
             else:
-                Pool2Launch[i]['Ret']['ToRet'] = False
+                Pool2Launch[i]['Retrofit_Info']['RetrofitCase'] = False
     else:
         pass
 

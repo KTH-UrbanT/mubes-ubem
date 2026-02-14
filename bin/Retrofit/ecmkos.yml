@@ -13,7 +13,7 @@ ECM_Category:
       Visible_Transmittance: 0.8         #[Float]x
   #****************************************************************************************
     Wall Inertia:
-      Thickness: 0.0077                    #[Float] #this layer will be considered also for the basement walls
+      Thickness: 0.0234                    #[Float] #this layer will be considered also for the basement walls
       Conductivity: 0.9                  #[Float]
       Roughness: "Rough"                 #[Str]
       Density: 2300                      #[Float]

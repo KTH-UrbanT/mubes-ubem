@@ -1,6 +1,9 @@
+# Author: Mohammadhossein Alizadeh
+# Contact: alizad@kth.se
+
 0_Bld_Opt:
   Location:
-  BldShape: 'L'                                         # 'S': Square, 'R': Rectangle, 'L': L shape
+  BldShape: 'L'                                # 'S': Square, 'R': Rectangle, 'L': L shape
 
   Coordinates:
 # Polygon 1
@@ -24,15 +27,12 @@
       - [103.77083311903334, 1.299203399397939]
       - [103.77068915226465, 1.2995108169324965]
 
-
-
-
-  CoordSys: 'EPSG:4326'                                # You should define valid CRS based on your coordinates
-  ProjectedCoordSys: '3414'
-  EgenAtemp: 400
+  CoordSys: 'EPSG:4326'                                # You should define the CRS of your coordinates defined in 'Coordinates'
+  ProjectedCoordSys: '3414'     # Insert the EPSG code of the projected coordinate system where the building under simulation is located
+  EgenAtemp: 400                # If you dont have the actual coordinate of the building and want to do simulation for a unreal building
   EgenAntalPlan: 6                                     # Number of floors above ground
   EgenAntalKallarplan: 1                               # Number of basement floor
-  height: [23.4, 5.2]
+  height: [23.4, 5.2]   # Insert height of the Blocks if your building consits of multiple blocks with different heights
   EgenNybyggAr: 1999
   43S_ARVARDE: 2000
   43S_BYGGAR: 2000

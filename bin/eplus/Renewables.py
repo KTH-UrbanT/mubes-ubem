@@ -29,9 +29,9 @@ def PV_Performance(idf):
     idf.newidfobject(
         "PHOTOVOLTAICPERFORMANCE:SIMPLE",
         Name="Simple PV Flat",
-        Fraction_of_Surface_Area_with_Active_Solar_Cells=0.2044,
+        Fraction_of_Surface_Area_with_Active_Solar_Cells=0.66,
         Conversion_Efficiency_Input_Mode="Fixed",  # case-insensitive
-        Value_for_Cell_Efficiency_if_Fixed=0.12,
+        Value_for_Cell_Efficiency_if_Fixed=0.15,
         Efficiency_Schedule_Name="",  # empty = no schedule
     )
     return idf
@@ -60,7 +60,7 @@ def LoadCenter(idf, PV_Gen_Names):
         setattr(idf.idfobjects["ELECTRICLOADCENTER:GENERATORS"][0], f"Generator_{i}_Name", gen)
         setattr(idf.idfobjects["ELECTRICLOADCENTER:GENERATORS"][0], f"Generator_{i}_Object_Type", "Generator:Photovoltaic")
         setattr(idf.idfobjects["ELECTRICLOADCENTER:GENERATORS"][0], f"Generator_{i}_Rated_Electric_Power_Output", 10000)  # W, rough peak
-        setattr(idf.idfobjects["ELECTRICLOADCENTER:GENERATORS"][0], f"Generator_{i}_Availability_Schedule_Name", "Always On PV")
+        # setattr(idf.idfobjects["ELECTRICLOADCENTER:GENERATORS"][0], f"Generator_{i}_Availability_Schedule_Name", "Always On PV")
 
     return idf, idf.idfobjects["ELECTRICLOADCENTER:GENERATORS"][0].Name
 

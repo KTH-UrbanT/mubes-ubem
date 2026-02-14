@@ -124,12 +124,14 @@ def setEMS4MeanTemp(idf,zonelist,Freq,name):
             Internal_Data_Type = 'Zone Air Volume'
             )
     #lets create the prgm callingManager (Define when EMS programs run during simulation)
-    idf.newidfobject(
-        'ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER',
-        Name='Average Building Temperature',
-        EnergyPlus_Model_Calling_Point='EndOfZoneTimestepBeforeZoneReporting' ,
-        Program_Name_1='AverageZoneTemps'
-    )
+    for idx, zone in enumerate(zonelist):
+        idf.newidfobject(
+            'ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER',
+            Name='AverageBuildingTemperature'+str(idx),
+            EnergyPlus_Model_Calling_Point='EndOfZoneTimestepBeforeZoneReporting' ,
+            Program_Name_1='AverageZoneTemps_'+str(idx),
+            Program_Name_2='AverageZoneTemps'
+        )
     #lets create the global Variable
     idf.newidfobject(
         'ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE',
@@ -151,6 +153,7 @@ def setEMS4MeanTemp(idf,zonelist,Freq,name):
     for idx,Temp in enumerate(listofTemp):
         SumNumerator = SumNumerator+Temp+'*'+listofVol[idx]+'+'
         SumDenominator = SumDenominator + listofVol[idx] + '+'
+
     idf.newidfobject(
         'ENERGYMANAGEMENTSYSTEM:PROGRAM',
         Name='AverageZoneTemps',
@@ -158,6 +161,19 @@ def setEMS4MeanTemp(idf,zonelist,Freq,name):
         Program_Line_2='SET SumDenominator  = '+SumDenominator[:-1],
         Program_Line_3='SET AverageBuildingTemp  = SumNumerator / SumDenominator',
     )
+    for idx, zone in enumerate(zonelist):
+        idf.newidfobject(
+            'ENERGYMANAGEMENTSYSTEM:PROGRAM',
+            Name='AverageZoneTemps_'+str(idx),
+            Program_Line_1='IF T'+str(idx)+' < 21',
+            Program_Line_2='  SET Zone_'+zone+'_Override = 25',
+            Program_Line_3='ELSE',
+            Program_Line_4='  SET Zone_BLOCK_BUILD_0_ALTO_STOREY_0_Override = 15',
+            Program_Line_5='ENDIF'
+        )
+
+
+
     #lets create now the ouputs of this EMS
     idf.newidfobject(
         'OUTPUT:ENERGYMANAGEMENTSYSTEM',
@@ -171,6 +187,16 @@ def setEMS4MeanTemp(idf,zonelist,Freq,name):
         Variable_Name=name,
         Reporting_Frequency=Freq,
     )
+
+    idf.newidfobject(
+        'ENERGYMANAGEMENTSYSTEM:SENSOR',
+        Name='OutDryBulb',
+        OutputVariable_or_OutputMeter_Index_Key_Name='Environment',
+        OutputVariable_or_OutputMeter_Name='Site Outdoor Air Drybulb Temperature',
+    )
+
+
+
 def setEMS4TotHeatPow(idf,building,zonelist,Freq,name):
     #lets create the temperature sensors for each zones and catch their volume
     for idx,zone in enumerate(zonelist):
@@ -275,7 +301,6 @@ def setEMS4TotDHWPow(idf,building,zonelist,Freq,name):
         Variable_Name=name,
         Reporting_Frequency=Freq,
     )
-
 
 
 

@@ -63,9 +63,9 @@ def CreateAirwallsMat(idf):
             Visible_Absorptance = 0.7,
         )
 
-def create_Material(idf, Material, MaterialUpgrade, Ret):
+def create_Material(idf, Material, MaterialUpgrade, Retrofit_Info):
 
-    if Ret['ToRet']:
+    if Retrofit_Info['RetrofitCase']:
         for key in MaterialUpgrade:
             Name = key
             create_MaterialObject(idf, Name, MaterialUpgrade[key])

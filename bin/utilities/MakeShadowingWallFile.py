@@ -43,7 +43,7 @@ def CreatePolygonEnviro(GlobKey,config,WithBackSide = True):
     PolygonEnviro = {}
     MainPath = os.getcwd()
     TotalSimDir = []
-    Ret = {"ToRet":False}
+    Retrofit_Info = {"RetrofitCase":False}
     for nbfile,keyPath in enumerate(GlobKey):
         #we need to create a temporary folder to store the log files if needed
         SimDir = os.path.join(os.path.dirname(keyPath['Buildingsfile']),'Temp')
@@ -66,7 +66,7 @@ def CreatePolygonEnviro(GlobKey,config,WithBackSide = True):
         for bldNum, Bld in enumerate(DataBaseInput['Build']):
             print('\r', end='')
             print('--building '+str(bldNum+1) +' / '+str(Size), end='', flush=True)
-            try: BldObj = Building('Bld'+str(bldNum), Ret, DataBaseInput, bldNum, SimDir,keyPath['Buildingsfile'],LogFile=[],PlotOnly=True, DebugMode=False)
+            try: BldObj = Building('Bld'+str(bldNum), Retrofit_Info, DataBaseInput, bldNum, SimDir,keyPath['Buildingsfile'],LogFile=[],PlotOnly=True, DebugMode=False)
             except:
                 BldID = getBldIDWhenError(DataBaseInput, bldNum)
                 print('\nBuilding ', BldID['BldIDKey'] , ' : ', BldID[BldID['BldIDKey']], ' is encountering an issue in its geometry, please check the corresponding input data. It will be ignored in the following')
