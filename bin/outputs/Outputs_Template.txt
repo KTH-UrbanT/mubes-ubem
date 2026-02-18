@@ -499,3 +499,5 @@ HVAC,Average,Zone Mechanical Ventilation Air Changes per Hour [ach]
 ## Zone,Average,Zone Air CO2 Concentration [ppm] #TODO
 ## HVAC,Sum,Generator Produced DC Electricity Energy [J]
 ## HVAC,Sum,Electric Load Center Produced Electricity Energy [J]
+## HVAC,Average,Zone Ideal Loads Supply Air Temperature [C]
+

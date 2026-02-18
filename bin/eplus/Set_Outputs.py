@@ -9,7 +9,6 @@ import esoreader
 import matplotlib.pyplot as plt
 import numpy as np
 from eplus.EnergyManagementSystem import * #setEMS4MeanTemp, setEMS4TotHeatPow, setEMS4TotDHWPow
-from eplus.HeatingSourceUtils import *
 
 def getOutputList(path,idf,OutputsFile):
     OutputsVar = {}
@@ -67,7 +66,6 @@ def AddOutputs(idf,building,path, SimDir, CurrentBld2Run, EMSOutputs,OutputsFile
 
     zonelist = getHeatedZones(idf)
     if EMSOutputs:
-        findCOP(idf, OutputsVar['Reportedfrequency'])
         # ActuatedComponentName = Component_Name_4_Actuator(os.path.join(SimDir, CurrentBld2Run, 'Runout.edd'))
         setEMS4MeanTemp(idf, zonelist, OutputsVar['Reportedfrequency'],EMSOutputs[0])
         setEMS4TotHeatPow(idf, building,zonelist, OutputsVar['Reportedfrequency'], EMSOutputs[1])

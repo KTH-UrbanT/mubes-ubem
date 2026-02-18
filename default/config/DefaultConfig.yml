@@ -7,7 +7,8 @@
     PATH_TO_ENERGYPLUSFMUKit : ../../../FMUsKit/EnergyPlusToFMU-v3.1.0           #[Str] this is the path to the EnergyPöus FMUL toolkit
     
 1_DATA :
-    PATH_TO_DATA : '../examples/minneberg/Minneberg_Buildings.geojson'  #ExternalStudy    #[Str] Input file or folder in case of several files
+    PATH_TO_DATA : '../examples/minneberg/Minneberg_Buildings.geojson'  # '../examples/Stockholm/Stockholm_Buildings.geojson' ExternalStudy    #[Str] Input file or folder in case of several files
+
     EPSG_REF : None                             #[int], is 4326 for US East coast, 3950 for EU, some other for elsewhere, leave None if no conversion is wanted or required
 
 2_CASE :

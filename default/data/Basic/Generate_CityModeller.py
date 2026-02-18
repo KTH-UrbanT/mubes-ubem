@@ -141,10 +141,13 @@ class ShapeCityPlanner():
             BldcpNow = self.cpNow[self.cpNow['FormularId'] == FormularID]
             BldcpBuilding = self.cpBuildings[self.cpBuildings['50A_UUID'] == ID]
             Height = BldcpBuilding['STS_BYGG_H'].values[0].item()
+            AntalPlan = BldcpNow['EgenAntalPlan'].values[0].item()
             if math.isnan(Height):
-                msg = f'[CityModeller Creation] Building {ID} is disregarded because has nan in height column STS_BYGG_H'
-                print(msg)
-                continue
+                if math.isnan(AntalPlan):
+                    msg = f'[CityModeller Creation] Building {ID} is disregarded because has nan in height column STS_BYGG_H'
+                    print(msg)
+                    continue
+                else: Height = AntalPlan * 2.6
             BldcpProperties = self.cpProperties[self.cpProperties['FNR'] == float(FNR)]
             template.get('features')[0]['type'] = 'Feature'
             template.get('features')[0]['geometry']['type'] = 'GeometryCollection'
@@ -180,6 +183,9 @@ class ShapeCityPlanner():
                             BldcpProperties[keys].values[0]
                     except:
                         template.get('features')[0]['properties'][keys] = BldcpProperties[keys].item()
+                else:
+                    template.get('features')[0]['properties']['height'] = Height
+
             for block in coordinates:
                 for idx, Info in enumerate([block]):
                     transformer = Transformer.from_crs("EPSG:4326", "EPSG:3006", always_xy=True)

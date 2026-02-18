@@ -13,7 +13,7 @@ import calibration.CalibUtilities as CalibUtil
 import eplus.EnergyManagementSystem as EnergyManagementSystem
 import eplus.Solar_Calculation as SolarCalc
 import outputs.Visualization as Visualization
-import eplus.HeatingSourceUtils as HPutils
+import eplus.PostProcessings as HPutils
 # from default.data.Basic.Generate_CityModeller import ShapeCityPlanner
 import shutil
 import multiprocessing as mp
@@ -285,7 +285,7 @@ if __name__ == '__main__' :
                 CB_OAT.LaunchOAT(CaseChoices,SimDir,nbBuild['keypath'],nbBuild['nbBuild'],nbBuild['Retrofit_Info'], [1],0, pythonpath)
     if not File2Launch[0] and CaseChoices['Verbose'] and CaseChoices['NbRuns']==1:  print('[Info] All asked simulations are already done and results available...refreshfolder to remove those')
     if CaseChoices['Verbose']: print('[Process Finished] runMUBES.py ended successfully')
-    HPutils.HeatPumpHeat2Elec(SimDir)
+    # HPutils.HeatPumpHeat2Elec(SimDir)
     # if config['2_CASE']['1_SimChoices']['OutputVisual']:
     #     app = Visualization.Visualization(CurrentSimDir)
     #     app.run(debug=False, use_reloader=False)
