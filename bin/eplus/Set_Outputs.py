@@ -120,7 +120,7 @@ def Read_OutputsEso(CaseName,ExtSurfNames, PerBlockResult, ZoneOutput):
                         finished = 1
                     except:
                         test += 1
-            Firstkey = BldBlckStry if PerBlockResult else 'STOREY ' + str(nb)
+            Firstkey = BldBlckStry if PerBlockResult else 'STOREY_' + str(nb)
         elif currentData[1] is not None:
             Firstkey = currentData[1]
         else:
@@ -156,7 +156,7 @@ def Read_OutputsEso(CaseName,ExtSurfNames, PerBlockResult, ZoneOutput):
             if PerBlockResult:
                 numstor = int(key[key.find('STOREY_') + 7:])
             else:
-                numstor= int(key[6:])
+                numstor= int(key[7:])
             KeyArea= 'NonHeatedArea' if numstor<0 else 'HeatedArea'
         for j, i in enumerate(res[key]):
             ZoneAgregRes[key][i]['GlobData'] = []

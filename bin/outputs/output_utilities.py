@@ -491,6 +491,7 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[],BldList = []):
         for x in BuildObj.EPCMeters['ElecLoad']:
             if BuildObj.EPCMeters['ElecLoad'][x]:
                 eleval += BuildObj.EPCMeters['ElecLoad'][x]
+        # We convert energy to EUI by dividing by Area
         Res['EPC_Elec'].append(eleval/Res['DB_Surf'][-1] if Res['DB_Surf'][-1]!=0 else 0)
         heatval = 0
         for x in BuildObj.EPCMeters['Heating']:
@@ -501,7 +502,6 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[],BldList = []):
             coolval += BuildObj.EPCMeters['Cooling'][x]
         Res['EPC_Cool'].append(coolval/Res['DB_Surf'][-1] if Res['DB_Surf'][-1]!=0 else 0)
         Res['EPC_Tot'].append((eleval+heatval+coolval)/Res['DB_Surf'][-1] if Res['DB_Surf'][-1]!=0 else 0)
-
 #forthe old way of doing things and the new paradigm for global results
         try:
             for key1 in Res:

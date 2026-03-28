@@ -221,7 +221,7 @@ def LaunchProcess(SimDir, Retrofit_Info, FirstRun,TotNbRun,currentRun,keyPath,nb
     try:
         # add some extra energy loads like domestic Hot water
         # start = time.time()
-        GrlFct.setExtraEnergyLoad(idf,building)
+        GrlFct.setExtraEnergyLoad(idf,building, keyPath)
     except:
         msg = '[Error] The setExtraEnergyLoad definition failed...\n'
         if Verbose: print(msg[:-1])

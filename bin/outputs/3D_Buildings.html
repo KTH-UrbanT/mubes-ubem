@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <title>pydeck</title>
+        <script src="https://api.tiles.mapbox.com/mapbox-gl-js/v1.13.0/mapbox-gl.js"></script>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css" />
+    <script src='https://cdn.jsdelivr.net/npm/@deck.gl/jupyter-widget@~9.0.*/dist/index.js'></script>
+    <style>
+    body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+#deck-container {
+  width: 100vw;
+  height: 100vh;
+}
+
+#deck-container canvas {
+  z-index: 1;
+  background: none;
+}
+    </style>
+  </head>
+  <body>
+    <div id="deck-container">
+    </div>
+  
+    <div style="
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    background-color: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    font-family: Arial;
+    font-size: 14px;
+    z-index: 1000;
+    min-width: 260px;
+    ">
+    <b>Energy Performance Class</b><br><br>
+
+    <div><span style="color:rgb(0,160,0)">■</span> A  (≤ 50 kWh/m²·yr)</div>
+    <div><span style="color:rgb(80,200,0)">■</span> B  (51–75 kWh/m²·yr)</div>
+    <div><span style="color:rgb(170,220,0)">■</span> C  (76–100 kWh/m²·yr)</div>
+    <div><span style="color:rgb(255,220,0)">■</span> D  (101–135 kWh/m²·yr)</div>
+    <div><span style="color:rgb(255,150,0)">■</span> E  (136–180 kWh/m²·yr)</div>
+    <div><span style="color:rgb(255,80,0)">■</span> F  (181–235 kWh/m²·yr)</div>
+    <div><span style="color:rgb(220,0,0)">■</span> G  (> 235 kWh/m²·yr)</div>
+
+    <br>
+    <div style="font-size:12px; color:gray;">
+    Primary energy use per heated floor area
+    </div>
+    </div>
+    
+</body>
+  <script>
+    const container = document.getElementById('deck-container');
+    const jsonInput = {
+  "initialViewState": {
+    "bearing": 30,
+    "latitude": 59.34009094900001,
+    "longitude": 17.989486624447622,
+    "pitch": 60,
+    "zoom": 17
+  },
+  "layers": [
+    {
+      "@@type": "PolygonLayer",
+      "data": [
+        {
+          "address": "Svartviksslingan 11",
+          "atemp": 3683,
+          "color": [
+            255,
+            150,
+            0
+          ],
+          "energy_class": "E",
+          "floors": 5.0,
+          "height": 17.6,
+          "polygon": [
+            [
+              17.9892874668,
+              59.34005651660001
+            ],
+            [
+              17.9891954808,
+              59.3401160931
+            ],
+            [
+              17.989075537,
+              59.340067777599984
+            ],
+            [
+              17.989167275199996,
+              59.34000798219999
+            ],
+            [
+              17.9891115235,
+              59.33998610449999
+            ],
+            [
+              17.9892216964,
+              59.33991430299999
+            ],
+            [
+              17.9893647886,
+              59.3399724121
+            ],
+            [
+              17.9894185637,
+              59.33993920579998
+            ],
+            [
+              17.9895102258,
+              59.33997576919999
+            ],
+            [
+              17.989457199500002,
+              59.340009488599996
+            ],
+            [
+              17.9896836833,
+              59.3401005136
+            ],
+            [
+              17.989737010999995,
+              59.34006622109999
+            ],
+            [
+              17.9898296588,
+              59.340103184
+            ],
+            [
+              17.9897764195,
+              59.3401376812
+            ],
+            [
+              17.989889290099995,
+              59.34018256399998
+            ],
+            [
+              17.9897801724,
+              59.34025395540001
+            ],
+            [
+              17.9897247201,
+              59.340231891299986
+            ],
+            [
+              17.989617864,
+              59.34030180189999
+            ],
+            [
+              17.9894879044,
+              59.340249825600004
+            ],
+            [
+              17.9895951657,
+              59.34018012159999
+            ],
+            [
+              17.9892874668,
+              59.34005651660001
+            ]
+          ],
+          "uuid": "916c8c38-37cf-4903-a77f-79430f98e92f",
+          "year": 1985.0
+        }
+      ],
+      "extruded": true,
+      "getElevation": "@@=height",
+      "getFillColor": "@@=color",
+      "getPolygon": "@@=polygon",
+      "id": "e0dfdcd3-df78-4f04-9b88-933223578f12",
+      "material": {
+        "ambient": 0.3,
+        "diffuse": 0.6,
+        "shininess": 20
+      },
+      "pickable": true
+    }
+  ],
+  "mapProvider": "carto",
+  "mapStyle": "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+  "views": [
+    {
+      "@@type": "MapView",
+      "controller": true
+    }
+  ]
+};
+    const tooltip = {'html': '\n            <b>Building ID:</b> {uuid} <br/>\n            <b>Address:</b> {address} <br/>\n            <b>Construction Year:</b> {year}<br/>\n            <b>Height:</b> {height} m <br/>\n            <b>Floors:</b> {floors} <br/>\n            <b>Atemp:</b> {atemp} m² <br/>\n            <b>Energy Class:</b> {energy_class}\n            ', 'style': {'backgroundColor': 'white', 'color': 'black', 'font-size': '13px'}};
+    const customLibraries = null;
+    const configuration = null;
+
+    const deckInstance = createDeck({
+                  container,
+      jsonInput,
+      tooltip,
+      customLibraries,
+      configuration
+    });
+
+  </script>
+</html>

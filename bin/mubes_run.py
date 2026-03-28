@@ -104,6 +104,8 @@ if __name__ == '__main__' :
                     SepThreads, nbBuild, idx, MultipleFile = MultipleFileName, Refresh=CaseChoices['RefreshFolder'],Verbose = CaseChoices['Verbose'])
         #a sample of parameter is generated if needed
         ParamSample, CaseChoices =  GrlFct.SetParamSample(SimDir, CaseChoices, SepThreads) #TODO check septhread
+        # ParamSample = CalibUtil.get_lhs_param_samples(CaseChoices['VarName2Change'], CaseChoices['BoundsLim'], 500)
+
         #if a simulation is asked to be done from posterriors that does not exist, the process will skip this building
         if len(ParamSample) == 0 :
             shutil.rmtree(SimDir)
@@ -215,8 +217,7 @@ if __name__ == '__main__' :
                 lastBld = True if done==1 and nbfile+1 == len(File2Launch) else False
                 BldObj,IDFObj,Check = CB_OAT.LaunchOAT(CaseChoices, file['SimDir'], file['keypath'], file['nbBuild'], file['Retrofit_Info'], [1], 0,
                                                       pythonpath,MakePlotOnly = MakePlotOnly)
-                # if config['2_CASE']['1_SimChoices']['SolarCalculation']:
-                #     poa = SolarCalc.Solar_Irradiance(BldObj, file['keypath'], config['3_SIM']['1_WeatherData']['WeatherDataFile'])
+
                 if CaseChoices['Verbose']:
                     print('Figure being completed by ' + str(round(100 * done, 1)) + ' %')
                 else:

@@ -53,11 +53,11 @@ def setZoneLevel(idf,building,FloorZoning = False):
     #control command related equipment, loads and leaks for each zones
     Load_and_occupancy.CreateZoneLoadAndCtrl(idf,building,FloorZoning)
 
-def setExtraEnergyLoad(idf,building):
+def setExtraEnergyLoad(idf,building, keyPath):
     if building.DHWInfos:
         DomesticHotWater.createWaterEqpt(idf,building)
     if building.Renewables:
-        Renewables.Photovoltaic(idf,building)
+        Renewables.Photovoltaic(idf,building, keyPath)
 
 def setOutputLevel(idf,building,MainPath, SimDir, CurrentBld2Run, EMSOutputs,OutputsFile):
     #ouputs definitions
@@ -441,6 +441,8 @@ def setChangedParam(building, ParamVal, VarName2Change, MainPath, DataBaseInput,
             intmass = building.InternalMass
             intmass['HeatedZoneIntMass']['WeightperZoneArea'] = round(ParamVal[varnum],roundVal)
             setattr(building, var, intmass)
+        if 'EnvLeak' in var:
+            building.EnvLeak = round(ParamVal[varnum],roundVal)
         elif 'ExtMass' in var:
             exttmass = building.Materials
             exttmass['Wall Inertia']['Thickness'] = round(ParamVal[varnum],roundVal)

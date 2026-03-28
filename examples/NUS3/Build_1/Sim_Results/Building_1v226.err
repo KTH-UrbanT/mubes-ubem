@@ -1,0 +1,42 @@
+Program Version,EnergyPlus, Version 9.5.0-de239b2e5f, YMD=2026.03.22 12:23,
+   ** Warning ** Weather file location will be used rather than entered (IDF) Location object.
+   **   ~~~   ** ..Location object=WEATHERDATA/SWE_ST_STOCKHOLM.024850_TMYX.2009-2023.EPW
+   **   ~~~   ** ..Weather File Location=Stockholm ST SWE SRC-TMYx WMO#=024850
+   **   ~~~   ** ..due to location differences, Latitude difference=[21.73] degrees, Longitude difference=[140.47] degrees.
+   **   ~~~   ** ..Time Zone difference=[9.0] hour(s), Elevation difference=[2500.00] percent, [50.00] meters.
+   ** Warning ** GetPollutionFactorInput: Requested reporting for Carbon Equivalent Pollution, but insufficient information is entered.
+   **   ~~~   ** Both "FuelFactors" and "EnvironmentalImpactFactors" must be entered or the displayed carbon pollution will all be zero.
+   ************* Testing Individual Branch Integrity
+   ************* All Branches passed integrity testing
+   ************* Testing Individual Supply Air Path Integrity
+   ************* All Supply Air Paths passed integrity testing
+   ************* Testing Individual Return Air Path Integrity
+   ************* All Return Air Paths passed integrity testing
+   ************* No node connection errors were found.
+   ************* Beginning Simulation
+   ** Warning ** Temperature out of range [-100. to 200.] (PsyPsatFnTemp)
+   **   ~~~   **  Routine=PsyTwbFnTdbWPb, Environment=RUN PERIOD 1, at Simulation time=03/20 09:30 - 09:45
+   **   ~~~   **  Input Temperature=-296.91
+   ************* Simulation Error Summary *************
+   ** Warning ** The following Report Variables were requested but not generated -- check.rdd file
+   **   ~~~   ** Either the IDF did not contain these elements, the variable name is misspelled,
+   **   ~~~   ** or the requested variable is an advanced output which requires Output : Diagnostics, DisplayAdvancedReportVariables;
+   ************* Key=*, VarName=ZONE ELECTRIC EQUIPMENT ELECTRIC POWER, Frequency=Hourly
+   ************* Key=*, VarName=FACILITY TOTAL PRODUCED ELECTRIC POWER, Frequency=Hourly
+   ************* There are 1 unused objects in input.
+   ************* Use Output:Diagnostics,DisplayUnusedObjects; to see them.
+   ************* There are 1 unused schedules in input.
+   ************* Use Output:Diagnostics,DisplayUnusedSchedules; to see them.
+   *************
+   ************* ===== Recurring Error Summary =====
+   ************* The following recurring error messages occurred.
+   *************
+   *************  ** Warning ** Temperature out of range [-100. to 200.] (PsyPsatFnTemp)
+   *************  **   ~~~   **   This error occurred 1 total times;
+   *************  **   ~~~   **   during Warmup 0 times;
+   *************  **   ~~~   **   during Sizing 0 times.
+   *************  **   ~~~   **   Max=-296.913269 C  Min=-296.913269 C
+   *************
+   ************* EnergyPlus Warmup Error Summary. During Warmup: 0 Warning; 0 Severe Errors.
+   ************* EnergyPlus Sizing Error Summary. During Sizing: 0 Warning; 0 Severe Errors.
+   ************* EnergyPlus Completed Successfully-- 4 Warning; 0 Severe Errors; Elapsed Time=00hr 00min 46.07sec

@@ -24,7 +24,7 @@
         NbRuns : 20                         #[Int] sample size for parametric simulation
     2_AdvancedChoices :
         Calibration : True                     #[Bool] if calibration process is desired to be launched (several other inputs are required
-        CalibTimeBasis : 'YearlyBasis'                     #[Str] can currently be either 'MonthlyBasis','WeeklyBasis','YearlyBasis'.
+        CalibTimeBasis : 'MonthlyBasis'                     #[Str] can currently be either 'MonthlyBasis','WeeklyBasis','YearlyBasis'.
         MeasurePath4Calibration : ../examples/minneberg/DataForCalibration            #[Str] path to the measured data. File names currently need to quite specific. Under development for full deployment
 
 3_SIM :

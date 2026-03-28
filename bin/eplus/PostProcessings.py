@@ -144,5 +144,5 @@ def Plot_COPvsTemp(OutTemp, COP_Space, COP_DHW , idx):
     plt.show()
 
 if __name__ == "__main__":
-    SimDir = '/Users/alizad/PycharmProjects/NewWorking-MUBES/examples/NUS'
+    SimDir = '/Users/alizad/PycharmProjects/NewWorking-MUBES/examples/NUS0'
     HeatPumpHeat2Elec(SimDir, 0.7, 0.7)

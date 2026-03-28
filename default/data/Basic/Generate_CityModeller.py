@@ -82,7 +82,6 @@ class ShapeCityPlanner():
         if self.config['1_Sim']['ODEN_API']:
             ODENAPI = ODEN_API.API(self.config['1_Sim']['API_BaseURL'], self.config['1_Sim']['UUID'])
             ODENAPI.Get_Building_by_ID()
-            print(3)
 
         else:
             # Lets read the datasets
@@ -108,6 +107,11 @@ class ShapeCityPlanner():
                     for samplebld in self.cpFootprints:
                         self.All_UUID.append(samplebld.get('50A_UUID'))
                         self.UUID = self.All_UUID
+                # elif 'csv' in self.config['1_Sim']['UUID'] or 'xlsx' in self.config['1_Sim']['UUID']:
+                #     if 'csv' in self.config['1_Sim']['UUID']:
+                #         self.UUID = np.array(pd.read_csv(os.path.join(path, 'examples/SvB_55A_UUID',self.config['1_Sim']['UUID'])['UUIDs']))
+                #     elif 'xlsx' in self.config['1_Sim']['UUID']:
+                #         self.UUID = np.array(pd.read_excel(os.path.join(path, 'examples/SvB_55A_UUID',self.config['1_Sim']['UUID']))['UUIDs'])
                 else:
                     self.UUID = self.config['1_Sim']['UUID']
 

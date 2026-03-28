@@ -9,6 +9,7 @@ import outputs.output_utilities as Utilities
 import pickle
 import core.GeneralFunctions as GrlFct
 import openturns as ot
+from pyDOE import lhs
 ot.ResourceMap.SetAsBool("ComposedDistribution-UseGenericCovarianceAlgorithm", True)
 
 def getYearlyError(Res,NewMeas):
@@ -58,6 +59,7 @@ def getPeriodError(Res,NewMeas,idx,NbSample):
     SampleError = []
     SampleVal = []
     for i in range(NbSample):
+        #Lets sum the energy in each hour to get yearly, monthly or weekly values
         SampleEnergySim.append(sum(SimPower[i*nbHrperSample:nbHrperSample+i*nbHrperSample]))
         SampleEnergyMeas.append(sum(MeasPower[i * nbHrperSample:nbHrperSample + i * nbHrperSample]))
         SampleError.append(abs(SampleEnergySim[-1]-SampleEnergyMeas[-1])/SampleEnergyMeas[-1]*100)
@@ -224,11 +226,79 @@ def getBootStrapedParam(Data, VarName2Change, nbruns, BoundLim):
     Param2keep =  np.array(y_transformed)
     return Param2keep.transpose()
 
-def getNewBounds(Bounds,BoundLim):
+def getNewBounds(Bounds,BoundLim, Error, ParamSample):
     newBounds = []
+    best = ParamSample[Error.index(min(Error))]
+    nbsm = 2
+    # for idx, bd in enumerate(Bounds):
     for idx, bd in enumerate(Bounds):
         newBounds.append(
-                [max(bd[0] - 0.1 * (bd[1] - bd[0]),BoundLim[idx][0]), min(BoundLim[idx][1], bd[1] + 0.1 * (bd[1] - bd[0]))])
+            [max(bd[0] - 0.1 * (bd[1] - bd[0]), BoundLim[idx][0]),
+             min(BoundLim[idx][1], bd[1] + 0.1 * (bd[1] - bd[0]))])
+    return newBounds
+
+def getNewBounds_MHA(Bounds,BoundLim, VarName2Change, Error, ParamSample):
+    newBounds = []
+    nbRun = 10
+
+
+    neg_indices = [i for i, e in enumerate(Error) if e < 0]
+    best_neg_idx = min(neg_indices, key=lambda i: abs(Error[i]))
+    BestNegError = Error[best_neg_idx]
+    BestNegativeSample = ParamSample[best_neg_idx]
+
+
+    if len(Error) == nbRun:
+        global WorstPosErrorPrev
+
+    if len(Error) == nbRun:
+        if all(x < 0 for x in Error):
+            BestPositiveSample = [BoundLim[bidx][1] for bidx, _ in enumerate(BoundLim)] #if len(Error == nbRun) else [BoundLim[bidx][1]*(1-0.4) for bidx, _ in enumerate(BoundLim)]
+            if len(Error) == nbRun:
+                # pos_indices = [i for i, e in enumerate(Error) if e > 0]
+                WorstPosError = 10000
+                # WorstPosErrorPrev = 1000
+                # CurrentError = Error[-nbRun:]
+                # WorstPosError = Error[max(range(len(Error)), key=lambda i: Error[i])]
+        else:
+            pos_indices = [i for i, e in enumerate(Error) if e > 0]
+            best_pos_idx = max(pos_indices, key=lambda i: abs(Error[i]))
+            BestPositiveSample = ParamSample[best_pos_idx]
+            WorstPosError = Error[max(pos_indices, key=lambda i: Error[i])]
+        WorstPosErrorPrev = WorstPosError
+
+
+    else:
+        if all(x < 0 for x in Error[-nbRun:]):
+            WorstPosError = WorstPosErrorPrev
+            BestPositiveSample = ParamSample[Error.index(WorstPosErrorPrev)]
+        else:
+            CurrentError = Error[-nbRun:]
+            WorstPosErrorNow = CurrentError[max(range(len(CurrentError)), key=lambda i: CurrentError[i])]
+            if WorstPosErrorNow < WorstPosErrorPrev:
+                PrevError = Error[:-nbRun]
+                # WorstPosErrorPrev = PrevError[max(range(len(PrevError)), key=lambda i: PrevError[i])]
+                WorstPosErrorPrev = WorstPosErrorNow
+                pos_index = CurrentError.index(WorstPosErrorNow)
+                BestPositiveSample = ParamSample[pos_index + len(PrevError)]
+            else:
+                WorstPosError = Error[Error.index(WorstPosErrorPrev)]
+                BestPositiveSample = ParamSample[Error.index(WorstPosErrorPrev)]
+
+    for idx, bd in enumerate(Bounds):
+        if BestNegError < 0 and WorstPosError > 0:
+            if VarName2Change[idx] == 'EnvLeak':
+                newBounds.append([min(BestNegativeSample[idx], BestPositiveSample[idx]), max(BestNegativeSample[idx], BestPositiveSample[idx])])
+            elif VarName2Change[idx] == 'wwr':
+                newBounds.append([min(BestNegativeSample[idx], BestPositiveSample[idx]), max(BestNegativeSample[idx], BestPositiveSample[idx])])
+            elif VarName2Change[idx] == 'setTempLoL':
+                newBounds.append([min(BestNegativeSample[idx], BestPositiveSample[idx]), max(BestNegativeSample[idx], BestPositiveSample[idx])])
+            elif VarName2Change[idx] == 'WindowUval':
+                newBounds.append([min(BestNegativeSample[idx], BestPositiveSample[idx]), max(BestNegativeSample[idx], BestPositiveSample[idx])])
+            elif VarName2Change[idx] == 'WallInsuThick':
+                newBounds.append([min(BestNegativeSample[idx], BestPositiveSample[idx]), max(BestNegativeSample[idx], BestPositiveSample[idx])])
+            elif VarName2Change[idx] == 'RoofInsuThick':
+                newBounds.append([min(BestNegativeSample[idx], BestPositiveSample[idx]), max(BestNegativeSample[idx], BestPositiveSample[idx])])
     return newBounds
 
 def getTheWinners(VarName2Change,Matches20, Matches10, Matches5):
@@ -279,6 +349,15 @@ def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change
     Meas = [float(val) for val in Lines]
 
     Error = getErrorMatches(Res, Meas, CalibBasis)
+    print('Error is : ', Error)
+    # if len(Error) < 100:
+    #     epsilon50 = 30
+    #     epsilon30 = 20
+    #     epsilon10 = 5
+    # else:
+    epsilon50 = np.percentile(Error, 50)
+    epsilon30 = np.percentile(Error, 30)
+    epsilon10 = np.percentile(Error, 10)
     Matches20 = getGoodParamList(Error,CalibBasis, VarName2Change, ParamSample, REMax=20, CVRMSMax = 30)
     Matches10 = getGoodParamList(Error,CalibBasis, VarName2Change, ParamSample, REMax=10, CVRMSMax = 20)
     Matches5 = getGoodParamList(Error, CalibBasis, VarName2Change, ParamSample, REMax=5, CVRMSMax=15)
@@ -288,7 +367,7 @@ def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change
     #Matches, NbWinners = getTheWinners(VarName2Change,Matches20, Matches10, Matches5)
     Matches, NbWinners = getTheWeightedWinners(VarName2Change, Matches20, Matches10, Matches5)
     try:
-        if len(ParamSample[:, 0]) >= 2000 or len(Matches5[VarName2Change[0]]) > 100:
+        if len(ParamSample[:, 0]) >= 300 or len(Matches5[VarName2Change[0]]) > 20:
             Finished = True
         elif len(ParamSample[:, 0]) >= 1000 and len(Matches5[VarName2Change[0]]) < 5:
             Finished = True
@@ -320,29 +399,58 @@ def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change
                     print('Correlated Sample worked !')
                 except:
                     print('Correlated Sample did not work...')
-                    Bounds = getNewBounds(Bounds, BoundLim)
+                    Bounds = getNewBounds_MHA(Bounds, BoundLim, VarName2Change, Error, ParamSample)
                     NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRun,ParamMethods)
+                    # NewSample = get_lhs_param_samples(VarName2Change, BoundLim, 500)
+
             else:
-                Bounds = getNewBounds(Bounds, BoundLim)
+                Bounds = getNewBounds_MHA(Bounds, BoundLim, VarName2Change, Error, ParamSample)
                 NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRun,ParamMethods)
+                # NewSample = get_lhs_param_samples(VarName2Change, BoundLim, 500)
+
             idx_offset = len(ParamSample[:, 0])
             ParamSample = np.concatenate((ParamSample, NewSample))
             Paramfile = os.path.join(SimDir, 'ParamSample.pickle')
             with open(Paramfile, 'wb') as handle:
                 pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            # Errfile = os.path.join(SimDir, 'Error.pickle')
+            # with open(Errfile, 'wb') as handle:
+            #     pickle.dump(Error, handle, protocol=pickle.HIGHEST_PROTOCOL)
     except:
         print('No matches at all from now...')
         if len(ParamSample[:, 0]) >= 2000:
             Finished = True
         else:
-            Bounds = getNewBounds(Bounds, BoundLim)
+            Bounds = getNewBounds_MHA(Bounds, BoundLim, VarName2Change, Error, ParamSample)
             NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRun,ParamMethods)
             idx_offset = len(ParamSample[:, 0])
             ParamSample = np.concatenate((ParamSample, NewSample))
             Paramfile = os.path.join(SimDir, 'ParamSample.pickle')
             with open(Paramfile, 'wb') as handle:
                 pickle.dump(ParamSample, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            Errfile = os.path.join(SimDir, 'Error.pickle')
+            with open(Errfile, 'wb') as handle:
+                pickle.dump(Error, handle, protocol=pickle.HIGHEST_PROTOCOL)
     return Finished,idx_offset,ParamSample
 
+
+from pyDOE import lhs
+import numpy as np
+
+def get_lhs_param_samples(VarName2Change, BoundLim, NbSample):
+
+    n_params = len(VarName2Change)
+
+    # LHS in [0,1]
+    lhs_unit = lhs(n_params, samples=NbSample)
+
+    # Extract bounds from your list structure
+    lower_bounds = np.array([b[0] for b in BoundLim], dtype=float)
+    upper_bounds = np.array([b[1] for b in BoundLim], dtype=float)
+
+    # Scale to real values
+    ParamSample = lower_bounds + lhs_unit * (upper_bounds - lower_bounds)
+
+    return ParamSample
 if __name__ == '__main__' :
     print('CalibUtilities.py')

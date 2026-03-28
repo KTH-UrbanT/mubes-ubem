@@ -17,7 +17,7 @@ def Visualization(ResultPath):
     # -------------------------------------------------
     results_by_building = {}
 
-    # ResultPath = '../../examples/NUS/Sim_Results/'
+    # ResultPath = '../../examples/NUS0/Sim_Results/'
     files = os.listdir(os.path.join(ResultPath, 'Sim_Results'))
 
     for bld in files:
