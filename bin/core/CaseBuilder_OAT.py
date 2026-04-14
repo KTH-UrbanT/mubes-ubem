@@ -88,7 +88,7 @@ def LaunchProcess(SimDir, Retrofit_Info, FirstRun,TotNbRun,currentRun,keyPath,nb
         #lets build the two main object we'll be playing with in the following : the idf and the building
         try:
             if DebugMode: startIniti = time.time()
-            idf, building = GrlFct.appendBuildCase(StudiedCase, Retrofit_Info, keyPath, nbcase, DataBaseInput, MainPath,LogFile,
+            idf, building = GrlFct.appendBuildCase(SimDir, StudiedCase, Retrofit_Info, keyPath, nbcase, DataBaseInput, MainPath,LogFile,
                                                DebugMode = DebugMode,PlotOnly=MakePlotOnly)
         except:
             msg = '[Error] The Building Object Initialisation has failed...\n'

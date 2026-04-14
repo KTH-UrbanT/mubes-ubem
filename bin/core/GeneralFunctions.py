@@ -19,8 +19,8 @@ import pyproj
 import numpy as np
 import json
 
-def appendBuildCase(StudiedCase, Retrofit_Info, keypath,nbcase,DataBaseInput,MainPath,LogFile,PlotOnly = False, DebugMode = False):
-    StudiedCase.addBuilding('Building'+str(nbcase), Retrofit_Info, DataBaseInput,nbcase,MainPath,keypath,LogFile,PlotOnly, DebugMode)
+def appendBuildCase(SimDir, StudiedCase, Retrofit_Info, keypath,nbcase,DataBaseInput,MainPath,LogFile,PlotOnly = False, DebugMode = False):
+    StudiedCase.addBuilding(SimDir, 'Building'+str(nbcase), Retrofit_Info, DataBaseInput,nbcase,MainPath,keypath,LogFile,PlotOnly, DebugMode)
     idf = StudiedCase.building[-1]['BuildIDF'] #Put the last idf file in idf
     building = StudiedCase.building[-1]['BuildData']# Put the last building file in building
     return idf, building

@@ -63,13 +63,24 @@ def CreateAirwallsMat(idf):
             Visible_Absorptance = 0.7,
         )
 
-def create_Material(idf, Material, MaterialUpgrade, Retrofit_Info):
-
+def create_Material(idf, Material, BaseMaterial_RetrofitCase, Retrofit_Info):
     if Retrofit_Info['RetrofitCase']:
-        for key in MaterialUpgrade:
+        if 'window' in [item.lower() for item in Retrofit_Info['RetrofitOptions']['ECMs']]:
+            BaseMaterial_RetrofitCase['Window']['UFactor'] = Retrofit_Info['RetrofitOptions']['Window_U_Value2Retrofit']
+        if 'wall' in [item.lower() for item in Retrofit_Info['RetrofitOptions']['ECMs']]:
+            BaseMaterial_RetrofitCase['Wall Insulation']['Thickness']  = Retrofit_Info['RetrofitOptions']['Wall_Thickness2Retrofit']
+        if 'roof' in [item.lower() for item in Retrofit_Info['RetrofitOptions']['ECMs']]:
+            BaseMaterial_RetrofitCase['Roof Insulation']['Thickness']  = Retrofit_Info['RetrofitOptions']['Roof_Thickness2Retrofit']
+        for key in BaseMaterial_RetrofitCase:
             Name = key
-            create_MaterialObject(idf, Name, MaterialUpgrade[key])
-    else:
+            create_MaterialObject(idf, Name, BaseMaterial_RetrofitCase[key])
+    # when the building is not in retrofitting list
+    elif not Retrofit_Info['RetrofitCase'] and Retrofit_Info['RetrofitOptions'] != '':
+        for key in BaseMaterial_RetrofitCase:
+            Name = key
+            create_MaterialObject(idf, Name, Material[key])
+    # when retrofitting mode is off
+    elif Retrofit_Info['RetrofitCase'] == '':
         for key in Material:
             Name = key
             create_MaterialObject(idf, Name, Material[key])

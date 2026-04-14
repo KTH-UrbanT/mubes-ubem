@@ -113,13 +113,13 @@ class BuildingList:
     def __init__(self):
         self.building = []
 
-    def addBuilding(self,name, Retrofit_Info, DataBaseInput,nbcase,MainPath,keypath,LogFile,PlotOnly, DebugMode):
+    def addBuilding(self, SimDir, name, Retrofit_Info, DataBaseInput,nbcase,MainPath,keypath,LogFile,PlotOnly, DebugMode):
         #idf object is created here
         IDF.setiddname(os.path.join(keypath['epluspath'],"Energy+.idd"))
         idf = IDF(os.path.normcase(os.path.join(keypath['epluspath'],"ExampleFiles/Minimal.idf")))
         idf.idfname = name
         #building object is created here
-        building = Building(name, Retrofit_Info, DataBaseInput, nbcase, MainPath,keypath['Buildingsfile'],LogFile,PlotOnly, DebugMode)
+        building = Building(SimDir, name, Retrofit_Info, DataBaseInput, nbcase, MainPath,keypath['Buildingsfile'],LogFile,PlotOnly, DebugMode)
         #both are append as dict in the globa studied case list
         self.building.append({
             'BuildData' : building,
@@ -142,7 +142,7 @@ def getBldIDWhenError(DataBaseInput,nbcase):
     return BuildID
 
 class Building:
-    def __init__(self,name, Retrofit_Info, DataBaseInput,nbcase,MainPath,BuildingFilePath,LogFile,PlotOnly,DebugMode):
+    def __init__(self,SimDir, name, Retrofit_Info, DataBaseInput,nbcase,MainPath,BuildingFilePath,LogFile,PlotOnly,DebugMode):
         import time
         Buildingsfile = DataBaseInput['Build']
         DB = Buildingsfile[nbcase]
@@ -218,10 +218,10 @@ class Building:
             self.IntLoad = self.getIntLoad(MainPath,LogFile,DebugMode)
             self.DHWInfos = self.getExtraEnergy(ExEn, MainPath)
         if self.RetrofitInfo['RetrofitCase']:
-            Retconfig = setConfig.read_yaml('RetrofitConfig.yml')
-            self.EnvelopeRet = Retconfig['ECM_Category']['Envelope']
+            RetrofitConfig = setConfig.read_yaml(os.path.join(SimDir, 'RetrofitConfig.yml'))
+            self.BaseMaterial_RetrofitCase = RetrofitConfig['1_SIM']['BaseMaterial']
         else:
-            self.EnvelopeRet = False
+            self.BaseMaterial_RetrofitCase = {}
 
 
             #if there are no cooling comsumption, lets considerer a set point at 50deg max

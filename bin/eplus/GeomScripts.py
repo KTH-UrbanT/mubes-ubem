@@ -104,9 +104,9 @@ def createBuilding(LogFile,idf,building, perim,FloorZoning,ForPlots =False,Debug
         if DebugMode: GrlFct.Write2LogFile(msg, LogFile)
         pass
 
-def createRapidGeomElem(idf,building, Ret):
+def createRapidGeomElem(idf,building, Retrofit_Info):
     #envelop can be created now and allocated to the correct surfaces
-    createEnvelope(idf, building, Ret)
+    createEnvelope(idf, building, Retrofit_Info)
     createShadings(building, idf)
     #create parition walls
     #from EP9.2 there is a dedicated construction type (to be tried as well), but 'Fullexeterior' option is still required
@@ -150,11 +150,11 @@ def createShadings(building,idf):
                     idf.removeidfobject(i)
     return idf
 
-def createEnvelope(idf,building, Ret):
+def createEnvelope(idf, building, Retrofit_Info):
     #settings for the materials and constructions
     idf.set_default_constructions()
     #creating the materials, see Envelope_Param for material specifications
-    Envelope_Param.create_Material(idf, building.Materials, building.EnvelopeRet,Ret)
+    Envelope_Param.create_Material(idf, building.Materials, building.BaseMaterial_RetrofitCase, Retrofit_Info)
     # lets change the construction for some specific zones surfaces: the partition between none heated zones like
     # basement and the above floors
     # creating the construction, see Envelope_Param for material specifications for seperation with heated and non heated zones
