@@ -37,7 +37,7 @@
         ResidentialOcc : False                   #[Bool] True: To define occupancy for residential type zones #TODO: when False it makes problem
         indoor_Air_Comfort_Analysis : True      #[Bool] True: Requirements for indoor air quality and thermal comfort are generated
         SolarCalculation: True
-        Retrofit: True                         #[Bool] True : energy conservation measures specified in ecm_confid will be applied
+        Retrofit: False                         #[Bool] True : energy conservation measures specified in ecm_confid will be applied
         EnergyManagementSystem: False
         Renewables: True
         StockholmBuildings: False               #[Bool] True : User specified building outside Minneberg from City Planner will be considered
