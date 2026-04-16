@@ -1,0 +1,33 @@
+0_APP:
+    PATH_TO_RESULTS: ../examples                                   #[Str] this is the main folder where the results will be stored. it will be created if not exists
+    PATH_TO_ENERGYPLUSFMUKit : ../../../FMUsKit/EnergyPlusToFMU-v3.1.0          #[Str] this is the path to the EnergyPöus FMUL toolkit
+1_DATA:
+    PATH_TO_DATA : ../examples/minneberg/Minneberg_Buildings.geojson               #[Str] Input file or folder in case of several files
+2_CASE:
+    0_GrlChoices :
+        CaseName : 'Ex3-MakeFmuCase'                    #[Str] Name of the studied Case, a subfolder of this name will be created in the main folder defined in '0_APP:PATH_TO_RESULTS'
+        OutputsFile : 'Outputs_Template.txt'    #[Str] Output file to identify the outputs the modeller would want and their frequency
+        RefreshFolder : True                    #[Bool] True : the folder CaseName, if exist, is emptied whatever could be in it
+        MakePlotsOnly : False                   #[Bool] True : a figure will be created with the buildings specified in BldID
+        MakePlotsPerBld : False                 #[Bool] True : a figure is created for each building including it's shadowing surfaces (if present)
+        Verbose : True                          #[Bool] True : Gives messages in the prompt window along the ongoing process
+        CPUusage : 0.8                          #[Float] Factor of CPU allowed to be used during parallel computing
+        DebugMode : True                       #[Bool] The log file will be feeded by detailed information along the process
+    1_SimChoices :
+        BldID : [1c931069-d3d1-4559-8968-e7f0564579fb,
+                71ceb6cb-8d37-41fe-800b-69723a00467b,
+                14765cf2-f7c2-4b3a-a55f-f7e5f46a1bca,
+                916c8c38-37cf-4903-a77f-79430f98e92f]                         #[List of Str] list of Building's ID if defined as attribute in the geojson file, index of the building in the geojson file otherwise
+        CorePerim : False                       #[Bool] True : core and perimeter zone thermal modelling
+        FloorZoning : False                     #[Bool] True : each floor is considered as a zone or for core zone construction
+    2_AdvancedChoices :
+        CreateFMU : True                       #[Bool] True: creates FMU for each building specified in the UUID. No simulation is launched afterward. FMU will be found in the CaseName folder
+
+3_SIM :
+    #files are needed to be located in the eather folder of EnergyPlus asthe same path is used afterward to launch the simulation
+    1_WeatherData :
+        WeatherDataFile : 'WeatherData/USA_CA_San.Francisco.Intl.AP.724940_TMY3.epw' #[Str] Need to be a epw file. This one is given because installed by default when installing EnergyPlus
+        Latitude: 37.62                        #[Float] Latitude of the location (+ is North, - is South) [-90,+90]
+        Longitude: -122.40                     #[Float] Longitude of the location (- is West, + is East [-180,180]
+        Time_Zone: -8.0                        #[Float] Time relative to GMT  [-12,14]
+        Elevation: 2.0                         #[Float] Elevation

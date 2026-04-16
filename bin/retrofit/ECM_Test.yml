@@ -1,0 +1,78 @@
+  #This files provides the Energy Conservation Measures settings
+0_RetrofitChoice:
+    ECM:
+        ECM_to_Implement: ['Window', 'Wall']
+    Base_Case:
+      BuildID: []#['1c931069-d3d1-4559-8968-e7f0564579fb', '9b94541c-e4b5-480a-aff3-78c37eb4effe']
+      WWR_Temp: {'0': 0.15, '1939': 0.15, '1960': 0.15, '1970': 0.2, '1976': 0.25, '1985': 0.25, '2000': 0.25}
+      Window_Base_U_Value: {'0': 2.7, '1939': 2.7, '1960': 2.5, '1970': 2, '1976': 1.8, '1985': 1.2, '2000': 0.83}
+      Wall_Base_Thickness: {'0': 0.2, '1939': 0.2, '1960': 0.3, '1970': 0.3, '1976': 0.3, '1985': 0.4, '2000': 0.4}
+      Roof_Base_Thickness: {'0': 0.2, '1939': 0.2, '1960': 0.3, '1970': 0.3, '1976': 0.4, '1985': 0.4, '2000': 0.5}
+
+    Retrofited_Case:
+      Window_U_Value2Retrofit: {'0': 0.964, '1939': 0.964, '1960': 0.938, '1970': 0.857, '1976': 0.818, '1985': 0.667, '2000': 0.534}
+      Wall_Thickness2Retrofit: {'0': 0.4, '1939': 0.4, '1960': 0.5, '1970': 0.5, '1976': 0.5, '1985': 0.6, '2000': 0.6}
+      Roof_Thickness2Retrofit: {'0': 0.6, '1939': 0.6, '1960': 0.7, '1970': 0.7, '1976': 0.8, '1985': 0.8, '2000': 0.9}
+
+1_SIM:
+  BaseMaterial:
+        Window:
+          UFactor: 3                     #[Float]v
+          Solar_Heat_Gain_Coefficient: 0.7   #[Float]
+          Visible_Transmittance: 0.8         #[Float]
+      #****************************************************************************************
+        Wall Inertia:
+          Thickness: 0.7890                     #[Float] #this layer will be considered also for the basement walls
+          Conductivity: 0.9                  #[Float]
+          Roughness: "Rough"                 #[Str]
+          Density: 2300                      #[Float]
+          Specific_Heat: 1000                #[Float]
+        Wall Insulation:
+          Thickness: 0.2                     #[Float]
+          Conductivity: 0.034554                 #[Float]
+          Roughness: "Rough"                 #[Str]
+          Density: 150                       #[Float]
+          Specific_Heat: 1000                #[Float]
+          #'Thermal_Absorptance' : 0.001
+      #****************************************************************************************
+        Basement Floor:
+          Thickness: 0.1                     #[Float] #this layer will be considered also for the basement floor
+          Conductivity: 0.9                  #[Float]
+          Roughness: "Rough"                 #[Str]
+          Density: 2300                      #[Float]
+          Specific_Heat: 1000                #[Float]
+
+        #   Basement Floor Insulation :
+        #       Thickness : 0.05    #not needed as even without basement the Heated1rstFloor is taken for the first floor
+        #       Conductivity : 0.25*0.1
+        #       Roughness : "Rough"
+        #       Density : 1000
+        #       Specific_Heat : 1000
+        #   Roof Inertia :
+        #        Thickness : 0.05 #not needed unless one wants to have inertia in the roof layer
+        #        Conductivity : 0.15*0.1
+        #        Roughness : "Rough"
+        #        Density : 1000
+        #        Specific_Heat : 1000
+      #****************************************************************************************
+        Roof Insulation:
+          Thickness: 0.34                     #[Float]
+          Conductivity: 0.03                 #[Float]
+          Roughness: "Rough"                 #[Str]
+          Density: 150                       #[Float]
+          Specific_Heat: 1000                #[Float]
+          #Thermal_Absorptance : 0.001
+      #****************************************************************************************
+        Heated1rstFloor Inertia:
+          Thickness: 0.1                     #[Float]
+          Conductivity: 0.9                  #[Float]
+          Roughness: "Rough"                 #[Str]
+          Density: 2300                      #[Float]
+          Specific_Heat: 1000                #[Float]
+        Heated1rstFloor Insulation:
+          Thickness: 0.15                    #[Float]
+          Conductivity: 0.035                #[Float]
+          Roughness: "Rough"                 #[Str]
+          Density: 150                       #[Float]
+          Specific_Heat: 1000                #[Float]
+          #Thermal_Absorptance : 0.001

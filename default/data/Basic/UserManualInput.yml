@@ -1,0 +1,38 @@
+# Author: Mohammadhossein Alizadeh
+# Contact: alizad@kth.se
+
+0_Bld_Opt:
+  Location:
+  BldShape: 'L'                                # 'S': Square, 'R': Rectangle, 'L': L shape
+
+  Coordinates:
+# Polygon 1
+  - - - [103.77062900789332, 1.299481994300379]
+      - [103.77059849776492, 1.29954702113983]
+      - [103.77065935038263, 1.2995761826595782]
+      - [103.77065052995988, 1.2995947832935144]
+      - [103.77079872168389, 1.2996655082165631]
+      - [103.77102306741722, 1.2991918248874867]
+      - [103.77087172995681, 1.2991215921595227]
+      - [103.77086435388185, 1.2991388544407982]
+      - [103.77080350126613, 1.299108854940883]
+      - [103.7707721529481, 1.2991738817898835]
+      - [103.77083350847914, 1.299203546099946]
+      - [103.77068894260952, 1.2995113516900005]
+      - [103.77062859290714, 1.2994823577644894]
+
+    - - [103.77068915226465, 1.2995108169324965]
+      - [103.77056963517572, 1.2994532154042702]
+      - [103.77071371613516, 1.2991461224802663]
+      - [103.77083311903334, 1.299203399397939]
+      - [103.77068915226465, 1.2995108169324965]
+
+  CoordSys: 'EPSG:4326'                                # You should define the CRS of your coordinates defined in 'Coordinates'
+  ProjectedCoordSys: '3414'     # Insert the EPSG code of the projected coordinate system where the building under simulation is located
+  EgenAtemp: 400                # If you dont have the actual coordinate of the building and want to do simulation for a unreal building
+  EgenAntalPlan: 6                                     # Number of floors above ground
+  EgenAntalKallarplan: 1                               # Number of basement floor
+  height: [23.4, 5.2]   # Insert height of the Blocks if your building consits of multiple blocks with different heights
+  EgenNybyggAr: 1999
+  43S_ARVARDE: 2000
+  43S_BYGGAR: 2000

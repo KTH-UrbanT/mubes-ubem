@@ -1,0 +1,18 @@
+0_APP:
+    PATH_TO_RESULTS: ../examples                                   #[Str] this is the main folder where the results will be stored. it will be created if not exists
+1_DATA:
+    PATH_TO_DATA : ../examples/minneberg/Minneberg_Buildings.geojson               #[Str] Input file or folder in case of several files
+2_CASE:
+    0_GrlChoices :
+        CaseName : 'Ex1-MakeDistrictPlot'                    #[Str] Name of the studied Case, a subfolder of this name will be created in the main folder defined in '0_APP:PATH_TO_RESULTS'
+        OutputsFile : 'Outputs_Template.txt'    #[Str] Output file to identify the outputs the modeller would want and their frequency
+        RefreshFolder : True                    #[Bool] True : the folder CaseName, if exist, is emptied whatever could be in it
+        MakePlotsOnly : True                   #[Bool] True : a figure will be created with the buildings specified in BldID
+        MakePlotsPerBld : False                 #[Bool] True : a figure is created for each building including it's shadowing surfaces (if present)
+        Verbose : False                          #[Bool] True : Gives messages in the prompt window along the ongoing process
+        CPUusage : 0.8                          #[Float] Factor of CPU allowed to be used during parallel computing
+        DebugMode : True                       #[Bool] The log file will be feeded by detailed information along the process
+    1_SimChoices :
+        CorePerim : False                       #[Bool] True : core and perimeter zone thermal modelling
+        FloorZoning : False                     #[Bool] True : each floor is considered as a zone or for core zone construction
+

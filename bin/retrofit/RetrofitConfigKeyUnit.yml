@@ -1,0 +1,72 @@
+#This files checks the units for Energy Conservation Measures settings
+0_RetrofitChoice:
+    ECM:
+        ECM_to_Implement: [str]
+    Base_Case:
+      BuildID: [int, str]
+      WWR_Temp: [dict]
+      Window_Base_U_Value: [dict]
+      Wall_Base_Thickness: [dict]
+      Roof_Base_Thickness: [dict]
+    Retrofited_Case:
+      Window_U_Value2Retrofit: [dict]
+      Wall_Thickness2Retrofit: [dict]
+      Roof_Thickness2Retrofit: [dict]
+1_SIM:
+  BaseMaterial:
+  #  wwr: [float,int]
+      Window :
+          UFactor :  [float,int]                      #[Float]
+          Solar_Heat_Gain_Coefficient : [float,int]   #[Float]
+          Visible_Transmittance : [float,int]         #[Float]
+      Wall Inertia :
+          Thickness : [float,int]                     #[Float] #this layer will be considered also for the basement walls
+          Conductivity : [float,int]                  #[Float]
+          Roughness : [str]                 #[Str]
+          Density : [float,int]                      #[Float]
+          Specific_Heat : [float,int]                #[Float]
+      Wall Insulation :
+          Thickness : [float,int]                     #[Float]
+          Conductivity : [float,int]                 #[Float]
+          Roughness : [str]                 #[Str]
+          Density : [float,int]                       #[Float]
+          Specific_Heat : [float,int]                #[Float]
+          #'Thermal_Absorptance' : [float,int]
+      Basement Floor :
+          Thickness : [float,int]                     #[Float] #this layer will be considered also for the basement floor
+          Conductivity : [float,int]                  #[Float]
+          Roughness : [str]                 #[Str]
+          Density : [float,int]                      #[Float]
+          Specific_Heat : [float,int]                #[Float]
+  #   Basement Floor Insulation :
+  #       Thickness : [float,int]    #not needed as even without basement the Heated1rstFloor is taken for the first floor
+  #       Conductivity : [float,int]
+  #       Roughness : "Rough"
+  #       Density : [float,int]
+  #       Specific_Heat : [float,int]
+  #   Roof Inertia :
+  #        Thickness : [float,int] #not needed unless one wants to have inertia in the roof layer
+  #        Conductivity : [float,int]
+  #        Roughness : "Rough"
+  #        Density : [float,int]
+  #        Specific_Heat : [float,int]
+      Roof Insulation :
+          Thickness : [float,int]                     #[Float]
+          Conductivity : [float,int]                 #[Float]
+          Roughness : [str]                 #[Str]
+          Density : [float,int]                       #[Float]
+          Specific_Heat : [float,int]                #[Float]
+         #Thermal_Absorptance : [float,int]
+      Heated1rstFloor Inertia :
+          Thickness : [float,int]                     #[Float]
+          Conductivity : [float,int]                  #[Float]
+          Roughness : [str]                 #[Str]
+          Density : [float,int]                      #[Float]
+          Specific_Heat : [float,int]                #[Float]
+      Heated1rstFloor Insulation :
+          Thickness : [float,int]                    #[Float]
+          Conductivity : [float,int]                #[Float]
+          Roughness : [str]                 #[Str]
+          Density : [float,int]                       #[Float]
+          Specific_Heat : [float,int]                #[Float]
+         #Thermal_Absorptance : [float,int]
