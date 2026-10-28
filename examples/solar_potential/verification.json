@@ -1,7 +1,0 @@
-{
-  "unique_buildings": 159,
-  "nonnegative_values": true,
-  "maximum_total_allocation_per_source_roof": 1.0,
-  "unique_used_roofs": 148,
-  "independent_source_requery_fid": 27537
-}

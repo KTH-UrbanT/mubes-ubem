@@ -18,3 +18,8 @@ examples/Ex5-Calibration/Build_*/
 bin/outputs/Dynamic.csv
 /examples/1965-1975/
 /examples/result_aggregation/integrated_*.csv
+
+# Local simulation configuration
+/bin/retrofit/ECM_Test.yml
+/default/config/DefaultConfig.yml
+/default/config/env.default.yml

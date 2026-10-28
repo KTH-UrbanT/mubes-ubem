@@ -200,7 +200,7 @@ class Building:
         # Optional geometry correction: adjusts self.footprint to match self.measured_Atemp
         # while keeping adjacent walls fixed and moving free walls as parallel offsets.
         # For the original workflow, comment out only this call.
-        self.AdjustFootprintAreaPreserveAdjacent(LogFile, DebugMode)
+        # self.AdjustFootprintAreaPreserveAdjacent(LogFile, DebugMode)
         self.EPHeatedArea, prem = self.getEPHeatedArea(LogFile,DebugMode)
         # self.VisCorrectedFoot(self.OriginalFootprint[0], self.footprint[0])
 
