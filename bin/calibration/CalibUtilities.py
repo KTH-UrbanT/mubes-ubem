@@ -267,7 +267,6 @@ def getNewBounds_MHA(Bounds,BoundLim, VarName2Change, Error, ParamSample):
             WorstPosError = Error[max(pos_indices, key=lambda i: Error[i])]
         WorstPosErrorPrev = WorstPosError
 
-
     else:
         if all(x < 0 for x in Error[-nbRun:]):
             WorstPosError = WorstPosErrorPrev
@@ -367,13 +366,13 @@ def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change
     #Matches, NbWinners = getTheWinners(VarName2Change,Matches20, Matches10, Matches5)
     Matches, NbWinners = getTheWeightedWinners(VarName2Change, Matches20, Matches10, Matches5)
     try:
-        if len(ParamSample[:, 0]) >= 300 or len(Matches5[VarName2Change[0]]) > 20:
+        if len(ParamSample[:, 0]) >= 300 or len(Matches5[VarName2Change[0]]) > 5:
             Finished = True
         elif len(ParamSample[:, 0]) >= 1000 and len(Matches5[VarName2Change[0]]) < 5:
             Finished = True
         else:
             print('New runs loop')
-            if len(Matches[VarName2Change[0]]) > 10:
+            if len(Matches[VarName2Change[0]]) > 20:
                 try:
                     NBskewedRuns = min(NbRun,NbWinners+90)
                     print('Nd of skewed runs : '+str(NBskewedRuns))

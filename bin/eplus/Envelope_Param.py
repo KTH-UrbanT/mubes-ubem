@@ -64,13 +64,18 @@ def CreateAirwallsMat(idf):
         )
 
 def create_Material(idf, Material, BaseMaterial_RetrofitCase, Retrofit_Info):
+
     if Retrofit_Info['RetrofitCase']:
+        BaseMaterial_RetrofitCase['Window']['UFactor'] = Retrofit_Info['RetrofitOptions']['Window_Base_U_Value']
+        BaseMaterial_RetrofitCase['Wall Insulation']['Thickness'] = Retrofit_Info['RetrofitOptions']['Wall_Base_Thickness']
+        BaseMaterial_RetrofitCase['Roof Insulation']['Thickness'] = Retrofit_Info['RetrofitOptions']['Roof_Base_Thickness']
         if 'window' in [item.lower() for item in Retrofit_Info['RetrofitOptions']['ECMs']]:
             BaseMaterial_RetrofitCase['Window']['UFactor'] = Retrofit_Info['RetrofitOptions']['Window_U_Value2Retrofit']
         if 'wall' in [item.lower() for item in Retrofit_Info['RetrofitOptions']['ECMs']]:
             BaseMaterial_RetrofitCase['Wall Insulation']['Thickness']  = Retrofit_Info['RetrofitOptions']['Wall_Thickness2Retrofit']
         if 'roof' in [item.lower() for item in Retrofit_Info['RetrofitOptions']['ECMs']]:
             BaseMaterial_RetrofitCase['Roof Insulation']['Thickness']  = Retrofit_Info['RetrofitOptions']['Roof_Thickness2Retrofit']
+
         for key in BaseMaterial_RetrofitCase:
             Name = key
             create_MaterialObject(idf, Name, BaseMaterial_RetrofitCase[key])

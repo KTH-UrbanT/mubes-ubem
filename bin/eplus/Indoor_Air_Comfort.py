@@ -16,15 +16,38 @@ def ScheduleCompact_cloth(idf, Name):
         "SCHEDULE:COMPACT",
         Name=Name,
         Schedule_Type_Limits_Name="Any Number",
+
+        # Winter
         Field_1="Through: 05/31",
         Field_2="For: AllDays",
-        Field_3="Until: 24:00, 2",
-        Field_4="Through: 09/30",
+        Field_3="Until: 24:00, 1.0",
+
+        # Summer
+        Field_4="Through: 08/31",
         Field_5="For: AllDays",
-        Field_6="Until: 24:00, 2",
-        Field_7="Through: 12/31",
+        Field_6="Until: 24:00, 0.5",
+
+        # Autumn transition
+        Field_7="Through: 09/30",
         Field_8="For: AllDays",
-        Field_9="Until: 24:00, 2;"
+        Field_9="Until: 24:00, 0.7",
+
+        # Winter
+        Field_10="Through: 12/31",
+        Field_11="For: AllDays",
+        Field_12="Until: 24:00, 1.0;"
+    )
+    return idf
+
+def ScheduleCompact_ClothingMethod(idf, Name):
+    idf.newidfobject(
+        "SCHEDULE:COMPACT",
+        Name=Name,
+        Schedule_Type_Limits_Name="Any Number",
+        Field_1="Through: 12/31",
+        Field_2="For: AllDays",
+        Field_3="Until: 24:00",
+        Field_4=1
     )
     return idf
 

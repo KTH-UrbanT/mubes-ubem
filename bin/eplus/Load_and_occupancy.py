@@ -29,6 +29,7 @@ def ScheduleCompact(idf, Name, SetPoint):
 
 def ScheduleCompactOccup(idf,Name,building,SetPoint):
     #schedule for occupant in all but residential areas
+    SetPoint=1
     idf.newidfobject(
         "SCHEDULE:COMPACT",
         Name=Name,
@@ -36,15 +37,16 @@ def ScheduleCompactOccup(idf,Name,building,SetPoint):
         Field_1='Through: 12/31',
         Field_2='For: AllDays',
         Field_3='Until: '+building.Office_Open,
-        Field_4=0,
+        Field_4=SetPoint,
         Field_5='Until: '+building.Office_Close,
         Field_6=SetPoint,
         Field_7='Until: 24:00',
-        Field_8=0,
+        Field_8=SetPoint,
     )
     return idf
 
 def ScheduleCompactResidentialOccup(idf, Name, building, SetPoint):
+    SetPoint = 1
     idf.newidfobject(
         "SCHEDULE:COMPACT",
         Name=Name,
@@ -54,25 +56,25 @@ def ScheduleCompactResidentialOccup(idf, Name, building, SetPoint):
         # ! --- Weekdays pattern ---
         Field_2='For: Weekdays',
         Field_3='Until: 07:00',  # night/early morning
-        Field_4=3,
+        Field_4=SetPoint,
         Field_5='Until: 09:00',  # morning at home
-        Field_6=2,
+        Field_6=SetPoint,
         Field_7='Until: 17:00',  # out at work/school
-        Field_8=0,
+        Field_8=SetPoint,
         Field_9='Until: 23:00',  # evening at home
-        Field_10=3,
+        Field_10=SetPoint,
         Field_11='Until: 24:00',  # late night
-        Field_12=3,
+        Field_12=SetPoint,
         # ! --- Weekends pattern ---
         Field_13='For: Weekends',
         Field_14='Until: 24:00',
-        Field_15=3,
+        Field_15=SetPoint,
         # ! --- Holidays, design days, custom days ---
         # This line covers: Holiday, SummerDesignDay, WinterDesignDay,
         # CustomDay1, CustomDay2
         Field_16='For: AllOtherDays',
         Field_17='Until: 24:00',
-        Field_18=3,
+        Field_18=SetPoint,
     )
     return idf
 
@@ -102,6 +104,8 @@ def create_Occupant(idf, zone, building,  OccScheduleName, ActScheduleName,NbPeo
         Thermal_Comfort_Model_1_Type = 'FANGER' if building.indoor_Air_Comfort_Analysis else '',
         Work_Efficiency_Schedule_Name = 'WorkEfficiency' if building.indoor_Air_Comfort_Analysis else '',
         Clothing_Insulation_Schedule_Name = 'ClothingInsulation' if building.indoor_Air_Comfort_Analysis else '',
+        Clothing_Insulation_Calculation_Method="CalculationMethodSchedule",
+        Clothing_Insulation_Calculation_Method_Schedule_Name="ClothingMethod",
         Air_Velocity_Schedule_Name = 'Airvelocity' if building.indoor_Air_Comfort_Analysis else '',
         Mean_Radiant_Temperature_Calculation_Type = 'ZoneAveraged' if building.indoor_Air_Comfort_Analysis else ''
         )
@@ -118,7 +122,10 @@ def ZoneLoad(idf, zone, LoadSchedule, building, isfile, ZoningMultiplier):
         Schedule_Name = LoadSchedule,
         Design_Level_Calculation_Method = 'Watts/Area',
         #Design_Level = floor_area/100 if isfile else building.IntLoad, #is a multiplier. this means that the file value will be the full zone's load in W
-        Watts_per_Zone_Floor_Area = 1/100*Multiplier if isfile else building.IntLoad*Multiplier #the /100 comes from the strobePackage but could be removed now (but see internal load in building class, before)
+        Watts_per_Zone_Floor_Area = 1/100*Multiplier if isfile else building.IntLoad*Multiplier, #the /100 comes from the strobePackage but could be removed now (but see internal load in building class, before)
+        Fraction_Latent = 0.0,
+        Fraction_Radiant = 0.0,
+        Fraction_Lost=0.45
         )
     return idf
 
@@ -144,8 +151,8 @@ def ZoneCtrl(idf,zone,building,PeopleDensity,ThermostatName, Multiplier,Correctd
         "HVACTEMPLATE:ZONE:IDEALLOADSAIRSYSTEM",
         Zone_Name=zone.Name,
         Template_Thermostat_Name=ThermostatName,
-        Heat_Recovery_Type='Sensible' if building.VentSyst['BalX'] or building.VentSyst['ExhX'] else 'None',
-        Sensible_Heat_Recovery_Effectiveness= 0.9,#Correctdeff['HReff']*building.AirRecovEff if building.VentSyst['BalX'] or building.VentSyst['ExhX'] else 0,
+        Heat_Recovery_Type= 'Sensible' if building.VentSyst['BalX'] or building.VentSyst['ExhX'] else 'None',
+        Sensible_Heat_Recovery_Effectiveness= Correctdeff['HReff']*building.AirRecovEff if building.VentSyst['BalX'] or building.VentSyst['ExhX'] else 0,
         Latent_Heat_Recovery_Effectiveness= 0,
         #Design_Specification_Outdoor_Air_Object_Name = AirNode,
         Outdoor_Air_Method='Sum' if PeopleDensity>0 and building.DemandControlledVentilation else 'Flow/Area',
@@ -183,7 +190,6 @@ def CreateEnvLeakage(idf, zone, building, ExtWallArea):
     #for the flow coefficient : E+ requires a value in m3/s/Pa^n
     #the database gives a value in l/s/m2 under 50Pa
     FlowCoef = building.EnvLeak*ExtWallArea/1000/(50**PressureExp)
-
     idf.newidfobject(
         "ZONEINFILTRATION:FLOWCOEFFICIENT",
         Name=zone.Name+'Leak',
@@ -311,8 +317,9 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
 
 # if the study is about indoor air quality and indoor thermal comfort then the following schedules are created
     if building.indoor_Air_Comfort_Analysis:
-        ScheduleCompact_WorkEfficiency(idf, 'WorkEfficiency', 0.5)
+        ScheduleCompact_WorkEfficiency(idf, 'WorkEfficiency', 0.0) #For residential occupancy we consider the efficiency to 0.
         ScheduleCompact_cloth(idf, 'ClothingInsulation')
+        ScheduleCompact_ClothingMethod(idf, "ClothingMethod")
         ScheduleCompact_Airvelocity(idf, 'Airvelocity',0.2)
 
         ScheduleCompact_CO2(idf, 'Outdoor CO2 Schedule', 400)
@@ -343,6 +350,7 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
     # to all zones adding an ideal load element driven by the above thermostat
     # but how much of non residential areas is to be considered in each zone, it depends on the overall building values
     OfficeOcc = 1 - building.OccupType['Residential'] #all occupancy but residential are taken for the extra airflow of 7 l/s/pers
+    ResidentialOcc = building.OccupType['Residential']
     # extra variable used below to compute the number of people to be considered in each zone
     PeopleDensity = [0, 0]
     ResidPeopleDensity = [0, 0]
@@ -352,21 +360,25 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
                 PeopleDensity[0] += building.OccupType[key] / OfficeOcc * min(
                     building.OccupRate[key])  # this is the mean number of people per m2
                 PeopleDensity[1] += building.OccupType[key] / OfficeOcc * max(building.OccupRate[key])
-            else:
-                ResidPeopleDensity[0] = building.OccupType[key] / building.OccupType['Residential'] * min(
-                    building.OccupRate[key])
-                ResidPeopleDensity[1] = building.OccupType[key] / building.OccupType['Residential'] * max(
-                    building.OccupRate[key])
+    if ResidentialOcc != 0:
+        try:
+            ResidPeopleDensity[0] += building.OccupType['Residential'] / building.OccupType['Residential'] * min(
+                building.OccupRate['Residential'])
+            ResidPeopleDensity[1] += building.OccupType['Residential'] / building.OccupType['Residential'] * max(
+                building.OccupRate['Residential'])
+        except: pass
     #we need to spread this in all existing blocs based on the area ratio
     BlocOfficeOcc = []
     BlocHeatedArea = []
     BlocOfficechek = []
     BlocPeopleDensity = []
+    BlocPeopleDensityResid = []
     for i,BlocArea in enumerate(building.BlocFootprintArea):
         BlocOfficeOcc.append(OfficeOcc) #because it is already a ratio, no need to add extra for floor areas  *BlocArea/sum(building.BlocFootprintArea))
         BlocHeatedArea.append(BlocArea*building.BlocNbFloor[i])
         BlocOfficechek.append(0) #it will be turned to 1 when finished to be considered depending on the occupancy rate
         BlocPeopleDensity.append(PeopleDensity)
+        BlocPeopleDensityResid.append(ResidPeopleDensity)
 
     #let us go through all the zones but we need to sort them from the lowest ones to the highest one....to have different settings for the basement ones
     # and to put non residential occupation type on the lowest floors first.
@@ -423,10 +435,15 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
             #as we go along the zones, we should know how much is left (this is done through the 2 lines below)
             #it computes the ratio of the current zone area concerned by office occupation (1 or below for each zone)
             OfficeTypeZone = min(1, BlocOfficeOcc[bloc]/(FloorArea/BlocHeatedArea[bloc])) if BlocOfficechek[bloc] == 0 else 0
+            # residential is simply the complement of office: OfficeOcc + ResidentialOcc always sum to 1,
+            # so whatever fraction of this floor isn't office is residential - no separate budget to track
+            OfficeTypeZone = 0 #! delete this later
+            ResidentialTypeZone = 1
             BlocOfficeOcc[bloc] = BlocOfficeOcc[bloc]-(FloorArea/BlocHeatedArea[bloc]) if OfficeTypeZone==1 else BlocOfficeOcc[bloc]
             BlocOfficechek[bloc] = 1 if OfficeTypeZone < 1 else 0 #if 1, it means that this is the last round with office occupancy, the next one will be fully residential
             # We need to define the number of occupant in the current zone depending on the ratio left
             BlocPeopleDensity[bloc] = [i*OfficeTypeZone for i in BlocPeopleDensity[bloc]]
+            BlocPeopleDensityResid[bloc] = [i*ResidentialTypeZone for i in BlocPeopleDensityResid[bloc]]
             if OfficeTypeZone>0:
                 # for each zone concerned by occupancy : one occupant is defined and the number is controlled  with a schedule
                 create_Occupant(idf, zone, building, 'OfficeOccuSchedule '+str(idx), 'OccupActivity', 1)
@@ -455,12 +472,15 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
                     ## here is the schedule that defines the number of occupant with fixed number of occupants (same all the time but still linked to shedule).
                     ScheduleCompactOccup(idf, 'OfficeOccuSchedule '+str(idx), building, SetPoint= round(FloorArea*max(BlocPeopleDensity[bloc]),2))
             else:
+                # independent of the office branch above (not elif): a transition floor can carry both an
+                # office-type occupant (scaled by OfficeTypeZone) and a residential-type occupant
+                # (scaled by ResidentialTypeZone) on the same zone
                 # Earlier it was only office type zone that had occupancy. Now if ResidentialOcc is True we can also define
                 # occupancy for residential type zones
                 if building.ResidentialOcc:
-                    create_Occupant(idf, zone, building, 'ResidentialOccuSchedule ' + str(idx), 'OccupActivity', 1)
+                    create_Occupant(idf, zone, building, 'ResidentialOccuSchedule ' + str(idx), 'OccupActivity', 1)#int(building.measured_Atemp/50)
                     ScheduleCompactResidentialOccup(idf, 'ResidentialOccuSchedule ' + str(idx), building,
-                                         SetPoint=round(FloorArea * max(BlocPeopleDensity[bloc]), 2))
+                                         SetPoint=round(FloorArea * max(BlocPeopleDensityResid[bloc]), 2))
             # computation of the zoning level multiplier
             ZoningMultiplier = 1 if FloorZoning else building.BlocNbFloor[bloc]
             # Internal load profile could be taken from the number of apartment. see building.IntLoad in BuildingObject

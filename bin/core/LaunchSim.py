@@ -117,7 +117,7 @@ def savecase(CaseName,RunDir, building, ResSimpath,file,filepath,API = False,CTi
             shutil.copyfile(os.path.join(RunDir, 'Runout.err'), os.path.join(ResSimpath, file[:-4] + '.err'))
             #shutil.copyfile(os.path.join(RunDir, 'Runtbl.htm'), os.path.join(ResSimpath, file[:-4] + '.html'))
         # shutil.copyfile(RunDir + '\\' + 'Runout.csv', ResSimpath + file[:-4] + '.csv')
-        Res = PPs.HeatPumpHeat2Elec(ResSimpath, Res, 0.7, 0.7)
+        # Res = PPs.HeatPumpHeat2Elec(ResSimpath, Res, 0.7, 0.7)
         with open(os.path.join(ResSimpath, file[:-4] + '.pickle'), 'wb') as handle:
             pickle.dump(Res, handle, protocol=pickle.HIGHEST_PROTOCOL)
 

@@ -9,6 +9,12 @@ def setSimparam(idf,building):
     #changing the Solar calculation because of complex surface (non convexe for inside floors)
     build_param = idf.idfobjects['BUILDING'][0]
     build_param.Solar_Distribution = 'FullExterior'
+    # warmup days (seed value from ExampleFiles/Minimal.idf is 25 / 6)
+    build_param.Maximum_Number_of_Warmup_Days = 25
+    build_param.Minimum_Number_of_Warmup_Days = 6
+    # warmup convergence tolerances (seed values are 0.04 fraction / 0.4 deltaC)
+    build_param.Loads_Convergence_Tolerance_Value = 0.04
+    build_param.Temperature_Convergence_Tolerance_Value = 0.4
     # 'FullInteriorAndExterior' | 'FullExteriorWithReflections' | 'FullExterior' | 'MinimalShadowing'
     #
     # In this case, 'FullExterior' is the most detailed and suitable option.
@@ -30,7 +36,7 @@ def setSimparam(idf,building):
         shadow_param.External_Shading_Calculation_Method  = 'InternalCalculation' #can be ImportedShading if it has been computed before (with yes on the option below)
     else:
         # ShadowCalculation options for energyPlus v9.4.0 and above (maybe)
-        shadow_param.Shading_Calculation_Method = 'PolygonClipping' #can be PixelCounting for the use of GPU or Imported if earlier saved in a file
+        shadow_param.Shading_Calculation_Method = 'PixelCounting' #can be PixelCounting for the use of GPU or Imported if earlier saved in a file
         shadow_param.Shading_Calculation_Update_Frequency_Method = 'Periodic' # Can be Timestep
         shadow_param.Shading_Calculation_Update_Frequency = 20  #number of days acounted for the method. not used if TimestepFrequency is choosen in Calculation_Method
         shadow_param.Pixel_Counting_Resolution = 512 #default value, increasing it can incerease the time of computation, but I don't know if used if not pixelcounting method used"
@@ -53,7 +59,7 @@ def setSimparam(idf,building):
     # )
     #time step
     timestepobj = idf.idfobjects['TIMESTEP'][0]
-    timestepobj.Number_of_Timesteps_per_Hour = 4
+    timestepobj.Number_of_Timesteps_per_Hour = 6
 
     # idf.newidfobject(
     #     'RUNPERIODCONTROL:DAYLIGHTSAVINGTIME',

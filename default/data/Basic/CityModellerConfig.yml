@@ -9,7 +9,9 @@
     CityModeller_Tempalte: 'default/data/Basic/CM_Template.geojson' # Path to input template required for MUBES to run simulation
 1_Sim:
     InputType: 'UUID'                                     # There are two ways to select the building you want to simulate, could be 'Address' or 'UUID'
-    UUID: ['916c8c38-37cf-4903-a77f-79430f98e92f', 'ed4557f7-ca4c-4da0-902b-765fa5b6aa03','ed4557f7-ca4c-4da0-902b-765fa5b6aa03']#['ed4557f7-ca4c-4da0-902b-765fa5b6aa03',    # If you have the UUID of the building, InputType should be 'UUID'. If no UUID inserted, then all UUIDs from cpfootprint will be comsidered.
+    UUID: ['916c8c38-37cf-4903-a77f-79430f98e92f', "c03aba4d-5a36-4453-93ab-166717251c9b", "32aff565-5fbb-4be0-be0a-25fadfd95fb6", "8cf3bdf8-53df-4c24-a1b6-464b02d17b4f", "1b55d6cd-c8e1-4c87-ac3a-9a9c47bcb171", "71f0067d-e8e7-4717-9fc6-531c4859cd45", "f8ed4a9c-5011-456c-a718-ec351d364f99",
+           "873be07f-e1a4-401f-844e-77d2d03bf111", "86980cd6-0764-4604-b234-0a5cc5a74a53", "a96ea08a-a82a-4e99-9985-58c66e61b87a", "1f8c4c61-2936-4602-9f3e-11e24d040b60", "bdc99591-1f2a-4318-93a7-46a4746bb9ec", "f8fdcfb0-f391-42ea-949a-1a4a436c6ad6",
+           "8f5620c1-146d-4e52-8df0-a6a515c68667", "686c5e7b-0e69-478a-bc00-7740434896ee", "5b9e94bc-bdd8-4d96-a92e-fae8baf5dcdb", "ca4e95c8-acd8-4e10-b4a5-35888e303f7a"]#['ed4557f7-ca4c-4da0-902b-765fa5b6aa03',    # If you have the UUID of the building, InputType should be 'UUID'. If no UUID inserted, then all UUIDs from cpfootprint will be comsidered.
            #"cad2c489-218a-4c96-9ce0-6928cb7d61e3"]
     Address: 'Jämtlandsgatan 120-122'                 # If you have the address of the building, InputType should be 'Address'
     address2UUID_DataPath: '/Users/alizad/OneDrive - KTH/Kallvatten_byggnad_with_addresses_and_ids_and_BldgUUD.xlsx'  # Here we need path to dataset that maps the buildings address to their UUID

@@ -1,4 +1,5 @@
 import os.path
+import math
 
 import numpy as np
 from shapely.geometry import Polygon
@@ -11,15 +12,39 @@ from shapely.geometry.polygon import Polygon
 def Photovoltaic(idf, building, keyPath):
     PV_Gen_Names_List = []
     roof_surfaces = [s for s in idf.idfobjects["BUILDINGSURFACE:DETAILED"] if s.Surface_Type.upper() == "ROOF"]
-    PV_Performance(idf)
-    PV_perfnce_Name = idf.idfobjects["PHOTOVOLTAICPERFORMANCE:SIMPLE"][0].Name
+    model = getattr(building, 'PVPerformanceModel', 'Simple')
+    if model == 'Simple':
+        PV_Performance(idf)
+        PV_perfnce_Name = idf.idfobjects["PHOTOVOLTAICPERFORMANCE:SIMPLE"][0].Name
+        arrays = [(roof, 1, 10000) for roof in roof_surfaces]
+    elif model == 'EquivalentOneDiode':
+        settings = getattr(building, 'PVEquivalentOneDiode', {})
+        arrays = SizeOneDiodeArrays(roof_surfaces, settings)
+        if not arrays:
+            return
+        PV_EquivalentOneDiode_Performance(idf, settings)
+        PV_perfnce_Name = idf.idfobjects["PHOTOVOLTAICPERFORMANCE:EQUIVALENTONE-DIODE"][0].Name
+    else:
+        raise ValueError('PVPerformanceModel must be Simple or EquivalentOneDiode, got ' + str(model))
     idf = Schedule4PV(idf, 'Always On PV')
-    for idx, roof in enumerate(roof_surfaces):
-        idf, PV_Gen_Names = PV_Genrator(idf, idx, roof, PV_perfnce_Name)
+    for idx, (roof, parallel_strings, rated_power) in enumerate(arrays):
+        if model == 'Simple':
+            idf, PV_Gen_Names = PV_Genrator(idf, idx, roof, PV_perfnce_Name)
+        else:
+            idf, PV_Gen_Names = PV_Generator_EquivalentOneDiode(
+                idf, roof, PV_perfnce_Name, parallel_strings, settings['ModulesInSeries'])
         PV_Gen_Names_List.append(PV_Gen_Names)
-    idf, LoadCenterName = LoadCenter(idf, PV_Gen_Names_List)
-    idf, Inverter_Name = Inverter(idf)
-    Distribution(idf, LoadCenterName, Inverter_Name)
+    if model == 'Simple':
+        idf, LoadCenterName = LoadCenter(idf, PV_Gen_Names_List)
+    else:
+        idf, LoadCenterName = LoadCenter_EquivalentOneDiode(
+            idf, PV_Gen_Names_List, [array[2] for array in arrays])
+    if model == 'Simple':
+        idf, Inverter_Name = Inverter(idf)
+        Distribution(idf, LoadCenterName, Inverter_Name)
+    else:
+        idf, Inverter_Name = Inverter_EquivalentOneDiode(idf, settings['InverterEfficiency'])
+        Distribution_EquivalentOneDiode(idf, LoadCenterName, Inverter_Name)
     poa = Solar_Irradiance(building, keyPath)
 
 
@@ -39,10 +64,113 @@ def PV_Performance(idf):
     idf.newidfobject(
         "PHOTOVOLTAICPERFORMANCE:SIMPLE",
         Name="Simple PV Flat",
-        Fraction_of_Surface_Area_with_Active_Solar_Cells=0.66,
+        Fraction_of_Surface_Area_with_Active_Solar_Cells=0.6285,
         Conversion_Efficiency_Input_Mode="Fixed",  # case-insensitive
-        Value_for_Cell_Efficiency_if_Fixed=0.15,
+        Value_for_Cell_Efficiency_if_Fixed=0.16,
         Efficiency_Schedule_Name="",  # empty = no schedule
+    )
+    return idf
+
+
+def SizeOneDiodeArrays(roof_surfaces, settings):
+    coverage = settings['RoofCoverageFraction']
+    module_area = settings['ModuleArea']
+    active_area = settings['ActiveArea']
+    modules_in_series = settings['ModulesInSeries']
+    if not 0 < coverage <= 1:
+        raise ValueError('PVEquivalentOneDiode.RoofCoverageFraction must be in (0, 1]')
+    if module_area <= 0 or not 0 < active_area <= module_area:
+        raise ValueError('PVEquivalentOneDiode requires 0 < ActiveArea <= ModuleArea')
+    if not isinstance(modules_in_series, int) or modules_in_series < 1:
+        raise ValueError('PVEquivalentOneDiode.ModulesInSeries must be a positive integer')
+    if not 0 < settings['ModuleCurrentAtMaximumPower'] < settings['ShortCircuitCurrent']:
+        raise ValueError('PVEquivalentOneDiode requires 0 < Imp < Isc')
+    if not 0 < settings['ModuleVoltageAtMaximumPower'] < settings['OpenCircuitVoltage']:
+        raise ValueError('PVEquivalentOneDiode requires 0 < Vmp < Voc')
+    if not 0 < settings['InverterEfficiency'] <= 1:
+        raise ValueError('PVEquivalentOneDiode.InverterEfficiency must be in (0, 1]')
+
+    arrays = []
+    for roof in roof_surfaces:
+        parallel_strings = math.floor(roof.area * coverage / (module_area * modules_in_series))
+        if parallel_strings < 1:
+            continue
+        rated_power = (parallel_strings * modules_in_series *
+                       settings['ModuleCurrentAtMaximumPower'] * settings['ModuleVoltageAtMaximumPower'])
+        arrays.append((roof, parallel_strings, rated_power))
+    return arrays
+
+
+def PV_EquivalentOneDiode_Performance(idf, settings):
+    idf.newidfobject(
+        'PHOTOVOLTAICPERFORMANCE:EQUIVALENTONE-DIODE',
+        Name='Equivalent One-Diode PV',
+        Cell_type=settings['CellType'],
+        Number_of_Cells_in_Series=settings['NumberOfCellsInSeries'],
+        Active_Area=settings['ActiveArea'],
+        Transmittance_Absorptance_Product=settings['TransmittanceAbsorptanceProduct'],
+        Semiconductor_Bandgap=settings['SemiconductorBandgap'],
+        Shunt_Resistance=settings['ShuntResistance'],
+        Short_Circuit_Current=settings['ShortCircuitCurrent'],
+        Open_Circuit_Voltage=settings['OpenCircuitVoltage'],
+        Reference_Temperature=settings['ReferenceTemperature'],
+        Reference_Insolation=settings['ReferenceInsolation'],
+        Module_Current_at_Maximum_Power=settings['ModuleCurrentAtMaximumPower'],
+        Module_Voltage_at_Maximum_Power=settings['ModuleVoltageAtMaximumPower'],
+        Temperature_Coefficient_of_Short_Circuit_Current=settings['TemperatureCoefficientOfShortCircuitCurrent'],
+        Temperature_Coefficient_of_Open_Circuit_Voltage=settings['TemperatureCoefficientOfOpenCircuitVoltage'],
+        Nominal_Operating_Cell_Temperature_Test_Ambient_Temperature=settings['NOCTAmbientTemperature'],
+        Nominal_Operating_Cell_Temperature_Test_Cell_Temperature=settings['NOCTCellTemperature'],
+        Nominal_Operating_Cell_Temperature_Test_Insolation=settings['NOCTInsolation'],
+        Module_Heat_Loss_Coefficient=settings['ModuleHeatLossCoefficient'],
+        Total_Heat_Capacity=settings['TotalHeatCapacity'],
+    )
+    return idf
+
+
+def PV_Generator_EquivalentOneDiode(idf, roof, performance_name, parallel_strings, modules_in_series):
+    generator = idf.newidfobject(
+        'GENERATOR:PHOTOVOLTAIC',
+        Name='PV_On_' + roof.Name,
+        Surface_Name=roof.Name,
+        Photovoltaic_Performance_Object_Type='PhotovoltaicPerformance:EquivalentOne-Diode',
+        Module_Performance_Name=performance_name,
+        Heat_Transfer_Integration_Mode='Decoupled',
+        Number_of_Series_Strings_in_Parallel=parallel_strings,
+        Number_of_Modules_in_Series=modules_in_series,
+    )
+    return idf, generator.Name
+
+
+def LoadCenter_EquivalentOneDiode(idf, generator_names, rated_powers):
+    load_center = idf.newidfobject('ELECTRICLOADCENTER:GENERATORS', Name='PV_Generators_FlatRoofs')
+    for index, (name, rated_power) in enumerate(zip(generator_names, rated_powers), start=1):
+        setattr(load_center, f'Generator_{index}_Name', name)
+        setattr(load_center, f'Generator_{index}_Object_Type', 'Generator:Photovoltaic')
+        setattr(load_center, f'Generator_{index}_Rated_Electric_Power_Output', rated_power)
+    return idf, load_center.Name
+
+
+def Inverter_EquivalentOneDiode(idf, efficiency):
+    inverter = idf.newidfobject(
+        'ELECTRICLOADCENTER:INVERTER:SIMPLE',
+        Name='PV_Inverter',
+        Availability_Schedule_Name='Always On PV',
+        Zone_Name='',
+        Radiative_Fraction=0.0,
+        Inverter_Efficiency=efficiency,
+    )
+    return idf, inverter.Name
+
+
+def Distribution_EquivalentOneDiode(idf, load_center_name, inverter_name):
+    idf.newidfobject(
+        'ELECTRICLOADCENTER:DISTRIBUTION',
+        Name='PV_Distribution',
+        Generator_List_Name=load_center_name,
+        Generator_Operation_Scheme_Type='Baseload',
+        Electrical_Buss_Type='DirectCurrentWithInverter',
+        Inverter_Name=inverter_name,
     )
     return idf
 
@@ -84,7 +212,7 @@ def Inverter(idf):
         Radiative_Fraction=0.0,
         Rated_Maximum_Output_Power=0,  # 0 often means "big enough"; check EP docs if you want explicit
         Night_Tare_Loss_Power=0.0,
-        Nominal_Efficiency=0.96,
+        Nominal_Efficiency=0.90,
     )
     return idf, idf.idfobjects["ELECTRICLOADCENTER:INVERTER:SIMPLE"][0].Name
 
@@ -98,7 +226,7 @@ def Distribution(idf, LoadCenterName, Inverter_Name):
         Demand_Limit_Scheme_Purchased_Electric_Demand_Limit=0.0,
         Track_Schedule_Name="",
         Generator_Track_Follow_Schedule_Name="",
-        Electrical_Bus_Type="AlternatingCurrent",
+        Electrical_Bus_Type="DirectCurrentWithInverter",
         Inverter_Name=Inverter_Name,
         Electrical_Storage_Object_Name="",
         Transformer_Object_Name="",

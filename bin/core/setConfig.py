@@ -588,8 +588,14 @@ def CreatePool2Retrofit(RetrofitChoice, DataBaseInput, CaseChoicesIDs, AllBldIDs
         msg = f"[retrofit Info] No Building ID was given in the RetrofitConfig.yml file. All buildings will be retrofitted."
         print(msg)
         for Ids in CaseChoicesIDs:
+            Pool2Launch[CaseChoicesIDs.index(Ids)]['Retrofit_Info']['RetrofitCase'] = True
             # Lets extract the base thickness, u-value, and wwr based on construction year
             ConstructionYear = DataBaseInput['Build']._data['features'][AllBldIDs.index(Ids)]['properties']['43S_BYGGAR']
+            if ConstructionYear is None:
+                msg = f'[Warning] Building with ID {Ids} has no construction year. Skip it'
+                print(msg)
+                Pool2Launch[CaseChoicesIDs.index(Ids)]['Retrofit_Info']['RetrofitCase'] = False
+                continue
             (Window_Base_U_Value, Wall_Base_Thickness, Roof_Base_Thickness, WindowWallR, Window_U_Value2Retrofit,
              Wall_Thickness2Retrofit, Roof_Thickness2Retrofit) = Envelop_Properties(ConstructionYear, RetrofitChoice)
             Pool2Retrofit.append({'BuildID': Ids, 'BuildNum2Retrofit': AllBldIDs.index(Ids), 'RetrofitAll': True,
@@ -601,7 +607,7 @@ def CreatePool2Retrofit(RetrofitChoice, DataBaseInput, CaseChoicesIDs, AllBldIDs
                                   'Wall_Thickness2Retrofit': Wall_Thickness2Retrofit,
                                   'Roof_Thickness2Retrofit': Roof_Thickness2Retrofit})
 
-            Pool2Launch[CaseChoicesIDs.index(Ids)]['Retrofit_Info']['RetrofitCase'] = True
+
             Pool2Launch[CaseChoicesIDs.index(Ids)]['Retrofit_Info']['RetrofitFolderPath'] = RetrofitFolderPath
             Pool2Launch[CaseChoicesIDs.index(Ids)]['Retrofit_Info']['RetrofitOptions'] = Pool2Retrofit[-1]
 

@@ -61,6 +61,31 @@
         ExtraTowerFile : [str]                          #name of the json file that has all the upper tower and shades that are to be added
 
 3_SIM :
+    PVPerformanceModel : [str]
+    PVEquivalentOneDiode :
+        RoofCoverageFraction : [float,int]
+        ModuleArea : [float,int]
+        ModulesInSeries : [int]
+        InverterEfficiency : [float,int]
+        CellType : [str]
+        NumberOfCellsInSeries : [int]
+        ActiveArea : [float,int]
+        TransmittanceAbsorptanceProduct : [float,int]
+        SemiconductorBandgap : [float,int]
+        ShuntResistance : [float,int]
+        ShortCircuitCurrent : [float,int]
+        OpenCircuitVoltage : [float,int]
+        ReferenceTemperature : [float,int]
+        ReferenceInsolation : [float,int]
+        ModuleCurrentAtMaximumPower : [float,int]
+        ModuleVoltageAtMaximumPower : [float,int]
+        TemperatureCoefficientOfShortCircuitCurrent : [float,int]
+        TemperatureCoefficientOfOpenCircuitVoltage : [float,int]
+        NOCTAmbientTemperature : [float,int]
+        NOCTCellTemperature : [float,int]
+        NOCTInsolation : [float,int]
+        ModuleHeatLossCoefficient : [float,int]
+        TotalHeatCapacity : [float,int]
     #files are needed to be located in the eather folder of EnergyPlus asthe same path is used afterward to launch the simulation
     1_WeatherData :
         WeatherDataFile : [str]                         #[Str] Need to be a epw file. This one is given because installed by default when installing EnergyPlus

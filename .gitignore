@@ -1,2 +1,20 @@
 bin/Generated_Buildings.geojson
 examples/Stockholm
+
+# Local Python environment and editor/cache files
+venv/
+.venv/
+.idea/
+.claude/settings.local.json
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# Generated MUBES / EnergyPlus simulation artifacts
+**/Final_Sim_Results/
+**/Sim_Results/
+**/Analysis_Temp/
+examples/Ex5-Calibration/Build_*/
+bin/outputs/Dynamic.csv
+/examples/1965-1975/
+/examples/result_aggregation/integrated_*.csv

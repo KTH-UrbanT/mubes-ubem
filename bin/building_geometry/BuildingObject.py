@@ -16,6 +16,9 @@ import re, itertools
 import utilities.ProbGenerator as ProbGenerator
 import numpy as np
 import math
+import copy
+from shapely import wkt
+from shapely.affinity import scale
 
 import matplotlib.pyplot as plt
 #this class defines the building characteristics regarding available data in the geojson file
@@ -180,17 +183,28 @@ class Building:
         self.measured_Atemp = int(DB.properties['EgenAtemp'])
         self.BldgElevation = config['3_SIM']['GeomElement']['BuildingElevation']
         self.Renewables = config['2_CASE']['1_SimChoices']['Renewables']
+        self.PVPerformanceModel = config['3_SIM'].get('PVPerformanceModel', 'Simple')
+        self.PVEquivalentOneDiode = config['3_SIM'].get('PVEquivalentOneDiode', {})
         self.footprint,  self.BlocHeight, self.BlocNbFloor, self.BlocAlt, self.BlocMaxAlt,self.BlocAltMatches = self.getfootprint(DB,LogFile,self.nbfloor,DebugMode)
+        # self.footprint = self.AreaCorrector(self.footprint, self.measured_Atemp/self.nbfloor)
+        self.OriginalFootprint = copy.deepcopy(self.footprint)
         self.AggregFootprint = self.getAggregatedFootprint()
         self.RefCoord = self.getRefCoord()
         self.DB_Surf = self.getsurface(DB, DBL,LogFile,DebugMode)
         self.SharedBld, self.VolumeCorRatio = self.IsSameFormularIdBuilding(Buildingsfile, nbcase, LogFile, DBL,DebugMode)
         self.BlocHeight, self.BlocNbFloor, self.StoreyHeigth = self.EvenFloorCorrection(self.BlocHeight, self.nbfloor, self.BlocNbFloor, self.footprint, self.measured_Atemp, LogFile,DebugMode)
         self.AdjustBlocDimension()
-        self.EPHeatedArea, prem = self.getEPHeatedArea(LogFile,DebugMode)
-        # self.perimeter = prem #Todo delete it later
         self.AdjacentWalls = [] #this will be appended in the getshade function if any present
         self.shades = self.getshade(nbcase, DataBaseInput,LogFile, PlotOnly=PlotOnly,DebugMode=DebugMode)
+
+        # Optional geometry correction: adjusts self.footprint to match self.measured_Atemp
+        # while keeping adjacent walls fixed and moving free walls as parallel offsets.
+        # For the original workflow, comment out only this call.
+        self.AdjustFootprintAreaPreserveAdjacent(LogFile, DebugMode)
+        self.EPHeatedArea, prem = self.getEPHeatedArea(LogFile,DebugMode)
+        # self.VisCorrectedFoot(self.OriginalFootprint[0], self.footprint[0])
+
+        # self.perimeter = prem #Todo delete it later
         self.AddExtraShade(extraShade)
         self.Materials = config['3_SIM']['BaseMaterial']
         self.InternalMass = config['3_SIM']['InternalMass']
@@ -198,8 +212,10 @@ class Building:
         if not PlotOnly:
             #the attributres above are needed in all case, the one below are needed only if energy simulation is asked for
             self.VentSyst = self.getVentSyst(DB, config['3_SIM']['VentSyst'], LogFile,DebugMode)
-            # self.VentSyst['BalX'] = True # ToDo delete these two lines later
-            # self.VentSyst['ExhX'] = True
+            if self.RetrofitInfo['RetrofitCase']:
+                if 'HeatRecovery' in self.RetrofitInfo['RetrofitOptions']['ECMs']:
+                    self.VentSyst['BalX'] = True # ToDo delete these two lines later
+                    self.VentSyst['ExhX'] = True
             self.AreaBasedFlowRate = self.getAreaBasedFlowRate(DB, DBL, BE)
             self.OccupType = self.getOccupType(DB, config['3_SIM']['OccupType'], LogFile,DebugMode)
             self.ResidentialOcc = config['2_CASE']['1_SimChoices']['ResidentialOcc']
@@ -643,6 +659,188 @@ class Building:
         BlocHeight = [val-val1 for val,val1 in zip(BlocMaxAlt,BlocAlt)]
         return coord, BlocHeight, BlocNbFloor, BlocAlt,BlocMaxAlt,BlocAltMatches
 
+
+    def AdjustFootprintAreaPreserveAdjacent(self, LogFile=[], DebugMode=False):
+        current = sum(Polygon(foot).area * floors for foot, floors in zip(self.footprint, self.BlocNbFloor))
+        if not self.measured_Atemp or current <= 0:
+            return
+        adjacent = [LineString(shade['Vertex']) for shade in self.shades.values() if shade.get('distance') == 0]
+        adjacent_segments = []
+        for line in adjacent:
+            coords = list(line.coords)
+            for idx in range(len(coords) - 1):
+                segment = LineString([coords[idx], coords[idx + 1]])
+                if segment.length > 0:
+                    adjacent_segments.append(segment)
+        shading_segments = []
+        for shade in self.shades.values():
+            if shade.get('distance') == 0:
+                continue
+            coords = shade.get('Vertex', [])
+            for idx in range(len(coords) - 1):
+                segment = LineString([coords[idx], coords[idx + 1]])
+                if segment.length > 0:
+                    shading_segments.append(segment)
+        tolerance = max(self.DistTol, 0.05)
+
+        def is_adjacent_edge(edge):
+            if edge.length <= tolerance:
+                return False
+            edge_coords = list(edge.coords)
+            edge_dx = edge_coords[1][0] - edge_coords[0][0]
+            edge_dy = edge_coords[1][1] - edge_coords[0][1]
+            for segment in adjacent_segments:
+                seg_coords = list(segment.coords)
+                seg_dx = seg_coords[1][0] - seg_coords[0][0]
+                seg_dy = seg_coords[1][1] - seg_coords[0][1]
+                parallel = abs((edge_dx * seg_dx + edge_dy * seg_dy) / (edge.length * segment.length)) > 0.98
+                if not parallel or edge.distance(segment) > tolerance:
+                    continue
+                overlap = edge.buffer(tolerance, cap_style=2).intersection(segment).length
+                if overlap > max(tolerance, min(edge.length, segment.length) * 0.2):
+                    return True
+            return False
+
+        def line_intersection(line1, line2):
+            (x1, y1), (x2, y2) = line1
+            (x3, y3), (x4, y4) = line2
+            den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+            if abs(den) < 1e-9:
+                return line2[0]
+            px = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / den
+            py = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / den
+            return (px, py)
+
+        def offset_would_cross_shading(point, next_point, moved_point, moved_next_point, original_poly):
+            swept = Polygon([point, next_point, moved_next_point, moved_point])
+            if not swept.is_valid or swept.area <= 0:
+                return False
+            return any(
+                not original_poly.buffer(tolerance).intersects(segment) and
+                swept.buffer(tolerance).intersects(segment)
+                for segment in shading_segments
+            )
+
+        def adjusted_footprint(offset):
+            new_footprint = []
+            for foot in self.footprint:
+                closed = foot[0] == foot[-1]
+                points = foot[:-1] if closed else foot
+                adjacent_edges = [False] * len(points)
+                for idx, node in enumerate(points):
+                    edge = LineString([node, points[(idx + 1) % len(points)]])
+                    if is_adjacent_edge(edge):
+                        adjacent_edges[idx] = True
+                if adjacent and all(adjacent_edges):
+                    new_footprint.append(foot)
+                    continue
+                original_poly = Polygon(points)
+                signed_area = sum(
+                    points[idx][0] * points[(idx + 1) % len(points)][1] -
+                    points[(idx + 1) % len(points)][0] * points[idx][1]
+                    for idx in range(len(points))
+                )
+                offset_lines = []
+                for idx, point in enumerate(points):
+                    next_point = points[(idx + 1) % len(points)]
+                    dx = next_point[0] - point[0]
+                    dy = next_point[1] - point[1]
+                    length = max((dx ** 2 + dy ** 2) ** 0.5, 1e-9)
+                    normal = (dy / length, -dx / length) if signed_area > 0 else (-dy / length, dx / length)
+                    edge_offset = 0 if adjacent_edges[idx] else offset
+                    moved_point = (point[0] + normal[0] * edge_offset, point[1] + normal[1] * edge_offset)
+                    moved_next_point = (next_point[0] + normal[0] * edge_offset, next_point[1] + normal[1] * edge_offset)
+                    if edge_offset and offset_would_cross_shading(point, next_point, moved_point, moved_next_point, original_poly):
+                        edge_offset = 0
+                        moved_point = point
+                        moved_next_point = next_point
+                    offset_lines.append((
+                        moved_point,
+                        moved_next_point
+                    ))
+                adjusted = [
+                    line_intersection(offset_lines[idx - 1], offset_lines[idx])
+                    for idx in range(len(offset_lines))
+                ]
+                candidate_poly = Polygon(adjusted)
+                if not candidate_poly.is_valid or candidate_poly.area <= 0:
+                    return None
+                if any(
+                    not original_poly.buffer(tolerance).intersects(segment) and
+                    (candidate_poly.buffer(tolerance).contains(segment) or candidate_poly.crosses(segment))
+                    for segment in shading_segments
+                ):
+                    return None
+                new_footprint.append(adjusted + [adjusted[0]] if closed else adjusted)
+            return new_footprint
+
+        def heated_area(candidate):
+            if candidate is None:
+                return None
+            return sum(Polygon(foot).area * floors for foot, floors in zip(candidate, self.BlocNbFloor))
+
+        target = float(self.measured_Atemp)
+        if abs(current - target) <= max(0.01, target * 0.001):
+            return
+        if target > current:
+            low, high = 0.0, 0.1
+        else:
+            low, high = -0.1, 0.0
+        low_area = heated_area(adjusted_footprint(low))
+        high_area = heated_area(adjusted_footprint(high))
+        while not (
+            low_area is not None and high_area is not None and
+            min(low_area, high_area) <= target <= max(low_area, high_area)
+        ):
+            if target > current:
+                if high_area is None:
+                    return
+                low = high
+                low_area = high_area
+                high *= 2
+            else:
+                if low_area is None:
+                    return
+                high = low
+                high_area = low_area
+                low *= 2
+            low_area = heated_area(adjusted_footprint(low))
+            high_area = heated_area(adjusted_footprint(high))
+            if max(abs(low), abs(high)) > 100:
+                return
+        if low_area is None or high_area is None:
+            return
+        for _ in range(40):
+            mid = (low + high) / 2
+            mid_area = heated_area(adjusted_footprint(mid))
+            if mid_area is None:
+                if target > current:
+                    high = mid
+                else:
+                    low = mid
+                continue
+            if (mid_area < target) == (low_area < target):
+                low = mid
+                low_area = mid_area
+            else:
+                high = mid
+                high_area = mid_area
+        low_candidate = adjusted_footprint(low)
+        high_candidate = adjusted_footprint(high)
+        low_area = heated_area(low_candidate)
+        high_area = heated_area(high_candidate)
+        if low_area is None and high_area is None:
+            return
+        if high_area is None or (low_area is not None and abs(low_area - target) < abs(high_area - target)):
+            self.footprint = low_candidate
+        else:
+            self.footprint = high_candidate
+        self.AggregFootprint = self.getAggregatedFootprint()
+        self.RefCoord = self.getRefCoord()
+        if DebugMode:
+            final = sum(Polygon(foot).area * floors for foot, floors in zip(self.footprint, self.BlocNbFloor))
+            GrlFct.Write2LogFile('[Geom Info] Footprint area adjusted from ' + str(round(current, 2)) + ' to ' + str(round(final, 2)) + ' m2 while preserving adjacent edges\n', LogFile)
+
     def AdjustBlocDimension(self):
         HeightCors = [h-(mAlt-Alt) for h,mAlt,Alt in zip(self.BlocHeight,self.BlocMaxAlt,self.BlocAlt)]
         newAlt = []
@@ -678,7 +876,7 @@ class Building:
         # for height in range(len(BlocHeight)):
         #     BlocHeight[height] *= storeyRatio
         for idx, Height in enumerate(BlocHeight):
-            val = int(round(Height, 1) / StoreyHeigth)
+            val = round(round(Height, 2) / StoreyHeigth)
             BlocNbFloor.append(max(1, val))  # the height is ed to the closest 10cm
             BlocHeight_New.append(BlocNbFloor[-1] * StoreyHeigth)
             msg = '[Geom Info] Bloc height : ' + str(BlocHeight_New[idx]) + ' with ' + str(BlocNbFloor[-1]) + ' nb of floors\n'
@@ -708,7 +906,8 @@ class Building:
 
         return BlocHeight_New, BlocNbFloor, StoreyHeigth
 
-    def best_storey_height(self, BlocHeight, nbfloor, BlocNbFloor, h_min=2.6, h_max=3.0):
+    def best_storey_height(self, BlocHeight, nbfloor, BlocNbFloor, h_min=2.6, h_max=5.5):
+        # We try to find a storey height that exactly matches building height and number of floors, height = nbfloor * storey height
         best_nbFloor = None
         best_height = None
         best_error = float("inf")
@@ -735,15 +934,46 @@ class Building:
                 if error < best_error:
                     best_error = error
                     best_height = storeyHeight
+                else:
+                    break
             base = math.floor(best_height)
             decimal = best_height - base
-            if decimal < 0.25:
-                best_height = base
-            elif decimal < 0.86:
-                best_height = base + 0.5
-            else:
-                best_height = base + 1
-        return round(best_height)
+            # if decimal < 0.25:
+            #     best_height = base
+            # elif decimal < 0.86:
+            #     best_height = base + 0.5
+            # else:
+            #     best_height = base + 1
+        return best_height#round(best_height)
+
+    def VisCorrectedFoot(self, orig, foot):
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots(figsize=(8, 8))
+
+        # Original footprint
+        orig = orig
+        if orig[0] != orig[-1]:
+            orig = orig + [orig[0]]
+        x, y = zip(*orig)
+        ax.plot(x, y, '-o', color='tab:blue', linewidth=2, markersize=3, label='Original')
+        ax.fill(x, y, color='tab:blue', alpha=0.2)
+
+        # Current footprint
+        foot = foot
+        if foot[0] != foot[-1]:
+            foot = foot + [foot[0]]
+        x, y = zip(*foot)
+        ax.plot(x, y, '-o', color='tab:red', linewidth=2, markersize=3, label='Current')
+        # Uncomment if you also want to fill it:
+        # ax.fill(x, y, color='tab:red', alpha=0.2)
+        ax.set_title(self.BuildID['50A_UUID'])
+
+        ax.set_aspect('equal', adjustable='box')
+
+        ax.grid(True)
+        ax.legend()
+        plt.show()
 
     def getEPHeatedArea(self,LogFile,DebugMode):
         "get the heated area based on the footprint and the number of floors"

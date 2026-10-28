@@ -182,18 +182,18 @@ def Read_OutputsEso(CaseName,ExtSurfNames, PerBlockResult, ZoneOutput):
                     BuildAgregRes[KeyArea][i]['GlobData'] = [sum(x)/2 for x in zip(BuildAgregRes[KeyArea][i]['GlobData'], ZoneAgregRes[key][i]['GlobData'])]
                 else:
                     BuildAgregRes[KeyArea][i]['GlobData'] = [sum(x) for x in zip(BuildAgregRes[KeyArea][i]['GlobData'], ZoneAgregRes[key][i]['GlobData'])]
-    if PerBlockResult and not ZoneOutput:
-        msg = '[Output Info] Per-block and per-zone results were not generated because "PerZoneResult" is disabled in the configuration.'
-        print(msg)
-    elif PerBlockResult and ZoneOutput:
-        msg = '[Output Info] Results have been generated for each block and zone.'
-        print(msg)
-    elif not PerBlockResult and ZoneOutput:
-        msg = '[Output Info] Results have been aggregated and reported at the zone level.'
-        print(msg)
-    elif not PerBlockResult and not ZoneOutput:
-        msg = '[Output Info] Results have been aggregated and reported at the building level.'
-        print(msg)
+    # if PerBlockResult and not ZoneOutput:
+    #     msg = '[Output Info] Per-block and per-zone results were not generated because "PerZoneResult" is disabled in the configuration.'
+    #     print(msg)
+    # elif PerBlockResult and ZoneOutput:
+    #     msg = '[Output Info] Results have been generated for each block and zone.'
+    #     print(msg)
+    # elif not PerBlockResult and ZoneOutput:
+    #     msg = '[Output Info] Results have been aggregated and reported at the zone level.'
+    #     print(msg)
+    # elif not PerBlockResult and not ZoneOutput:
+    #     msg = '[Output Info] Results have been aggregated and reported at the building level.'
+    #     print(msg)
 
     return ZoneAgregRes if ZoneOutput else BuildAgregRes
 

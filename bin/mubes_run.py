@@ -20,6 +20,9 @@ import multiprocessing as mp
 import yaml
 import copy
 import sys, os, pickle
+import time
+import threading
+import builtins
 import logging
 logging.disable(logging.CRITICAL)
 
@@ -35,6 +38,82 @@ sys.path.append('..')
 def giveReturnFromPool(results):
     doNothing = 0
     print(results)
+
+
+def _format_elapsed(seconds):
+    seconds = int(seconds)
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f'{hours:02d}:{minutes:02d}:{seconds:02d}'
+
+
+# Guards the terminal line so the ticking elapsed-time display never ends up
+# glued to the front of an unrelated log line, whether that line is printed
+# from another thread in this process or from a multiprocessing.Pool worker
+# (hence the Manager-backed lock/dict, which both sides can share).
+_original_print = builtins.print
+# Set to the shared (lock, state) pair while a run is in progress, so Pool
+# creations elsewhere in this module can wire workers into the same guard.
+_pool_guard = None
+
+
+def _make_guarded_print(lock, state):
+    def _guarded_print(*args, **kwargs):
+        with lock:
+            if state.get('active'):
+                sys.stdout.write('\r' + ' ' * state.get('width', 0) + '\r')
+                state['active'] = False
+            _original_print(*args, **kwargs)
+    return _guarded_print
+
+
+def _pool_worker_init(lock, state):
+    builtins.print = _make_guarded_print(lock, state)
+
+
+def _start_elapsed_timer():
+    global _pool_guard
+    start_time = time.time()
+    stop_event = threading.Event()
+    manager = mp.Manager()
+    lock = manager.Lock()
+    state = manager.dict({'active': False, 'width': 0})
+    _pool_guard = (lock, state)
+    builtins.print = _make_guarded_print(lock, state)
+
+    def show_elapsed():
+        while not stop_event.wait(1):
+            text = f'[Timer] elapsed time: {_format_elapsed(time.time() - start_time)}'
+            with lock:
+                sys.stdout.write('\r' + text)
+                sys.stdout.flush()
+                state['active'] = True
+                state['width'] = len(text)
+
+    timer_thread = threading.Thread(target=show_elapsed, daemon=True)
+    timer_thread.start()
+    return start_time, stop_event, timer_thread, manager
+
+
+def _stop_elapsed_timer(start_time, stop_event, timer_thread, manager):
+    global _pool_guard
+    stop_event.set()
+    timer_thread.join(timeout=2)
+    builtins.print = _original_print
+    lock, state = _pool_guard
+    with lock:
+        if state.get('active'):
+            sys.stdout.write('\r' + ' ' * state.get('width', 0) + '\r')
+    _pool_guard = None
+    manager.shutdown()
+    elapsed = _format_elapsed(time.time() - start_time)
+    print(f'[Timer] total elapsed time: {elapsed}')
+
+
+def _make_pool(nbcpu):
+    if _pool_guard is not None:
+        return mp.Pool(processes=int(nbcpu), initializer=_pool_worker_init, initargs=_pool_guard)
+    return mp.Pool(processes=int(nbcpu))
 
 
 def mubes_run(CaseChoices, config, SepThreads, Pool2Launch, MultipleFiles, RetrofitConfig, Pool2Retrofit):
@@ -117,7 +196,7 @@ def mubes_run(CaseChoices, config, SepThreads, Pool2Launch, MultipleFiles, Retro
                         NewRuns.append(i)
                 #now the pool can be created changing the FirstRun key to False for all other runs
                 CaseChoices['FirstRun'] = False
-                pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
+                pool = _make_pool(nbcpu)  # let us allow 80% of CPU usage
                 for i in NewRuns:
                     pool.apply_async(CB_OAT.LaunchOAT, args=(CaseChoices,SimDir,keypath,nbBuild,Case['Retrofit_Info'], ParamSample[i+idx_offset, :],i+idx_offset,pythonpath))
                 pool.close()
@@ -128,7 +207,7 @@ def mubes_run(CaseChoices, config, SepThreads, Pool2Launch, MultipleFiles, Retro
                 if not file2run and CaseChoices['Verbose'] :  print(
                         '[Info] All asked simulations are already done and results available...refreshfolder to remove those')
                 nbcpu = max(mp.cpu_count()*CaseChoices['CPUusage'],1)
-                pool = mp.Pool(processes=int(nbcpu))  # let us allow 80% of CPU usage
+                pool = _make_pool(nbcpu)  # let us allow 80% of CPU usage
                 # This is added to take care of actuator implementation. Prev the building pickle file loaded in runcase function.
                 for i in range(len(file2run)):
                     if config['2_CASE']['1_SimChoices']['EnergyManagementSystem']:
@@ -219,7 +298,7 @@ def mubes_run(CaseChoices, config, SepThreads, Pool2Launch, MultipleFiles, Retro
                                                      os.path.basename(File2Launch[ListKey][0]['SimDir']))
             if not MultipleFiles and CaseChoices['Verbose']: print('Idf input files under process...')
             CurrentSimDir = File2Launch[ListKey][0]['SimDir']
-            pool = mp.Pool(processes=int(nbcpu))
+            pool = _make_pool(nbcpu)
             for nbBuild in File2Launch[ListKey]:
                 pool.apply_async(CB_OAT.LaunchOAT, args=(CaseChoices,CurrentSimDir,nbBuild['keypath'],nbBuild['nbBuild'], nbBuild['Retrofit_Info'], [1],0,pythonpath))
                 # CB_OAT.LaunchOAT(CaseChoices, CurrentSimDir, nbBuild['keypath'], nbBuild['nbBuild'], nbBuild['Ret'], [1], 0, pythonpath)
@@ -232,7 +311,7 @@ def mubes_run(CaseChoices, config, SepThreads, Pool2Launch, MultipleFiles, Retro
             if CaseChoices['Verbose']: print(
                         'Simulations under process for ' + os.path.basename(CurrentSimDir))
             file2run = LaunchSim.initiateprocess(CurrentSimDir)
-            pool = mp.Pool(processes=int(nbcpu))
+            pool = _make_pool(nbcpu)
             if config['2_CASE']['1_SimChoices']['EnergyManagementSystem']:
                 EnergyManagementSystem.EMS_Actuator_Handling_Module(CaseChoices['NbRuns'], config, epluspath, CurrentSimDir, file2run)
             for i in range(len(file2run)):
@@ -296,28 +375,36 @@ if __name__ == '__main__':
 
     CaseChoices, config, SepThreads, Pool2Launch, MultipleFiles, RetrofitConfig, Pool2Retrofit = setConfig.getConfig(
         localDir)
-    if Pool2Retrofit:
-        from itertools import combinations
+    timer_start, timer_stop, timer_thread, timer_manager = _start_elapsed_timer()
+    try:
+        if Pool2Retrofit:
 
-        SelectedECMs = RetrofitConfig['0_RetrofitChoice']['ECM']['ECM_to_Implement']
-        ECM_Combo = []
-        for r in range(1, len(SelectedECMs) + 1):
-            for combo in combinations(SelectedECMs, r):
-                ECM_Combo.append(['_'.join(combo)])
-        if len(ECM_Combo) == 0:
-            ECM_Combo.append(['Base'])
-        for ecm in ECM_Combo:
-            if ecm[0] == 'Base':
-                pass
-            else:
-                for idx, _ in enumerate(Pool2Launch):
-                    try:
-                        Pool2Launch[idx]['Retrofit_Info']['RetrofitOptions']['ECMs'] = ecm[0].split('_')
-                    except:
-                        Pool2Launch[idx]['Retrofit_Info']['RetrofitOptions']['ECMs'] = ecm
+            from itertools import combinations
 
-            config['2_CASE']['0_GrlChoices']['CaseName'] = 'SvB_' + ecm[0]
-            CaseChoices['CaseName'] = 'SvB_' + ecm[0]
+            SelectedECMs = RetrofitConfig['0_RetrofitChoice']['ECM']['ECM_to_Implement']
+            ECM_Combo = []
+            for r in range(1, len(SelectedECMs) + 1):
+                for combo in combinations(SelectedECMs, r):
+                    ECM_Combo.append(['_'.join(combo)])
+            if len(ECM_Combo) == 0:
+                ECM_Combo.append(['Base'])
+            for ecm in ECM_Combo:
+                if ecm[0] == 'Base':
+                    pass
+                # elif ecm[0] != 'Window_Wall_HeatRecovery':
+                #     continue
+                else:
+                    for idx, _ in enumerate(Pool2Launch):
+                        if Pool2Launch[idx]['Retrofit_Info']['RetrofitCase']:
+                            try:
+                                Pool2Launch[idx]['Retrofit_Info']['RetrofitOptions']['ECMs'] = ecm[0].split('_')
+                            except:
+                                Pool2Launch[idx]['Retrofit_Info']['RetrofitOptions']['ECMs'] = ecm
+
+                config['2_CASE']['0_GrlChoices']['CaseName'] = 'SvB_' + ecm[0]
+                CaseChoices['CaseName'] = 'SvB_' + ecm[0]
+                mubes_run(CaseChoices, config, SepThreads, Pool2Launch, MultipleFiles, RetrofitConfig, Pool2Retrofit)
+        else:
             mubes_run(CaseChoices, config, SepThreads, Pool2Launch, MultipleFiles, RetrofitConfig, Pool2Retrofit)
-    else:
-        mubes_run(CaseChoices, config, SepThreads, Pool2Launch, MultipleFiles, RetrofitConfig, Pool2Retrofit)
+    finally:
+        _stop_elapsed_timer(timer_start, timer_stop, timer_thread, timer_manager)

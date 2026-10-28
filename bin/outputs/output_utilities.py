@@ -379,7 +379,11 @@ def plotHist(fig_name,ax0,vary,varyname):
     ax0.hist(vary,normed=True,label = varyname)
     ax0.legend()
 
-def GetData(path,extravariables = [], Timeseries = [],BuildNum=[],BldList = []):
+def GetData(path,extravariables = [], Timeseries = [],BuildNum=[],BldList = [],PreLoadedResults=None):
+    # PreLoadedResults : optional {pickle_filename: already-unpickled data} mapping.
+    # When given, the per-building pickles are taken from memory instead of being
+    # re-read from disk (identical content, just skips the pickle.load I/O). The
+    # .err files are still read and every downstream computation is unchanged.
     os.chdir(path)
     liste = os.listdir()
     ResBld = {}
@@ -422,13 +426,16 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[],BldList = []):
             try:
                 #print(file)
                 SimNumb.append(NbRun)
-                try:
-                    with open(file, 'rb') as handle:
-                        ResBld[SimNumb[-1]] = pickle.load(handle)
-                except:
-                    import pickle5
-                    with open(file, 'rb') as handle:
-                        ResBld[SimNumb[-1]] = pickle5.load(handle)
+                if PreLoadedResults is not None and file in PreLoadedResults:
+                    ResBld[SimNumb[-1]] = PreLoadedResults[file]
+                else:
+                    try:
+                        with open(file, 'rb') as handle:
+                            ResBld[SimNumb[-1]] = pickle.load(handle)
+                    except:
+                        import pickle5
+                        with open(file, 'rb') as handle:
+                            ResBld[SimNumb[-1]] = pickle5.load(handle)
                 try:
                     Res['ErrFiles'].append(os.path.getsize(file[:file.index('.pickle')]+'.err'))
                     with open(file[:file.index('.pickle')]+'.err') as file:
@@ -441,7 +448,7 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[],BldList = []):
                 pass
 
     #lets get the mandatory variables
-    variables=['EP_Elec','EP_Heat','EP_Cool','EP_DHW','SimNum','EPC_Elec','EPC_Heat','EPC_Cool','EPC_Tot',
+    variables=['EP_Elec','EP_Heat','EP_Cool','EP_DHW','SimNum','EPC_Elec','EPC_Heat','EPC_DHW','EPC_Cool','EPC_Tot',
                'DB_Surf','EP_Area','BuildID','BldSimName','ExtEnvSurf','IntVolume']
     # lest build the Res dictionnary
     for key in variables:
@@ -497,6 +504,12 @@ def GetData(path,extravariables = [], Timeseries = [],BuildNum=[],BldList = []):
         for x in BuildObj.EPCMeters['Heating']:
             heatval += BuildObj.EPCMeters['Heating'][x]
         Res['EPC_Heat'].append(heatval/Res['DB_Surf'][-1] if Res['DB_Surf'][-1]!=0 else 0)
+
+        dhvval = 0
+        for x in BuildObj.EPCMeters['DHW']:
+            dhvval += BuildObj.EPCMeters['DHW'][x]
+        Res['EPC_DHW'].append(dhvval/Res['DB_Surf'][-1] if Res['DB_Surf'][-1]!=0 else 0)
+
         coolval = 0
         for x in BuildObj.EPCMeters['Cooling']:
             coolval += BuildObj.EPCMeters['Cooling'][x]

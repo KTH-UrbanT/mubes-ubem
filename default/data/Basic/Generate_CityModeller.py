@@ -77,6 +77,8 @@ def clean_nans(obj):
 # There is a template of CityModeller in dir with name CM_Template that we use to generate CityModeller
 class ShapeCityPlanner():
     def __init__(self, path):
+        if 'bin' in path:
+            path = path[:path.find('bin')]
         self.Mainpath = path #os.getcwd()[: os.getcwd().find('bin')]
         self.config = Read_yml(os.path.join(self.Mainpath, 'default/data/Basic/CityModellerConfig.yml'))
         if self.config['1_Sim']['ODEN_API']:
@@ -218,6 +220,8 @@ class ShapeCityPlanner():
     def SaveitGeoJson(self, Mainpath, BuildingData, Path2Data, CaseName):
         # Replace this with your actual GeoJSON input dictionary
         geojson_cleaned = clean_nans(BuildingData)
+        if 'bin' in Mainpath:
+            Mainpath = Mainpath[:Mainpath.find('bin')]
         DataFolder = os.path.join(Mainpath,'examples', 'Data_for_'+CaseName)
             # os.path.join(f"{Mainpath}{Path2Data[3:]}"[:(f"{Mainpath}{Path2Data[3:]}").find('examples')+9], 'Data_for_'+CaseName)
         if os.path.exists(DataFolder):
