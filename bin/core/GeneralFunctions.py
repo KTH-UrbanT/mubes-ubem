@@ -234,7 +234,7 @@ def SaveCase(MainPath,SepThreads,CaseName,nbBuild):
 
 def CreateSimDir(CurrentPath,DestinationPath,CaseName,SepThreads,nbBuild,idx,MultipleFile = '',Refresh = False,Verbose = False):
     if not os.path.exists(DestinationPath):
-        os.mkdir(os.path.abspath(DestinationPath))
+        os.makedirs(os.path.abspath(DestinationPath), exist_ok=True)
         if Verbose: print(DestinationPath +' folder is created')
     SimDir = os.path.join(os.path.abspath(DestinationPath), CaseName)
     if not os.path.exists(SimDir):
