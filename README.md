@@ -34,6 +34,7 @@ __First__ __thing__ : Change the path to EnergyPlus and (if needed) to the Data 
 *__python__ __mubes_run.py__ __-yml__ __path_to_config.yml__* will launch the simulation using the information given in the path_to_config.yml. The latter can contain only the changes wanted from the DefaultConfig.yml.  
 *__python__ __mubes_run.py__ __-CONFIG__ __{JSON Format}__* will launch the simulation using the information given in the {JSON Format} as arguments. The latter can contain only the changes wanted from the DefaultConfig.yml.  
 ___
+## Retrofitting studies
 !!!!! The tool is under development for retrofit studies. It has been tried to separate the retrofit studies with already developed repository.
 To run a retrofitting scenario run the following:
 1. Put *__Retrofit : True__* in *__DefaultConfig.yml__* under *__2_CASE/1_SimChoices/Retrofit__*.

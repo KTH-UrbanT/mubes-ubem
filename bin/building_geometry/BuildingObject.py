@@ -365,6 +365,8 @@ class Building:
 
     def getBEData(self,BE):
         for key in BE.keys():
+            if key == 'setTempLoL' and 'SetPoint' in self.RetrofitInfo['RetrofitOptions']['ECMs'] :
+                BE['setTempLoL'] = [21,21]
             setattr(self, key, BE[key])
 
     def getExtraEnergy(self,ExEn,MainPath):

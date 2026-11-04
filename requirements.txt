@@ -1,4 +1,4 @@
-git+https://github.com/MohammadHosseinalizadeh/geomeppy.git@geomeppyForMUBES
+git+https://github.com/MohammadHosseinalizadeh/GeomEppy4MUBES.git@geomeppyForMUBES
 eppy==0.5.60
 numpy==1.23.5
 pandas==1.5.2
