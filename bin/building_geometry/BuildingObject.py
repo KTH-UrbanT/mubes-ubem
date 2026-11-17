@@ -363,12 +363,16 @@ class Building:
                 self.DB_Surf  = newATemp
         return SharedBld, VolumeCorRatio
 
-    def getBEData(self,BE):
-        for key in BE.keys():
-            if key == 'setTempLoL' and 'SetPoint' in self.RetrofitInfo['RetrofitOptions']['ECMs'] :
-                BE['setTempLoL'] = [21,21]
-            setattr(self, key, BE[key])
+    def getBEData(self, BE):
+        info = getattr(self, 'RetrofitInfo', None) or {}
+        ecms = (info.get('RetrofitOptions') or {}).get('ECMs') or []
 
+        for key, value in BE.items():
+            if key == 'setTempLoL' and 'SetPoint' in ecms:
+                value = [21, 21]
+                BE[key] = value  # remove this line if BE itself shouldn't be changed
+            setattr(self, key, value)
+            
     def getExtraEnergy(self,ExEn,MainPath):
         output={}
         for key in ExEn.keys():
