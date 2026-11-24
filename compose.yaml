@@ -1,0 +1,12 @@
+services:
+  mubes:
+    image: mubes:dev
+    platform: linux/amd64
+    build:
+      context: .
+    working_dir: /project/bin
+    command: ["python", "-u", "mubes_run.py"]
+    volumes:
+      - ./docker-results:/project/docker-results
+      - ./docker-inputs/WeatherData:/usr/local/EnergyPlus-9-5-0/WeatherData:ro
+      - ./docker-inputs/ExampleFiles:/usr/local/EnergyPlus-9-5-0/ExampleFiles:ro
