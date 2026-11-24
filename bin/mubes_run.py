@@ -9,17 +9,10 @@ import core.LaunchSim as LaunchSim
 import core.CaseBuilder_OAT as CB_OAT
 import core.setConfig as setConfig
 import calibration.CalibUtilities as CalibUtil
-# import outputs.output_utilities as OutUtils
 import eplus.EnergyManagementSystem as EnergyManagementSystem
-import eplus.Solar_Calculation as SolarCalc
-import outputs.Visualization as Visualization
-import eplus.PostProcessings as HPutils
-# from default.data.Basic.Generate_CityModeller import ShapeCityPlanner
 import shutil
 import multiprocessing as mp
-import yaml
-import copy
-import sys, os, pickle
+import yaml, sys, os, copy
 import time
 import threading
 import builtins
@@ -381,7 +374,25 @@ if __name__ == '__main__':
 
             from itertools import combinations
 
-            SelectedECMs = RetrofitConfig['0_RetrofitChoice']['ECM']['ECM_to_Implement']
+            RequestedECMs = RetrofitConfig['0_RetrofitChoice']['ECM']['ECM_to_Implement']
+            ValidECMs = {'window': 'Window','wall': 'Wall','roof': 'Roof','heatrecovery': 'HeatRecovery','setpoint': 'SetPoint',}
+            SelectedECMs = []
+
+            for ecm in RequestedECMs:
+                normalized = ecm.strip().lower() if isinstance(ecm, str) else ''
+                canonical = ValidECMs.get(normalized)
+
+                if canonical is None:
+                    print(f"[Retrofit Warning] Skipping unknown ECM: {ecm!r}")
+                    continue
+
+                if canonical not in SelectedECMs:
+                    SelectedECMs.append(canonical)
+
+            if RequestedECMs and not SelectedECMs:
+                print("[Retrofit Info] No valid ECMs selected. Skipping retrofit simulations.")
+                sys.exit(0)
+
             ECM_Combo = []
             for r in range(1, len(SelectedECMs) + 1):
                 for combo in combinations(SelectedECMs, r):
@@ -401,8 +412,8 @@ if __name__ == '__main__':
                             except:
                                 Pool2Launch[idx]['Retrofit_Info']['RetrofitOptions']['ECMs'] = ecm
 
-                config['2_CASE']['0_GrlChoices']['CaseName'] = 'SvB_' + ecm[0]
-                CaseChoices['CaseName'] = 'SvB_' + ecm[0]
+                config['2_CASE']['0_GrlChoices']['CaseName'] = 'Retrofit_' + ecm[0]
+                CaseChoices['CaseName'] = 'Retrofit_' + ecm[0]
                 mubes_run(CaseChoices, config, SepThreads, Pool2Launch, MultipleFiles, RetrofitConfig, Pool2Retrofit)
         else:
             mubes_run(CaseChoices, config, SepThreads, Pool2Launch, MultipleFiles, RetrofitConfig, Pool2Retrofit)

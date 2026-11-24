@@ -20,6 +20,8 @@ bin/outputs/Dynamic.csv
 /examples/result_aggregation/integrated_*.csv
 
 # Local simulation configuration
-/bin/retrofit/ECM_Test.yml
-/default/config/DefaultConfig.yml
+#/bin/retrofit/ECM_Test.yml
+#/default/config/DefaultConfig.yml
 /default/config/env.default.yml
+
+/docker-results/

@@ -9,7 +9,8 @@ import outputs.output_utilities as Utilities
 import pickle
 import core.GeneralFunctions as GrlFct
 import openturns as ot
-from pyDOE import lhs
+
+
 ot.ResourceMap.SetAsBool("ComposedDistribution-UseGenericCovarianceAlgorithm", True)
 
 def getYearlyError(Res,NewMeas):
@@ -18,7 +19,7 @@ def getYearlyError(Res,NewMeas):
     # EPCHeat = [val*Res['ATemp'][0] for val in Res['EPC_Heat']]
     EPHeat = []
     # This for loop is based on nbRun
-    for idx in range(len(Res['EP_Heat'])): # !why EP_Heat has one value?
+    for idx in range(len(Res['EP_Heat'])):
         Heat2treat = Res['HeatedArea'][idx]['Data_Zone Ideal Loads Supply Air Total Heating Rate']
         # If we have simulation for more than one year, then we create a window with size of number of the years: int(len(Heat2treat) / 8760)
         #Then we average based on length of the window
@@ -398,14 +399,12 @@ def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change
                     print('Correlated Sample worked !')
                 except:
                     print('Correlated Sample did not work...')
-                    Bounds = getNewBounds_MHA(Bounds, BoundLim, VarName2Change, Error, ParamSample)
+                    Bounds = getNewBounds(Bounds, BoundLim, VarName2Change, Error, ParamSample)
                     NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRun,ParamMethods)
-                    # NewSample = get_lhs_param_samples(VarName2Change, BoundLim, 500)
 
             else:
-                Bounds = getNewBounds_MHA(Bounds, BoundLim, VarName2Change, Error, ParamSample)
+                Bounds = getNewBounds(Bounds, BoundLim, VarName2Change, Error, ParamSample)
                 NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRun,ParamMethods)
-                # NewSample = get_lhs_param_samples(VarName2Change, BoundLim, 500)
 
             idx_offset = len(ParamSample[:, 0])
             ParamSample = np.concatenate((ParamSample, NewSample))
@@ -420,7 +419,7 @@ def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change
         if len(ParamSample[:, 0]) >= 2000:
             Finished = True
         else:
-            Bounds = getNewBounds_MHA(Bounds, BoundLim, VarName2Change, Error, ParamSample)
+            Bounds = getNewBounds(Bounds, BoundLim, VarName2Change, Error, ParamSample)
             NewSample = GrlFct.getParamSample(VarName2Change, Bounds, NbRun,ParamMethods)
             idx_offset = len(ParamSample[:, 0])
             ParamSample = np.concatenate((ParamSample, NewSample))
@@ -433,23 +432,5 @@ def CompareSample(Finished,idx_offset, SimDir,CurrentPath,nbBuild,VarName2Change
     return Finished,idx_offset,ParamSample
 
 
-from pyDOE import lhs
-import numpy as np
-
-def get_lhs_param_samples(VarName2Change, BoundLim, NbSample):
-
-    n_params = len(VarName2Change)
-
-    # LHS in [0,1]
-    lhs_unit = lhs(n_params, samples=NbSample)
-
-    # Extract bounds from your list structure
-    lower_bounds = np.array([b[0] for b in BoundLim], dtype=float)
-    upper_bounds = np.array([b[1] for b in BoundLim], dtype=float)
-
-    # Scale to real values
-    ParamSample = lower_bounds + lhs_unit * (upper_bounds - lower_bounds)
-
-    return ParamSample
 if __name__ == '__main__' :
     print('CalibUtilities.py')

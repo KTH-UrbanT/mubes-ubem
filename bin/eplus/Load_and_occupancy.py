@@ -29,7 +29,6 @@ def ScheduleCompact(idf, Name, SetPoint):
 
 def ScheduleCompactOccup(idf,Name,building,SetPoint):
     #schedule for occupant in all but residential areas
-    SetPoint=1
     idf.newidfobject(
         "SCHEDULE:COMPACT",
         Name=Name,
@@ -46,7 +45,6 @@ def ScheduleCompactOccup(idf,Name,building,SetPoint):
     return idf
 
 def ScheduleCompactResidentialOccup(idf, Name, building, SetPoint):
-    SetPoint = 1
     idf.newidfobject(
         "SCHEDULE:COMPACT",
         Name=Name,
@@ -95,7 +93,7 @@ def create_ScheduleFile(idf, Name, fileName):
 def create_Occupant(idf, zone, building,  OccScheduleName, ActScheduleName,NbPeople):
     idf.newidfobject(
         'PEOPLE',
-        Name = zone.Name+' Occ',
+        Name = zone.Name + ' ' +OccScheduleName[:OccScheduleName.lower().find('_')] +'_Occ',
         Zone_or_ZoneList_Name = zone.Name,
         Zone_or_ZoneList_or_Space_or_SpaceList_Name=zone.Name, # this is because E+ changed the above input name by this one in new versions
         Number_of_People_Schedule_Name = OccScheduleName,
@@ -351,22 +349,25 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
     # but how much of non residential areas is to be considered in each zone, it depends on the overall building values
     OfficeOcc = 1 - building.OccupType['Residential'] #all occupancy but residential are taken for the extra airflow of 7 l/s/pers
     ResidentialOcc = building.OccupType['Residential']
-    # extra variable used below to compute the number of people to be considered in each zone
+    # extra variable used below to compute the number of people to be considered in each zone for residential or office type
     PeopleDensity = [0, 0]
     ResidPeopleDensity = [0, 0]
-    if OfficeOcc != 0:
-        for key in building.OccupType.keys():
-            if not key in ['Residential']: #TODO: i think if we delete this and edit the schedule, then we can include residential
-                PeopleDensity[0] += building.OccupType[key] / OfficeOcc * min(
-                    building.OccupRate[key])  # this is the mean number of people per m2
-                PeopleDensity[1] += building.OccupType[key] / OfficeOcc * max(building.OccupRate[key])
-    if ResidentialOcc != 0:
-        try:
-            ResidPeopleDensity[0] += building.OccupType['Residential'] / building.OccupType['Residential'] * min(
-                building.OccupRate['Residential'])
-            ResidPeopleDensity[1] += building.OccupType['Residential'] / building.OccupType['Residential'] * max(
-                building.OccupRate['Residential'])
-        except: pass
+
+    if ResidentialOcc > 0:
+        ResidPeopleDensity = [
+            min(building.OccupRate['Residential']),
+            max(building.OccupRate['Residential']),
+        ]
+
+    if OfficeOcc > 0:
+        for key, occupancy in building.OccupType.items():
+            if key != 'Residential':
+                PeopleDensity[0] += (
+                        occupancy / OfficeOcc * min(building.OccupRate[key])
+                )
+                PeopleDensity[1] += (
+                        occupancy / OfficeOcc * max(building.OccupRate[key])
+                )
     #we need to spread this in all existing blocs based on the area ratio
     BlocOfficeOcc = []
     BlocHeatedArea = []
@@ -435,24 +436,25 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
             #as we go along the zones, we should know how much is left (this is done through the 2 lines below)
             #it computes the ratio of the current zone area concerned by office occupation (1 or below for each zone)
             OfficeTypeZone = min(1, BlocOfficeOcc[bloc]/(FloorArea/BlocHeatedArea[bloc])) if BlocOfficechek[bloc] == 0 else 0
+            # if the share of office in floor is less than 10% we consider it fully residential
+            OfficeTypeZone = 0.0 if OfficeTypeZone < 0.10 else OfficeTypeZone
             # residential is simply the complement of office: OfficeOcc + ResidentialOcc always sum to 1,
             # so whatever fraction of this floor isn't office is residential - no separate budget to track
-            OfficeTypeZone = 0 #! delete this later
-            ResidentialTypeZone = 1
+            ResidentialTypeZone = 1 - OfficeTypeZone
             BlocOfficeOcc[bloc] = BlocOfficeOcc[bloc]-(FloorArea/BlocHeatedArea[bloc]) if OfficeTypeZone==1 else BlocOfficeOcc[bloc]
             BlocOfficechek[bloc] = 1 if OfficeTypeZone < 1 else 0 #if 1, it means that this is the last round with office occupancy, the next one will be fully residential
             # We need to define the number of occupant in the current zone depending on the ratio left
             BlocPeopleDensity[bloc] = [i*OfficeTypeZone for i in BlocPeopleDensity[bloc]]
-            BlocPeopleDensityResid[bloc] = [i*ResidentialTypeZone for i in BlocPeopleDensityResid[bloc]]
+            BlocPeopleDensityResid[bloc] = [i*ResidentialTypeZone for i in ResidPeopleDensity]
             if OfficeTypeZone>0:
                 # for each zone concerned by occupancy : one occupant is defined and the number is controlled  with a schedule
-                create_Occupant(idf, zone, building, 'OfficeOccuSchedule '+str(idx), 'OccupActivity', 1)
+                create_Occupant(idf, zone, building, 'Office_OccuSchedule '+str(idx), 'OccupActivity', 1)
                 if building.OffOccRandom:   #if random occupancy is wished (in yml)
                     #lets create a beta distribution random file for the number of ccupant
                     pathfile = os.path.join(os.getcwd(),'InputFiles')
                     name = idf.idfname + str(idx)+'_OfficeOccu.txt' #building.name + 'nbUsers.txt'
                     ProbGenerator.BuildOccupancyFile(name,pathfile,round(FloorArea*min(BlocPeopleDensity[bloc]),2),round(FloorArea*max(BlocPeopleDensity[bloc]),2), building)
-                    create_ScheduleFile(idf, 'OfficeOccuSchedule ' + str(idx), os.path.join(pathfile, name))
+                    create_ScheduleFile(idf, 'Office_OccuSchedule ' + str(idx), os.path.join(pathfile, name))
                     if building.setTempUpL[1] - building.setTempUpL[0] == 0:
                         CoolSetPoint = building.setTempUpL[0]
                     else:
@@ -470,16 +472,16 @@ def CreateZoneLoadAndCtrl(idf,building,FloorZoning):
                     CreateThermostat(idf, 'OfficeZone'+ str(idx),CoolSetPoint,HeatSetPoint)
                 else:
                     ## here is the schedule that defines the number of occupant with fixed number of occupants (same all the time but still linked to shedule).
-                    ScheduleCompactOccup(idf, 'OfficeOccuSchedule '+str(idx), building, SetPoint= round(FloorArea*max(BlocPeopleDensity[bloc]),2))
-            else:
+                    ScheduleCompactOccup(idf, 'Office_OccuSchedule '+str(idx), building, SetPoint= round(FloorArea*max(BlocPeopleDensity[bloc]),2))
+            if ResidentialTypeZone != 0:
                 # independent of the office branch above (not elif): a transition floor can carry both an
                 # office-type occupant (scaled by OfficeTypeZone) and a residential-type occupant
                 # (scaled by ResidentialTypeZone) on the same zone
                 # Earlier it was only office type zone that had occupancy. Now if ResidentialOcc is True we can also define
                 # occupancy for residential type zones
                 if building.ResidentialOcc:
-                    create_Occupant(idf, zone, building, 'ResidentialOccuSchedule ' + str(idx), 'OccupActivity', 1)#int(building.measured_Atemp/50)
-                    ScheduleCompactResidentialOccup(idf, 'ResidentialOccuSchedule ' + str(idx), building,
+                    create_Occupant(idf, zone, building, 'Residential_OccuSchedule ' + str(idx), 'OccupActivity', 1)#int(building.measured_Atemp/50)
+                    ScheduleCompactResidentialOccup(idf, 'Residential_OccuSchedule ' + str(idx), building,
                                          SetPoint=round(FloorArea * max(BlocPeopleDensityResid[bloc]), 2))
             # computation of the zoning level multiplier
             ZoningMultiplier = 1 if FloorZoning else building.BlocNbFloor[bloc]

@@ -1,78 +1,65 @@
   #This files provides the Energy Conservation Measures settings
-0_RetrofitChoice:
-    ECM:
-        ECM_to_Implement: []
-    Base_Case:
-      BuildID: []#['1c931069-d3d1-4559-8968-e7f0564579fb', '9b94541c-e4b5-480a-aff3-78c37eb4effe']
-      WWR_Temp: {'0': 0.15, '1939': 0.15, '1960': 0.15, '1970': 0.2, '1976': 0.25, '1985': 0.25, '2000': 0.25}
-      Window_Base_U_Value: {'1945': 2.7, '1960': 2.2, '1976': 2.5, '1990': 2, '2000': 1.8, '2010': 1.2,}
-      Wall_Base_Thickness: {'1945': 2.7, '1960': 0.1, '1976': 0.1, '1990': 2, '2000': 1.8, '2010': 1.2,}
-      Roof_Base_Thickness: {'1945': 2.7, '1960': 0.1, '1976': 0.1, '1990': 2, '2000': 1.8, '2010': 1.2,}
+0_RetrofitChoice:                                                                                               # Retrofit measures, target buildings, and construction-year lookup tables.
+    ECM:                                                                                                        # Selection of energy conservation measures.
+        ECM_to_Implement: []                                                                                    # [List[str]] Selected measures, e.g. Window, Wall, Roof, HeatRecovery, SetPoint; [] selects none.
+    Base_Case:                                                                                                  # Baseline envelope properties; year keys select the latest threshold not exceeding construction year.
+      BuildID: []                                                                                               # [List] Building IDs to retrofit; [] uses all buildings selected in the main configuration.
+      WWR: {'0': 0.15, '1939': 0.15, '1960': 0.15, '1970': 0.2, '1976': 0.25, '1985': 0.25, '2000': 0.25}       # [Dict] Construction-year thresholds -> window-to-wall area ratio (0-1).
+      Window_Base_U_Value: {'1945': 2.7, '1960': 2.2, '1976': 2.5, '1990': 2, '2000': 1.8, '2010': 1.2,}        # [Dict] Construction-year thresholds -> baseline window U-value (W/m2/K).
+      Wall_Base_Thickness: {'1945': 2.7, '1960': 0.1, '1976': 0.1, '1990': 2, '2000': 1.8, '2010': 1.2,}        # [Dict] Construction-year thresholds -> baseline wall insulation thickness (m).
+      Roof_Base_Thickness: {'1945': 2.7, '1960': 0.1, '1976': 0.1, '1990': 2, '2000': 1.8, '2010': 1.2,}        # [Dict] Construction-year thresholds -> baseline roof insulation thickness (m).
 
-    Retrofited_Case:
-      Window_U_Value2Retrofit: {'1945': 2.7, '1960': 1.2, '1976': 0.1, '1990': 2, '2000': 1.8, '2010': 1.2,}
-      Wall_Thickness2Retrofit: {'1945': 2.7, '1960': 0.185, '1976': 0.1, '1990': 2, '2000': 1.8, '2010': 1.2,}
-      Roof_Thickness2Retrofit: {'1945': 2.7, '1960': 0.23, '1976': 0.1, '1990': 2, '2000': 1.8, '2010': 1.2,}
+    Retrofited_Case:                                                                                            # Target envelope properties applied when the corresponding measure is selected.
+      Window_U_Value2Retrofit: {'1945': 2.7, '1960': 1.2, '1976': 0.1, '1990': 2, '2000': 1.8, '2010': 1.2,}    # [Dict] Construction-year thresholds -> replacement window U-value (W/m2/K).
+      Wall_Thickness2Retrofit: {'1945': 2.7, '1960': 0.185, '1976': 0.1, '1990': 2, '2000': 1.8, '2010': 1.2,}  # [Dict] Construction-year thresholds -> total target wall insulation thickness (m), not added thickness.
+      Roof_Thickness2Retrofit: {'1945': 2.7, '1960': 0.23, '1976': 0.1, '1990': 2, '2000': 1.8, '2010': 1.2,}   # [Dict] Construction-year thresholds -> total target roof insulation thickness (m), not added thickness.
 
-1_SIM:
-  BaseMaterial:
-        Window:
-          UFactor: 3                     #[Float]v
-          Solar_Heat_Gain_Coefficient: 0.7   #[Float]
-          Visible_Transmittance: 0.8         #[Float]
+1_SIM:                                                                                                          # Simulation material definitions for retrofit cases.
+  BaseMaterial:                                                                                                 # Material properties; window U-factor and wall/roof insulation thickness are overridden by year tables.
+        Window:                                                                                                 # Simple glazing properties.
+          UFactor: 3                                                                                            # [Float] Window U-value (W/m2/K); overridden by the selected construction-year table.
+          Solar_Heat_Gain_Coefficient: 0.7                                                                      # [Float] Fraction of incident solar energy admitted through the window (0-1).
+          Visible_Transmittance: 0.8                                                                            # [Float] Fraction of visible light transmitted through the window (0-1).
       #****************************************************************************************
-        Wall Inertia:
-          Thickness: 0.7890                     #[Float] #this layer will be considered also for the basement walls
-          Conductivity: 0.9                  #[Float]
-          Roughness: "Rough"                 #[Str]
-          Density: 2300                      #[Float]
-          Specific_Heat: 1000                #[Float]
-        Wall Insulation:
-          Thickness: 0.2                     #[Float]
-          Conductivity: 0.034554                 #[Float]
-          Roughness: "Rough"                 #[Str]
-          Density: 150                       #[Float]
-          Specific_Heat: 1000                #[Float]
+        Wall Inertia:                                                                                           # Thermal-mass layer for walls, also used for basement walls.
+          Thickness: 0.7890                                                                                     # [Float] Material layer thickness (m).
+          Conductivity: 0.9                                                                                     # [Float] Thermal conductivity (W/m/K).
+          Roughness: "Rough"                                                                                    # [Str] EnergyPlus surface roughness category, e.g. Rough or Smooth.
+          Density: 2300                                                                                         # [Float] Material mass density (kg/m3).
+          Specific_Heat: 1000                                                                                   # [Float] Specific heat capacity (J/kg/K).
+        Wall Insulation:                                                                                        # Wall insulation layer; thickness is overridden by the selected construction-year table.
+          Thickness: 0.2                                                                                        # [Float] Material layer thickness (m).
+          Conductivity: 0.034554                                                                                # [Float] Thermal conductivity (W/m/K).
+          Roughness: "Rough"                                                                                    # [Str] EnergyPlus surface roughness category, e.g. Rough or Smooth.
+          Density: 150                                                                                          # [Float] Material mass density (kg/m3).
+          Specific_Heat: 1000                                                                                   # [Float] Specific heat capacity (J/kg/K).
           #'Thermal_Absorptance' : 0.001
       #****************************************************************************************
-        Basement Floor:
-          Thickness: 0.1                     #[Float] #this layer will be considered also for the basement floor
-          Conductivity: 0.9                  #[Float]
-          Roughness: "Rough"                 #[Str]
-          Density: 2300                      #[Float]
-          Specific_Heat: 1000                #[Float]
-
-        #   Basement Floor Insulation :
-        #       Thickness : 0.05    #not needed as even without basement the Heated1rstFloor is taken for the first floor
-        #       Conductivity : 0.25*0.1
-        #       Roughness : "Rough"
-        #       Density : 1000
-        #       Specific_Heat : 1000
-        #   Roof Inertia :
-        #        Thickness : 0.05 #not needed unless one wants to have inertia in the roof layer
-        #        Conductivity : 0.15*0.1
-        #        Roughness : "Rough"
-        #        Density : 1000
-        #        Specific_Heat : 1000
+        Basement Floor:                                                                                         # Thermal-mass layer for the basement floor.
+          Thickness: 0.1                                                                                        # [Float] Material layer thickness (m).
+          Conductivity: 0.9                                                                                     # [Float] Thermal conductivity (W/m/K).
+          Roughness: "Rough"                                                                                    # [Str] EnergyPlus surface roughness category, e.g. Rough or Smooth.
+          Density: 2300                                                                                         # [Float] Material mass density (kg/m3).
+          Specific_Heat: 1000                                                                                   # [Float] Specific heat capacity (J/kg/K).
       #****************************************************************************************
-        Roof Insulation:
-          Thickness: 0.34                     #[Float]
-          Conductivity: 0.03                 #[Float]
-          Roughness: "Rough"                 #[Str]
-          Density: 150                       #[Float]
-          Specific_Heat: 1000                #[Float]
+        Roof Insulation:                                                                                        # Roof insulation layer; thickness is overridden by the selected construction-year table.
+          Thickness: 0.34                                                                                       # [Float] Material layer thickness (m).
+          Conductivity: 0.03                                                                                    # [Float] Thermal conductivity (W/m/K).
+          Roughness: "Rough"                                                                                    # [Str] EnergyPlus surface roughness category, e.g. Rough or Smooth.
+          Density: 150                                                                                          # [Float] Material mass density (kg/m3).
+          Specific_Heat: 1000                                                                                   # [Float] Specific heat capacity (J/kg/K).
           #Thermal_Absorptance : 0.001
       #****************************************************************************************
-        Heated1rstFloor Inertia:
-          Thickness: 0.1                     #[Float]
-          Conductivity: 0.9                  #[Float]
-          Roughness: "Rough"                 #[Str]
-          Density: 2300                      #[Float]
-          Specific_Heat: 1000                #[Float]
-        Heated1rstFloor Insulation:
-          Thickness: 0.15                    #[Float]
-          Conductivity: 0.035                #[Float]
-          Roughness: "Rough"                 #[Str]
-          Density: 150                       #[Float]
-          Specific_Heat: 1000                #[Float]
+        Heated1rstFloor Inertia:                                                                                # Thermal-mass layer of the lowest heated floor.
+          Thickness: 0.1                                                                                        # [Float] Material layer thickness (m).
+          Conductivity: 0.9                                                                                     # [Float] Thermal conductivity (W/m/K).
+          Roughness: "Rough"                                                                                    # [Str] EnergyPlus surface roughness category, e.g. Rough or Smooth.
+          Density: 2300                                                                                         # [Float] Material mass density (kg/m3).
+          Specific_Heat: 1000                                                                                   # [Float] Specific heat capacity (J/kg/K).
+        Heated1rstFloor Insulation:                                                                             # Insulation layer of the lowest heated floor.
+          Thickness: 0.15                                                                                       # [Float] Material layer thickness (m).
+          Conductivity: 0.035                                                                                   # [Float] Thermal conductivity (W/m/K).
+          Roughness: "Rough"                                                                                    # [Str] EnergyPlus surface roughness category, e.g. Rough or Smooth.
+          Density: 150                                                                                          # [Float] Material mass density (kg/m3).
+          Specific_Heat: 1000                                                                                   # [Float] Specific heat capacity (J/kg/K).
           #Thermal_Absorptance : 0.001

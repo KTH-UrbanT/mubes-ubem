@@ -15,8 +15,6 @@ import os
 from subprocess import check_call
 import platform
 
-from sympy.codegen import Print
-
 
 def EMS_Actuator_Handling_Module(nbRun, config, epluspath, CurrentSimDir, file2run):
     for i in range(len(file2run)):
@@ -104,7 +102,7 @@ def Add_Actuator(nbRun, SimDir, file2run, EDD_Data):
                         f.write(idfObject)
         except:
             msg = 'No component found to be controlled by actuator'
-            Print(msg)
+            print(msg)
 
 def setEMS4MeanTemp(idf,zonelist,Freq,name):
     """
