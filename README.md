@@ -8,12 +8,12 @@ Massive Area Urban Building Energy Simulation (MUBES) is a tool in framework of 
 * Several thermal zoning options are proposed from single heated and non heated zones up to core and perimeter zones for each building floor.
 * It can launch simulations using parallel computing or can automatically creates FMUs of each building in order to make co-simulation afterward (the co-simulation process, using FMPy, is validated in Windows, Mac and Linux (Ubuntu)).  
 * The main input file is in a geojson format. It contains the footprint including height (3D vertexes, or 2D vertexes and height as an attribut) of each building's surface as well as some propreties taken from several databases (EPCs, and others).  
-__Rq__:  The platform is continually under development, newcomers are welcome to join by forking and proposing changes.  
+__Rq__:  The platform is continually under development, newcomers are welcome to join by forking and proposing changes.
 
 ![Minneberg.png](Minneberg.png)
 
 <details>
-<summary><h2 style="display: inline; margin: 0;">Environments</h2></summary>
+<summary><h2 style="display: inline; margin: 0; color: #58a6ff;">Environments</h2></summary>
 
 MUBES is a Python-based urban building energy modelling tool that uses EnergyPlus as its simulation engine. The Docker setup runs MUBES with Python 3.9 and EnergyPlus 9.5, so users do not need to install those versions separately. 
 MUBES uses [EPPY]([EPPY](https://github.com/santoshphilip/eppy)) and [GeomEppy]([GeomEppy](https://github.com/jamiebull1/geomeppy)). Earlier versions were also tested directly on Windows, Ubuntu 20.04, and macOS with various Python and EnergyPlus versions.
@@ -21,53 +21,53 @@ MUBES uses [EPPY]([EPPY](https://github.com/santoshphilip/eppy)) and [GeomEppy](
 </details>
 
 <details>
-<summary><h2 style="display: inline; margin: 0;">Installation process</h2></summary>
+<summary><h2 style="display: inline; margin: 0; color: #58a6ff;">Installation process</h2></summary>
 
-<details>
-<summary><h3 style="display: inline; margin: 0;">Run with Docker</h3></summary>
+> <details>
+> <summary><strong>Run with Docker</strong></summary>
+>
+> Install Docker Desktop and clone this repository. From the project folder, build the image:
+>
+> ```bash
+> docker compose build
+> ```
+>
+> Place the required `.epw` weather file in `docker-inputs/WeatherData/` and `Minimal.idf` in `docker-inputs/ExampleFiles/`. These folders are not included in the repository.
+>
+> Run MUBES:
+>
+> ```bash
+> docker compose run --rm mubes
+> ```
+>
+> </details>
 
-Install Docker Desktop and clone this repository. From the project folder, build the image:
+> <details>
+> <summary><strong>Install directly</strong></summary>
+>
+> Install compatible versions of Python and EnergyPlus, then install the Python packages:
+>
+> ```bash
+> pip install -r requirements.txt
+> ```
+>
+> The GeomEppy dependency uses a branch derived from the original package.
+>
+> </details>
 
-```bash
-docker compose build
-```
-
-Place the required `.epw` weather file in `docker-inputs/WeatherData/` and `Minimal.idf` in `docker-inputs/ExampleFiles/`. These folders are not included in the repository.
-
-Run MUBES:
-
-```bash
-docker compose run --rm mubes
-```
+> <details>
+> <summary><strong>FMU creation</strong></summary>
+>
+> The FMU creation option requires the [EnergyPlusToFMU-v3.1.0 toolkit](https://simulationresearch.lbl.gov/fmu/EnergyPlus/export/userGuide/download.html). Install it alongside the MUBES project in a folder named `FMUsKit`.
+>
+> FMUs can be moved to another computer when they do not use external files. Relative paths to external files currently cause errors. On Windows 10, see [EnergyPlusToFMU issue 54](https://github.com/lbl-srg/EnergyPlusToFMU/issues/54) for the timing changes needed to remove intermediate files.
+>
+> </details>
 
 </details>
 
 <details>
-<summary><h3 style="display: inline; margin: 0;">Install directly</h3></summary>
-
-Install compatible versions of Python and EnergyPlus, then install the Python packages:
-
-```bash
-pip install -r requirements.txt
-```
-
-The GeomEppy dependency uses a branch derived from the original package.
-
-</details>
-
-<details>
-<summary><h3 style="display: inline; margin: 0;">FMU creation</h3></summary>
-
-The FMU creation option requires the [EnergyPlusToFMU-v3.1.0 toolkit](https://simulationresearch.lbl.gov/fmu/EnergyPlus/export/userGuide/download.html). Install it alongside the MUBES project in a folder named `FMUsKit`.
-
-FMUs can be moved to another computer when they do not use external files. Relative paths to external files currently cause errors. On Windows 10, see [EnergyPlusToFMU issue 54](https://github.com/lbl-srg/EnergyPlusToFMU/issues/54) for the timing changes needed to remove intermediate files.
-
-</details>
-
-</details>
-
-<details>
-<summary><h2 style="display: inline; margin: 0;">Folder organization</h2></summary>
+<summary><h2 style="display: inline; margin: 0; color: #58a6ff;">Folder organization</h2></summary>
 
 The main MUBES folder contains:
 
@@ -90,62 +90,62 @@ Replace `ExampleName.yml` with the example you want to run, after checking that 
 </details>
 
 <details>
-<summary><h2 style="display: inline; margin: 0;">Run a simulation case</h2></summary>
+<summary><h2 style="display: inline; margin: 0; color: #58a6ff;">Run a simulation case</h2></summary>
 
 MUBES reads `default/config/DefaultConfig.yml` first. An optional YAML configuration can change only the settings you want to override. If you run MUBES directly, check the EnergyPlus and data paths in `default/config/env.yml` before starting.
 
-<details>
-<summary><h3 style="display: inline; margin: 0;">Run with Docker</h3></summary>
+> <details>
+> <summary><strong>Run with Docker</strong></summary>
+>
+> From the project folder, run the default configuration:
+>
+> ```bash
+> docker compose run --rm mubes
+> ```
+>
+> To use a specific YAML configuration:
+>
+> ```bash
+> docker compose run --rm mubes python -u mubes_run.py -yml /project/path/to/config.yml
+> ```
+>
+> Replace `/project/path/to/config.yml` with the file’s path **inside the container**. For example, a configuration stored at `examples/MyCase.yml` in the project has the container path `/project/examples/MyCase.yml`.
+>
+> Before running a simulation, provide the weather file required by your configuration in `docker-inputs/WeatherData/` and `Minimal.idf` in `docker-inputs/ExampleFiles/`. Also check that any data files referenced by the configuration are available.
+>
+> </details>
 
-From the project folder, run the default configuration:
-
-```bash
-docker compose run --rm mubes
-```
-
-To use a specific YAML configuration:
-
-```bash
-docker compose run --rm mubes python -u mubes_run.py -yml /project/path/to/config.yml
-```
-
-Replace `/project/path/to/config.yml` with the file’s path **inside the container**. For example, a configuration stored at `examples/MyCase.yml` in the project has the container path `/project/examples/MyCase.yml`.
-
-Before running a simulation, provide the weather file required by your configuration in `docker-inputs/WeatherData/` and `Minimal.idf` in `docker-inputs/ExampleFiles/`. Also check that any data files referenced by the configuration are available.
+> <details>
+> <summary><strong>Run directly with Python</strong></summary>
+>
+> From the `bin/` folder, run the default configuration:
+>
+> ```bash
+> python mubes_run.py
+> ```
+>
+> To use a specific YAML configuration:
+>
+> ```bash
+> python mubes_run.py -yml path_to_config.yml
+> ```
+>
+> The YAML file can contain only the settings you want to change from `DefaultConfig.yml`.
+>
+> MUBES also accepts configuration values as a JSON argument:
+>
+> ```bash
+> python mubes_run.py -CONFIG '{"0_APP":{"PATH_TO_RESULTS":"../examples"}}'
+> ```
+>
+> The JSON can contain only the settings you want to change from `DefaultConfig.yml`.
+>
+> </details>
 
 </details>
 
 <details>
-<summary><h3 style="display: inline; margin: 0;">Run directly with Python</h3></summary>
-
-From the `bin/` folder, run the default configuration:
-
-```bash
-python mubes_run.py
-```
-
-To use a specific YAML configuration:
-
-```bash
-python mubes_run.py -yml path_to_config.yml
-```
-
-The YAML file can contain only the settings you want to change from `DefaultConfig.yml`.
-
-MUBES also accepts configuration values as a JSON argument:
-
-```bash
-python mubes_run.py -CONFIG '{"0_APP":{"PATH_TO_RESULTS":"../examples"}}'
-```
-
-The JSON can contain only the settings you want to change from `DefaultConfig.yml`.
-
-</details>
-
-</details>
-
-<details>
-<summary><h2 style="display: inline; margin: 0;">Retrofitting studies</h2></summary>
+<summary><h2 style="display: inline; margin: 0; color: #58a6ff;">Retrofitting studies</h2></summary>
 
 ! The tool is under development for retrofit studies. It has been tried to separate the retrofit studies with already developed repository.
 
@@ -166,7 +166,7 @@ __Outputs_Template.txt__  in __bin\outputs__ : This file proposes a list of avai
 </details>
 
 <details>
-<summary><h2 style="display: inline; margin: 0;">Creating a shadowing wall file</h2></summary>
+<summary><h2 style="display: inline; margin: 0; color: #58a6ff;">Creating a shadowing wall file</h2></summary>
 
 * *__python__ __MakeShadowingWallFile.py__* will build a .json file out of the geojson files in the same location, given in the *Config.yml*.  
 * *__python__ __MakeShadowingWallFile.py__ __-yml__ __path_to_config.yml__* will build a .json file out of the geojson files in the same location, given in the *path_to_config.yml*.  
@@ -182,7 +182,7 @@ The more shadowing walls are considered the more warnings can be raised by Energ
 </details>
 
 <details>
-<summary><h2 style="display: inline; margin: 0;">FMU examples</h2></summary>
+<summary><h2 style="display: inline; margin: 0; color: #58a6ff;">FMU examples</h2></summary>
 
 * __FMPySimPlayGroundEx1.py__ and __FMPySimPlayGroundEx2.py__: it uses FMPy package and as been successfully tested for controlling temperature's setpoints, internal loads, or watertaps at each time steps of the simulation. For one who'd like to make co-simulation, a deep understanding is still needed on the EP side as inputs and outputs are to be defined.  
 
@@ -197,7 +197,7 @@ The two examples (Ex1 and Ex2) :
 </details>
 
 <details>
-<summary><h2 style="display: inline; margin: 0;">Engine structure</h2></summary>
+<summary><h2 style="display: inline; margin: 0; color: #58a6ff;">Engine structure</h2></summary>
 
 The paradigm of simulation engine is to automate simulation on several different levels :
 - simulation level (deals with simulation's parameters),
